@@ -58,6 +58,7 @@ class Config(QtCore.QObject):
         'backend': [
             'opengl',
             'opengles',
+            'vulkan',
         ],
     }
 
@@ -70,7 +71,7 @@ class Config(QtCore.QObject):
             'framerate': (60, 1),
             'log_level': 'info',
             'clear_color': (0.0, 0.0, 0.0, 1.0),
-            'backend': 'opengl',
+            'backend': 'vulkan',
 
             # Export
             'export_width': 1280,

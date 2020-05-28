@@ -1231,6 +1231,7 @@ static void setup_glsl_info_gl(struct pgcraft *s)
     s->has_in_out_layout_qualifiers = IS_GLSL_ES_MIN(310) || IS_GLSL_MIN(410);
     s->has_precision_qualifiers     = IS_GLSL_ES_MIN(100);
     s->has_modern_texture_picking   = IS_GLSL_ES_MIN(300) || IS_GLSL_MIN(330);
+    s->use_ublock                   = 0;
 
     s->has_explicit_bindings = IS_GLSL_ES_MIN(310) || IS_GLSL_MIN(420) ||
                                (gpu_ctx->features & NGLI_FEATURE_SHADING_LANGUAGE_420PACK);
@@ -1247,6 +1248,24 @@ static void setup_glsl_info_gl(struct pgcraft *s)
     }
 }
 
+static void setup_glsl_info_vk(struct pgcraft *s)
+{
+    s->glsl_version = 450;
+
+    s->sym_vertex_index   = "gl_VertexIndex";
+    s->sym_instance_index = "gl_InstanceIndex";
+
+    s->has_in_out_qualifiers        = 1;
+    s->has_in_out_layout_qualifiers = 1;
+    s->has_precision_qualifiers     = 0;
+    s->has_modern_texture_picking   = 1;
+    s->use_ublock                   = 1;
+
+    /* Bindings are shared across stages and types */
+    for (int i = 0; i < NB_BINDINGS; i++)
+        s->next_bindings[i] = &s->bindings[0];
+}
+
 static void setup_glsl_info(struct pgcraft *s)
 {
     struct ngl_ctx *ctx = s->ctx;
@@ -1257,6 +1276,8 @@ static void setup_glsl_info(struct pgcraft *s)
 
     if (config->backend == NGL_BACKEND_OPENGL || config->backend == NGL_BACKEND_OPENGLES)
         setup_glsl_info_gl(s);
+    else if (config->backend == NGL_BACKEND_VULKAN)
+        setup_glsl_info_vk(s);
     else
         ngli_assert(0);
 }
