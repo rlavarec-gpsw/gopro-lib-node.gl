@@ -57,7 +57,11 @@
 #if defined(TARGET_IPHONE) || defined(TARGET_ANDROID)
 # define DEFAULT_BACKEND NGL_BACKEND_OPENGLES
 #else
-# define DEFAULT_BACKEND NGL_BACKEND_OPENGL
+# if defined(BACKEND_VK)
+#  define DEFAULT_BACKEND NGL_BACKEND_VULKAN
+# else
+#  define DEFAULT_BACKEND NGL_BACKEND_OPENGL
+# endif
 #endif
 
 void ngl_log_set_callback(void *arg, ngl_log_callback_type callback)
@@ -574,6 +578,9 @@ static const int backend_ids[] = {
 #if defined(BACKEND_GL)
     NGL_BACKEND_OPENGL,
     NGL_BACKEND_OPENGLES,
+#endif
+#ifdef BACKEND_VK
+    NGL_BACKEND_VULKAN,
 #endif
 };
 

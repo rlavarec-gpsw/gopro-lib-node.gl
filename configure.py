@@ -65,11 +65,17 @@ _EXTERNAL_DEPS = dict(
         url=f'https://renderdoc.org/stable/@VERSION@/renderdoc_@VERSION@.tar.gz',
         sha256='a5bc7396857f519477e6edde0fa419eb6e855a2b94fedba0bbedf9c2df64e4a4',
     ),
+    glslang=dict(
+        version='11.8.0',
+        dst_file='glslang-@VERSION@.tar.gz',
+        url='https://github.com/KhronosGroup/glslang/archive/refs/tags/@VERSION@.tar.gz',
+        sha256='9e5fbe5b844d203da5e61bcd84eda76326e0ff5dc696cb862147bbe01d2febb0',
+    ),
 )
 
 
 def _get_external_deps(args):
-    deps = ['sxplayer']
+    deps = ['sxplayer', 'glslang']
     if _SYSTEM == 'Windows':
         deps.append('pkgconf')
     if 'gpu_capture' in args.debug_opts:
@@ -82,6 +88,17 @@ def _get_external_deps(args):
 def _guess_base_dir(dirs):
     smallest_dir = sorted(dirs, key=lambda x: len(x))[0]
     return pathlib.Path(smallest_dir).parts[0]
+
+
+def _get_brew_prefix():
+    prefix = None
+    try:
+        proc = run(['brew', '--prefix'], capture_output=True, text=True, check=True)
+        prefix = proc.stdout.strip()
+    except FileNotFoundError:
+        # Silently pass if brew is not installed
+        pass
+    return prefix
 
 
 def _file_chk(path, chksum_hexdigest):
@@ -229,16 +246,35 @@ def _renderdoc_install(cfg):
 
 @_block('nodegl-setup', [_sxplayer_install])
 def _nodegl_setup(cfg):
-    nodegl_debug_opts = []
+    nodegl_opts = []
     if cfg.args.debug_opts:
         debug_opts = ','.join(cfg.args.debug_opts)
-        nodegl_debug_opts += [f'-Ddebug_opts={debug_opts}']
+        nodegl_opts += [f'-Ddebug_opts={debug_opts}']
 
     if 'gpu_capture' in cfg.args.debug_opts:
         renderdoc_dir = cfg.externals[_RENDERDOC_ID]
-        nodegl_debug_opts += [f'-Drenderdoc_dir={renderdoc_dir}']
+        nodegl_opts += [f'-Drenderdoc_dir={renderdoc_dir}']
 
-    return ['$(MESON_SETUP) -Drpath=true ' + _cmd_join(*nodegl_debug_opts, 'libnodegl', op.join('builddir', 'libnodegl'))]
+    extra_library_dirs = []
+    if _SYSTEM == 'Windows':
+        extra_library_dirs += [
+            op.join(cfg.prefix, 'Lib')
+        ]
+    elif _SYSTEM == 'Darwin':
+        prefix = _get_brew_prefix()
+        if prefix:
+            extra_library_dirs += [
+                op.join(prefix, 'lib')
+            ]
+    extra_library_dirs += [
+        op.join('/tmp/b', 'lib')
+    ]
+
+    if extra_library_dirs:
+        opts = ','.join(extra_library_dirs)
+        nodegl_opts += [f'-Dextra_library_dirs={opts}']
+
+    return ['$(MESON_SETUP) -Drpath=true ' + _cmd_join(*nodegl_opts, 'libnodegl', op.join('builddir', 'libnodegl'))]
 
 
 @_block('nodegl-install', [_nodegl_setup])
@@ -362,6 +398,7 @@ def _clean(cfg):
     return [
         _rd(op.join('builddir', 'pkgconf')),
         _rd(op.join('builddir', 'sxplayer')),
+        _rd(op.join('builddir', 'glslang')),
         _rd(op.join('builddir', 'libnodegl')),
         _rd(op.join('builddir', 'ngl-tools')),
         _rd(op.join('builddir', 'tests')),
@@ -389,6 +426,37 @@ def _tests(cfg):
     return ['$(MESON) ' + _cmd_join('test', '-C', op.join('builddir', 'tests'))]
 
 
+@_block('glslang-setup')
+def _glslang_setup(cfg):
+    srcdir = cfg.externals['glslang']
+    builddir = op.join('builddir', 'glslang')
+
+    # Pull internal dependencies
+    run(['python', 'update_glslang_sources.py'], cwd=srcdir, check=True)
+
+    # Shared build is not supported on Windows
+    build_shared = 'OFF' if _SYSTEM == 'Windows' else 'ON'
+    opts = [
+        '-DCMAKE_BUILD_TYPE=Release',
+        f'-DBUILD_SHARED_LIBS={build_shared}',
+        '-DENABLE_OPT=ON',
+        '-DBUILD_EXTERNAL=ON',
+        '-DENABLE_SPVREMAPPER=OFF',
+        '-DENABLE_GLSLANG_BINARIES=OFF',
+    ]
+    return [
+        f'$(CMAKE_SETUP) -S {srcdir} -B {builddir} ' + shlex.join(opts),
+    ]
+
+
+@_block('glslang-install', [_glslang_setup])
+def _glslang_install(cfg):
+    builddir = op.join('builddir', 'glslang')
+    return [
+        f'cmake --build {builddir} --target install',
+    ]
+
+
 def _quote(s):
     if not s or ' ' in s:
         return f'"{s}"'
@@ -404,6 +472,8 @@ def _cmd_join(*cmds):
 
 
 def _get_make_vars(cfg):
+    debug = cfg.args.coverage or cfg.args.buildtype == 'debug'
+
     # We don't want Python to fallback on one found in the PATH so we explicit
     # it to the one in the venv.
     python = op.join(cfg.bin_path, 'python')
@@ -419,17 +489,23 @@ def _get_make_vars(cfg):
     #
     meson = 'MAKEFLAGS= meson' if _SYSTEM != 'Windows' else 'meson'
 
-    buildtype = 'debugoptimized' if cfg.args.coverage or cfg.args.buildtype == 'debug' else 'release'
     meson_setup = [
         'setup',
         '--prefix', cfg.prefix,
         '--pkg-config-path', cfg.pkg_config_path,
-        '--buildtype', buildtype,
+        '--buildtype', 'debugoptimized' if debug else 'release',
     ]
     if cfg.args.coverage:
         meson_setup += ['-Db_coverage=true']
     if _SYSTEM != 'MinGW' and 'debug' not in cfg.args.buildtype:
         meson_setup += ['-Db_lto=true']
+
+    cmake_builddtype = 'Debug' if debug else 'Release'
+    cmake_setup = [
+        f'-DCMAKE_INSTALL_PREFIX={cfg.prefix}',
+        f'-DCMAKE_BUILD_TYPE={cmake_builddtype}',
+        '-GNinja',
+    ]
 
     if _SYSTEM == 'Windows':
         meson_setup += ['--bindir=Scripts', '--libdir=Lib', '--includedir=Include']
@@ -446,6 +522,7 @@ def _get_make_vars(cfg):
     # Our tests/meson.build logic is not well supported with the VS backend so
     # we need to fallback on Ninja
     ret['MESON_SETUP_TESTS'] = '$(MESON) ' + _cmd_join(*meson_setup, '--backend=ninja')
+    ret['CMAKE_SETUP'] = 'cmake ' + _cmd_join(*cmake_setup)
 
     return ret
 
@@ -569,7 +646,7 @@ def _run():
     parser.add_argument('--coverage', action='store_true',
                         help='Code coverage')
     parser.add_argument('-d', '--debug-opts', nargs='+', default=[],
-                        choices=('gl', 'mem', 'scene', 'gpu_capture'),
+                        choices=('gl', 'vk', 'mem', 'scene', 'gpu_capture'),
                         help='Debug options')
     parser.add_argument('--build-backend', choices=('ninja', 'vs'), default=default_build_backend,
                         help='Build backend to use')
@@ -590,6 +667,8 @@ def _run():
         _all, _tests, _clean,
         _nodegl_updatedoc, _nodegl_updatespecs, _nodegl_updateglwrappers,
     ]
+    if _SYSTEM == 'Windows':
+        blocks += [_glslang_install]
     if args.coverage:
         blocks += [_coverage_html, _coverage_xml]
     makefile = _get_makefile(cfg, blocks)

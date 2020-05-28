@@ -332,12 +332,15 @@ static void media_uninit(struct ngl_node *node)
 
 #if defined(TARGET_ANDROID)
     struct ngl_ctx *ctx = node->ctx;
+    const struct ngl_config *config = &ctx->config;
     struct android_ctx *android_ctx = &ctx->android_ctx;
-    if (android_ctx->has_native_imagereader_api) {
-        ngli_android_imagereader_freep(&s->android_imagereader);
-    } else {
-        ngli_android_surface_free(&s->android_surface);
-        ngli_android_handlerthread_free(&s->android_handlerthread);
+    if (config->backend == NGL_BACKEND_OPENGLES) {
+        if (android_ctx->has_native_imagereader_api) {
+            ngli_android_imagereader_freep(&s->android_imagereader);
+        } else {
+            ngli_android_surface_free(&s->android_surface);
+            ngli_android_handlerthread_free(&s->android_handlerthread);
+        }
     }
 #endif
 }
