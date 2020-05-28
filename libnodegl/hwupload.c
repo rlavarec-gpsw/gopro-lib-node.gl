@@ -63,6 +63,20 @@ static const struct hwmap_class *hwupload_gl_class_map[] = {
 #endif
 };
 
+static const struct hwmap_class *hwupload_vk_class_map[] = {
+    [SXPLAYER_PIXFMT_RGBA]        = &ngli_hwmap_common_class,
+    [SXPLAYER_PIXFMT_BGRA]        = &ngli_hwmap_common_class,
+    [SXPLAYER_SMPFMT_FLT]         = &ngli_hwmap_common_class,
+    [SXPLAYER_PIXFMT_NV12]        = &ngli_hwmap_common_class,
+    [SXPLAYER_PIXFMT_YUV420P]     = &ngli_hwmap_common_class,
+    [SXPLAYER_PIXFMT_YUV422P]     = &ngli_hwmap_common_class,
+    [SXPLAYER_PIXFMT_YUV444P]     = &ngli_hwmap_common_class,
+    [SXPLAYER_PIXFMT_P010LE]      = &ngli_hwmap_common_class,
+    [SXPLAYER_PIXFMT_YUV420P10LE] = &ngli_hwmap_common_class,
+    [SXPLAYER_PIXFMT_YUV422P10LE] = &ngli_hwmap_common_class,
+    [SXPLAYER_PIXFMT_YUV444P10LE] = &ngli_hwmap_common_class,
+};
+
 static const struct hwmap_class *get_hwmap_class(int backend, struct sxplayer_frame *frame)
 {
     if (backend == NGL_BACKEND_OPENGL || backend == NGL_BACKEND_OPENGLES) {
@@ -70,6 +84,11 @@ static const struct hwmap_class *get_hwmap_class(int backend, struct sxplayer_fr
             return NULL;
 
         return hwupload_gl_class_map[frame->pix_fmt];
+    } else if (backend == NGL_BACKEND_VULKAN) {
+        if (frame->pix_fmt < 0 || frame->pix_fmt >= NGLI_ARRAY_NB(hwupload_vk_class_map))
+            return NULL;
+
+        return hwupload_vk_class_map[frame->pix_fmt];
     }
 
     return NULL;
