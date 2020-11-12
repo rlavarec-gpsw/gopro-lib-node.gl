@@ -373,11 +373,19 @@ gbackends_cfg = {
         'deps': ['shaderc', 'vulkan'],
       },
       'darwin': {
+        'src': files('backends/vk/hwmap_videotoolbox_darwin_vk.m'),
+        'deps': ['shaderc'],
+        'libs': ['MoltenVK'],
+        'frameworks': ['Metal'],
       },
       'android': {
         'deps': ['shaderc'],
       },
       'iphone': {
+        'src': files('backends/vk/hwmap_videotoolbox_darwin_vk.m'),
+        'deps': ['shaderc'],
+        'libs': ['MoltenVK'],
+        'frameworks': ['Metal'],
       },
       'windows': {
         'deps': ['shaderc', 'vulkan'],
@@ -390,6 +398,9 @@ if host_system in ['darwin', 'iphone']
   add_languages('objc')
 endif
 
+# Additional search paths for find_library
+library_dirs = [ get_option('prefix') / get_option('libdir') ]
+
 foreach gbackend_name, gbackend_cfg : gbackends_cfg
   opt_gbackend = get_option('gbackend-' + gbackend_name)
 
@@ -398,8 +409,12 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
   foreach dep : host_backend_cfg.get('deps', [])
     gbackend_deps += dependency(dep, required: opt_gbackend)
   endforeach
-  foreach dep : host_backend_cfg.get('libs', [])
-    gbackend_deps += cc.find_library(dep, required: opt_gbackend)
+  foreach lib : host_backend_cfg.get('libs', [])
+    dep = cc.find_library(lib, required: opt_gbackend)
+    if not opt_gbackend.disabled() and not dep.found()
+        dep = cc.find_library(lib, required: opt_gbackend, dirs: library_dirs)
+    endif
+    gbackend_deps += dep
   endforeach
   if 'frameworks' in host_backend_cfg
     gbackend_deps += dependency('appleframeworks', modules: host_backend_cfg.get('frameworks'), required: opt_gbackend)
