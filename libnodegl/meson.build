@@ -21,8 +21,8 @@
 
 project(
   'libnodegl',
-  'c',
-   default_options: ['c_std=c99'],
+  [ 'c', 'cpp' ],
+   default_options: ['c_std=c99', 'b_lundef=false'],
    license: 'Apache',
    meson_version: '>= 0.54.0',
    version: '0.0.0',
@@ -37,6 +37,12 @@ conf_data.set('version_micro', version_array[2])
 host_system = host_machine.system()
 cpu_family = host_machine.cpu_family()
 cc = meson.get_compiler('c')
+
+if cc.get_id() == 'msvc'
+  add_global_arguments('/std:c++latest', language: 'cpp')
+else
+  add_global_arguments('-std=gnu++2a', language: 'cpp')
+endif
 
 # meson currently (0.56.0) doesn't distinguish between macOS and iOS (the
 # "darwin" identifier is shared), so we need to test explicitely.
@@ -175,6 +181,7 @@ lib_src = files(
   'pgcache.c',
   'pgcraft.c',
   'pipeline.c',
+  'pipeline_util.c',
   'precision.c',
   'program.c',
   'rendertarget.c',
@@ -220,6 +227,13 @@ lib_deps = [
   dependency('libsxplayer', version: '>= 9.7.0'),
   dependency('threads'),
 ]
+if (cc.get_id() == 'msvc')
+  lib_deps += dependency('libpthreads')
+endif
+
+lib_c_args = []
+lib_include_dirs = []
+lib_link_args = []
 
 host_cfg = hosts_cfg.get(host_system, {})
 foreach dep : host_cfg.get('deps', [])
@@ -297,6 +311,44 @@ endif
 # Graphic backend dependencies
 #
 
+ngfx_cflags = []
+
+ngfx_src = [
+  'backends/ngfx/buffer_ngfx.cpp',
+  'backends/ngfx/format_ngfx.cpp',
+  'backends/ngfx/gctx_ngfx.cpp',
+  'backends/ngfx/pipeline_ngfx.cpp',
+  'backends/ngfx/program_ngfx.cpp',
+  'backends/ngfx/rendertarget_ngfx.cpp',
+  'backends/ngfx/texture_ngfx.cpp',
+  'backends/ngfx/topology_ngfx.cpp',
+  'backends/ngfx/util_ngfx.cpp',
+]
+
+enable_ngfx_backend = get_option('enable_ngfx_backend')
+if host_system == 'windows' and cc.get_id() != 'msvc'
+  enable_ngfx_backend = false
+endif
+
+if enable_ngfx_backend
+  ngfx_graphics_backend = get_option('ngfx_graphics_backend')
+  if ngfx_graphics_backend == 'NGFX_GRAPHICS_BACKEND_DIRECT3D12' and host_system == 'windows'
+    ngfx_cflags += '-DNGFX_GRAPHICS_BACKEND_DIRECT3D12'
+    ngfx_src += 'backends/ngfx/surface_util_ngfx_d3d.cpp'
+    ngfx_src += 'backends/ngfx/swapchain_util_ngfx_d3d.cpp'
+  elif ngfx_graphics_backend == 'NGFX_GRAPHICS_BACKEND_VULKAN'
+    ngfx_cflags += '-DNGFX_GRAPHICS_BACKEND_VULKAN'
+    ngfx_src += 'backends/ngfx/surface_util_ngfx_vk.cpp'
+    ngfx_src += 'backends/ngfx/swapchain_util_ngfx_vk.cpp'
+  elif ngfx_graphics_backend == 'NGFX_GRAPHICS_BACKEND_METAL' and host_system == 'darwin'
+    ngfx_cflags += '-DNGFX_GRAPHICS_BACKEND_METAL'
+    ngfx_src += 'backends/ngfx/surface_util_ngfx_mtl.mm'
+    ngfx_src += 'backends/ngfx/swapchain_util_ngfx_mtl.mm'
+  else
+    error('invalid value for ngfx_graphics_backend: @0@'.format(ngfx_graphics_backend))
+  endif
+endif
+
 gbackends_cfg = {
   'gl': {
     'src': files(
@@ -358,7 +410,10 @@ gbackends_cfg = {
         'deps': ['shaderc', 'vulkan'],
       },
       'darwin': {
-        'src': files('backends/vk/hwupload_videotoolbox_darwin_vk.m'),
+        'src': files(
+            'backends/vk/hwupload_videotoolbox_darwin_vk.m',
+            'backends/vk/mvk_util.m'
+        ),
         'deps': ['shaderc'],
         'libs': ['MoltenVK'],
         'frameworks': ['Metal'],
@@ -377,10 +432,98 @@ gbackends_cfg = {
       },
     },
   },
+  'ngfx': {
+    'src': files(ngfx_src),
+    'cfg': 'BACKEND_NGFX',
+    'hosts_cfg': {
+      'windows': {
+      },
+      'linux': {
+      },
+      'darwin': {
+        'src': files(
+          'backends/ngfx/hwupload_videotoolbox_darwin_ngfx.mm'
+        ),
+      },
+    },
+  },
 }
+
+if enable_ngfx_backend
+  ngfx_window_backend = get_option('ngfx_window_backend')
+  if ngfx_window_backend == 'NGFX_WINDOW_BACKEND_WINDOWS' and host_system == 'windows'
+    ngfx_cflags += '-DNGFX_WINDOW_BACKEND_WINDOWS'
+  elif ngfx_window_backend == 'NGFX_WINDOW_BACKEND_GLFW'
+    ngfx_cflags += '-DNGFX_WINDOW_BACKEND_GLFW'
+  elif ngfx_window_backend == 'NGFX_WINDOW_BACKEND_APPKIT' and host_system == 'darwin'
+    ngfx_cflags += '-DNGFX_WINDOW_BACKEND_APPKIT'
+  else
+    error('invalid value for ngfx_window_backend: @0@'.format(ngfx_window_backend))
+  endif
+
+  ngfx_deps = []
+
+  json_dep = declare_dependency(
+    include_directories: [ '../external/json/include' ],
+  )
+  ngfx_deps += json_dep
+
+  if host_system == 'windows'
+    spirv_cross_dep = dependency('spirv-cross')
+    ngfx_deps += spirv_cross_dep
+
+    glm_dep = declare_dependency(
+      include_directories: [ '../external/windows/glm-0.9.9.8/glm' ]
+    )
+    ngfx_deps += glm_dep
+
+    ngfx_includes = [ '../external/windows/ngfx_x64-windows/include' ]
+    if ngfx_graphics_backend == 'NGFX_GRAPHICS_BACKEND_DIRECT3D12'
+      ngfx_includes += '../external/windows/d3dx12'
+    endif
+    ngfx_dep = declare_dependency(
+      compile_args: ngfx_cflags,
+      include_directories: ngfx_includes,
+      link_args: [
+        '-L' + meson.current_source_dir() + '\\..\\external\\windows\\ngfx_x64-windows\\lib', '-lngfx',
+        '-ld3d12', '-ldxgi', '-ld3dcompiler'
+      ],
+    )
+    ngfx_deps += ngfx_dep
+
+  elif host_system == 'linux'
+    spirv_cross_link_args = [
+      '-lspirv-cross-cpp', '-lspirv-cross-core', '-lspirv-cross-glsl', '-lspirv-cross-hlsl', '-lspirv-cross-msl', '-lspirv-cross-reflect', '-lspirv-cross-util', '-lspirv-cross-c'
+    ]
+    ngfx_dep = declare_dependency(
+      compile_args: ngfx_cflags,
+      include_directories: [ '../external/linux/ngfx_x64-linux/include' ],
+      link_args: [
+        '-L' + meson.current_source_dir() + '/../external/linux/ngfx_x64-linux/lib', '-lngfx',
+      ] + spirv_cross_link_args,
+    )
+    ngfx_deps += ngfx_dep
+
+  elif host_system == 'darwin'
+    spirv_cross_link_args = [
+      '-lspirv-cross-cpp', '-lspirv-cross-core', '-lspirv-cross-glsl', '-lspirv-cross-hlsl', '-lspirv-cross-msl', '-lspirv-cross-reflect', '-lspirv-cross-util', '-lspirv-cross-c'
+    ]
+    ngfx_dep = declare_dependency(
+      compile_args: ngfx_cflags,
+      include_directories: [ '../external/darwin/ngfx_x64-darwin/include' ],
+      link_args: [
+        '-L' + meson.current_source_dir() + '/../external/darwin/ngfx_x64-darwin/lib', '-lngfx',
+      ] + spirv_cross_link_args,
+    )
+    ngfx_deps += ngfx_dep
+
+  endif
+endif
 
 if host_system in ['darwin', 'iphone']
   add_languages('objc')
+  add_languages('objcpp')
+  add_global_arguments('-std=gnu++2a', language: 'objcpp')
 endif
 
 # Additional search paths for find_library
@@ -405,12 +548,21 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
     gbackend_deps += dependency('appleframeworks', modules: host_backend_cfg.get('frameworks'), required: opt_gbackend)
   endif
 
+  if enable_ngfx_backend and gbackend_name == 'ngfx'
+     gbackend_deps += ngfx_deps
+  endif
+
   all_dep_found = true
   foreach dep : gbackend_deps
     all_dep_found = all_dep_found and dep.found()
   endforeach
-  message('backend: @0@ enabled: @1@'.format(gbackend_name, all_dep_found.to_string()))
-  if all_dep_found
+  enable_backend = all_dep_found
+  if gbackend_name == 'ngfx' and not enable_ngfx_backend
+    enable_backend = false
+  endif
+  message('backend: @0@ enabled: @1@'.format(gbackend_name, enable_backend))
+
+  if enable_backend
 
     if gbackend_name == 'gl' and vaapi_enabled
       lib_src += files('backends/gl/hwupload_vaapi_gl.c')
@@ -453,6 +605,8 @@ libnodegl = library(
   version: meson.project_version(),
   c_args: lib_c_args,
   gnu_symbol_visibility: 'hidden',
+  link_args: lib_link_args,
+  include_directories: lib_include_dirs,
 )
 lib_header = configure_file(
   input: files('nodegl.h.in'),
@@ -514,7 +668,7 @@ run_target(
 # Doc
 #
 
-if not get_option('small')
+if not get_option('small') and meson.backend() != 'xcode'
   gen_doc = executable(
     'gen_doc',
     lib_src + files('gen_doc.c'),
