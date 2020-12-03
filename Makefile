@@ -39,6 +39,7 @@ PYTHON     ?= python3
 PIP = PKG_CONFIG_PATH=$(PREFIX_FULLPATH)/lib/pkgconfig LDFLAGS=$(RPATH_LDFLAGS) $(PREFIX)/bin/pip
 endif
 
+TARGET_OS_LOWERCASE = $(shell $(PYTHON) -c "print('$(TARGET_OS)'.lower())" )
 DEBUG_GL    ?= no
 DEBUG_MEM   ?= no
 DEBUG_SCENE ?= no
@@ -117,6 +118,7 @@ NODEGL_DEBUG_OPTS-$(DEBUG_GPU_CAPTURE) += gpu_capture
 ifneq ($(NODEGL_DEBUG_OPTS-yes),)
 NODEGL_DEBUG_OPTS = -Ddebug_opts=$(shell echo $(NODEGL_DEBUG_OPTS-yes) | tr ' ' ',')
 endif
+
 ifeq ($(DEBUG_GPU_CAPTURE),yes)
 ifeq ($(TARGET_OS),Windows)
 RENDERDOC_DIR = $(shell wslpath -wa .)\external\renderdoc
@@ -126,6 +128,9 @@ RENDERDOC_DIR = $(PWD)/external/renderdoc
 NODEGL_DEBUG_OPTS += -Drenderdoc_dir="$(RENDERDOC_DIR)"
 endif
 endif
+
+NODEGL_MESON_SETUP_OPTIONS = $(NODEGL_DEBUG_OPTS)
+
 
 # Workaround Debian/Ubuntu bug; see https://github.com/mesonbuild/meson/issues/5925
 ifeq ($(TARGET_OS),Linux)
@@ -145,12 +150,29 @@ else
 CMAKE ?= cmake
 endif
 
+ifeq ($(TARGET_OS),MinGW-w64)
+export ENABLE_NGFX_BACKEND ?= 0
+else
+export ENABLE_NGFX_BACKEND ?= 1
+endif
+
 ifeq ($(TARGET_OS),Windows)
 CMAKE_GENERATOR ?= "Visual Studio 16 2019"
 else ifeq ($(TARGET_OS),Linux)
 CMAKE_GENERATOR ?= "CodeBlocks - Ninja"
 else ifeq ($(TARGET_OS),Darwin)
 CMAKE_GENERATOR ?= "Xcode"
+endif
+
+ifeq ($(ENABLE_NGFX_BACKEND),1)
+ifeq ($(TARGET_OS),Windows)
+NGFX_GRAPHICS_BACKEND ?= "NGFX_GRAPHICS_BACKEND_DIRECT3D12"
+else ifeq ($(TARGET_OS),Linux)
+NGFX_GRAPHICS_BACKEND ?= "NGFX_GRAPHICS_BACKEND_VULKAN"
+else ifeq ($(TARGET_OS),Darwin)
+NGFX_GRAPHICS_BACKEND ?= "NGFX_GRAPHICS_BACKEND_METAL"
+endif
+NODEGL_MESON_SETUP_OPTIONS += -Dngfx_graphics_backend=$(NGFX_GRAPHICS_BACKEND)
 endif
 
 ifeq ($(DEBUG),yes)
@@ -257,9 +279,11 @@ ifeq ($(TARGET_OS),$(filter $(TARGET_OS),MinGW-w64 Windows))
 NODEGL_DEPS += renderdoc-install
 endif
 endif
-
+ifeq ($(ENABLE_NGFX_BACKEND), 1)
+NODEGL_DEPS+=ngfx-install
+endif
 nodegl-setup: $(NODEGL_DEPS)
-	($(ACTIVATE) && $(MESON_SETUP) $(NODEGL_DEBUG_OPTS) libnodegl $(BUILDDIR)/libnodegl)
+	($(ACTIVATE) && $(MESON_SETUP) $(NODEGL_MESON_SETUP_OPTIONS) --default-library shared libnodegl $(BUILDDIR)/libnodegl)
 
 pkg-config-install: external-download $(PREFIX_DONE)
 ifeq ($(TARGET_OS),Windows)
@@ -320,6 +344,15 @@ MoltenVK-install: external-download $(PREFIX)
 	install -d $(PREFIX)/lib
 	cp -v external/MoltenVK/Package/Latest/MoltenVK/dylib/macOS/libMoltenVK.dylib $(PREFIX)/lib
 	cp -vr external/MoltenVK/Package/Latest/MoltenVK/include $(PREFIX)
+
+ngfx-install: external-download pkg-config-install shaderc-install $(PREFIX_DONE)
+	bash build_scripts/sync_deps.sh $(TARGET_OS)
+	$(CMAKE) -S external/ngfx -B $(BUILDDIR)/ngfx $(CMAKE_SETUP_OPTIONS) -D$(NGFX_GRAPHICS_BACKEND)=ON && \
+	$(CMAKE) --build $(BUILDDIR)/ngfx $(CMAKE_COMPILE_OPTIONS) && \
+	$(CMAKE) --install $(BUILDDIR)/ngfx $(CMAKE_INSTALL_OPTIONS)
+ifeq ($(NGFX_GRAPHICS_BACKEND), NGFX_GRAPHICS_BACKEND_DIRECT3D12)
+	-(./$(PREFIX)/Scripts/ngfx_compile_shaders_dx12.exe d3dBlitOp)
+endif
 
 #
 # We do not pull meson from pip on MinGW for the same reasons we don't pull
@@ -394,3 +427,5 @@ coverage-xml:
 .PHONY: clean clean_py
 .PHONY: coverage-html coverage-xml
 .PHONY: external-download external-install
+.PHONY: ngfx-install
+.PHONY: ngl-debug-tools
