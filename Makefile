@@ -29,9 +29,6 @@ else
 PREFIX_FULLPATH = $(PWD)/$(PREFIX)
 endif
 
-#
-# User configuration
-#
 DEBUG      ?= no
 COVERAGE   ?= no
 ifeq ($(TARGET_OS),Windows)
@@ -42,6 +39,7 @@ PYTHON     ?= python3
 PIP = PKG_CONFIG_PATH=$(PREFIX_FULLPATH)/lib/pkgconfig LDFLAGS=$(RPATH_LDFLAGS) $(PREFIX)/bin/pip
 endif
 
+TARGET_OS_LOWERCASE = $(shell $(PYTHON) -c "print('$(TARGET_OS)'.lower())" )
 DEBUG_GL    ?= no
 DEBUG_MEM   ?= no
 DEBUG_SCENE ?= no
@@ -100,7 +98,7 @@ MESON_SETUP += -Db_coverage=true
 DEBUG = yes
 endif
 ifeq ($(DEBUG),yes)
-MESON_SETUP += --buildtype=debugoptimized
+MESON_SETUP += --buildtype=debug
 else
 MESON_SETUP += --buildtype=release
 ifneq ($(TARGET_OS),MinGW-w64)
@@ -146,6 +144,9 @@ NODEGL_DEBUG_OPTS-$(DEBUG_GPU_CAPTURE) += gpu_capture
 ifneq ($(NODEGL_DEBUG_OPTS-yes),)
 NODEGL_DEBUG_OPTS = -Ddebug_opts=$(shell echo $(NODEGL_DEBUG_OPTS-yes) | tr ' ' ',')
 endif
+
+NODEGL_SETUP_OPTS = -Dngfx_graphics_backend=$(NGFX_GRAPHICS_BACKEND) -Dngfx_window_backend=$(NGFX_WINDOW_BACKEND)
+
 ifeq ($(DEBUG_GPU_CAPTURE),yes)
 ifeq ($(TARGET_OS),Windows)
 RENDERDOC_DIR = $(shell wslpath -wa .)\external\renderdoc
@@ -168,6 +169,66 @@ ifneq ($(TESTS_SUITE),)
 MESON_TESTS_SUITE_OPTS += --suite $(TESTS_SUITE)
 endif
 
+ifeq ($(TARGET_OS),Windows)
+CMAKE ?= cmake.exe
+else
+CMAKE ?= cmake
+endif
+
+ifeq ($(TARGET_OS),MinGW-w64)
+export ENABLE_NGFX_BACKEND ?= 0
+else
+export ENABLE_NGFX_BACKEND ?= 1
+endif
+
+ifeq ($(TARGET_OS),Windows)
+CMAKE_GENERATOR ?= "Visual Studio 16 2019"
+NGFX_GRAPHICS_BACKEND ?= "NGFX_GRAPHICS_BACKEND_DIRECT3D12"
+NGFX_WINDOW_BACKEND ?= "NGFX_WINDOW_BACKEND_WINDOWS"
+else ifeq ($(TARGET_OS),Linux)
+NGFX_GRAPHICS_BACKEND ?= "NGFX_GRAPHICS_BACKEND_VULKAN"
+NGFX_WINDOW_BACKEND ?= "NGFX_WINDOW_BACKEND_GLFW"
+CMAKE_GENERATOR ?= "CodeBlocks - Ninja"
+else ifeq ($(TARGET_OS),Darwin)
+NGFX_GRAPHICS_BACKEND ?= "NGFX_GRAPHICS_BACKEND_METAL"
+NGFX_WINDOW_BACKEND ?= "NGFX_WINDOW_BACKEND_APPKIT"
+CMAKE_GENERATOR ?= "Xcode"
+endif
+
+ifeq ($(DEBUG),yes)
+CMAKE_BUILD_TYPE = Debug
+CMAKE_BUILD_DIR = cmake-build-debug
+else
+CMAKE_BUILD_TYPE = Release
+CMAKE_BUILD_DIR = cmake-build-release
+endif
+
+CMAKE_SETUP_OPTIONS = -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) -G $(CMAKE_GENERATOR)
+ifeq ($(TARGET_OS),Windows)
+# Set Windows SDK Version
+CMAKE_SYSTEM_VERSION ?= 10.0.18362.0
+CMAKE_SETUP_OPTIONS += -DCMAKE_SYSTEM_VERSION=$(CMAKE_SYSTEM_VERSION)
+# Set VCPKG Directory
+CMAKE_SETUP_OPTIONS += -DVCPKG_DIR='$(VCPKG_DIR)'
+endif
+
+# Set External Directory
+ifeq ($(TARGET_OS),Windows)
+EXTERNAL_DIR = $(shell wslpath -wa external)
+else
+EXTERNAL_DIR = $(PWD)/external
+endif
+
+CMAKE_SETUP_OPTIONS += -DEXTERNAL_DIR='$(EXTERNAL_DIR)'
+
+CMAKE_SETUP = $(CMAKE) -H. -B$(CMAKE_BUILD_DIR) $(CMAKE_SETUP_OPTIONS)
+CMAKE_COMPILE = $(CMAKE) --build $(CMAKE_BUILD_DIR) --config $(CMAKE_BUILD_TYPE) -j8
+ifeq ($(V),1)
+CMAKE_COMPILE += -v
+endif
+CMAKE_INSTALL = $(CMAKE) --install $(CMAKE_BUILD_DIR) --config $(CMAKE_BUILD_TYPE)
+
+
 all: ngl-tools-install pynodegl-utils-install
 	@echo
 	@echo "    Install completed."
@@ -177,7 +238,15 @@ all: ngl-tools-install pynodegl-utils-install
 	@echo
 
 ngl-tools-install: nodegl-install
-	($(ACTIVATE) && $(MESON_SETUP) --backend $(MESON_BACKEND) ngl-tools $(BUILDDIR)/ngl-tools && $(MESON_COMPILE) -C $(BUILDDIR)/ngl-tools && $(MESON_INSTALL) -C $(BUILDDIR)/ngl-tools)
+	($(ACTIVATE) && $(MESON_SETUP) --backend $(MESON_BACKEND) ngl-tools $(BUILDDIR)/ngl-tools)
+ifeq ($(TARGET_OS),Windows)
+ifeq ($(DEBUG),yes)
+	# Set RuntimeLibrary to MultithreadedDLL using a script
+	# Note: Meson doesn't support
+	bash build_scripts/$(TARGET_OS_LOWERCASE)/patch_vcxproj_files.sh --set-runtime-library MultiThreadedDLL $(BUILDDIR)/ngl-tools
+endif
+endif
+	($(ACTIVATE) && $(MESON_COMPILE) -C $(BUILDDIR)/ngl-tools && $(MESON_INSTALL) -C $(BUILDDIR)/ngl-tools)
 
 ngl-debug-tools-install:
 	$(CMAKE) -S ngl-debug-tools -B builddir/ngl-debug-tools -G $(CMAKE_GENERATOR) $(CMAKE_SETUP_OPTIONS) && \
@@ -229,9 +298,19 @@ ifeq ($(TARGET_OS),$(filter $(TARGET_OS),MinGW-w64 Windows))
 NODEGL_DEPS += renderdoc-install
 endif
 endif
-
+ifeq ($(ENABLE_NGFX_BACKEND), 1)
+NODEGL_DEPS+=ngfx-install
+endif
 nodegl-setup: $(NODEGL_DEPS)
-	($(ACTIVATE) && $(MESON_SETUP) --backend $(MESON_BACKEND) $(NODEGL_DEBUG_OPTS) libnodegl $(BUILDDIR)/libnodegl)
+	($(ACTIVATE) && $(MESON_SETUP) --backend $(MESON_BACKEND) $(NODEGL_SETUP_OPTS) $(NODEGL_DEBUG_OPTS) --default-library shared libnodegl $(BUILDDIR)/libnodegl)
+ifeq ($(TARGET_OS),Windows)
+ifeq ($(DEBUG),yes)
+	# Set RuntimeLibrary to MultithreadedDLL
+	bash build_scripts/$(TARGET_OS_LOWERCASE)/patch_vcxproj_files.sh --set-runtime-library MultiThreadedDLL $(BUILDDIR)/libnodegl
+endif
+	# Enable MultiProcessorCompilation
+	bash build_scripts/$(TARGET_OS_LOWERCASE)/patch_vcxproj_files.sh --set-multiprocessor-compilation true $(BUILDDIR)/libnodegl
+endif
 
 pkg-config-install: external-download $(PREFIX_DONE)
 ifeq ($(TARGET_OS),Windows)
@@ -276,6 +355,49 @@ MoltenVK-install: external-download $(PREFIX)
 	install -d $(PREFIX)/lib
 	cp -v external/MoltenVK/Package/Latest/MoltenVK/dylib/macOS/libMoltenVK.dylib $(PREFIX)/lib
 	cp -vr external/MoltenVK/Package/Latest/MoltenVK/include $(PREFIX)
+
+ngfx-install: external-download $(PREFIX_DONE)
+	bash build_scripts/sync_deps.sh $(TARGET_OS)
+ifeq ($(TARGET_OS), Windows)
+	( cd external/ngfx && $(CMAKE_SETUP) -D$(NGFX_GRAPHICS_BACKEND)=ON)
+ifeq ($(DEBUG),yes)
+	# Set RuntimeLibrary to MultithreadedDLL
+	bash build_scripts/$(TARGET_OS_LOWERCASE)/patch_vcxproj_files.sh --set-runtime-library MultiThreadedDLL external/ngfx/$(CMAKE_BUILD_DIR)
+	# Enable MultiProcessorCompilation
+	bash build_scripts/$(TARGET_OS_LOWERCASE)/patch_vcxproj_files.sh --set-multiprocessor-compilation true external/ngfx/$(CMAKE_BUILD_DIR)
+endif
+	( cd external/ngfx && $(CMAKE_COMPILE) && $(CMAKE_INSTALL) --prefix ../$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE) )
+	cp external/$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE)/lib/ngfx.lib $(PREFIX)/Lib
+else ifeq ($(TARGET_OS), Linux)
+	( \
+	  cd external/ngfx && \
+	  $(CMAKE_SETUP) -D$(NGFX_GRAPHICS_BACKEND)=ON && \
+	  $(CMAKE_COMPILE) && \
+	  $(CMAKE_INSTALL) --prefix ../$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE) \
+	)
+	cp external/$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE)/lib/libngfx.so $(PREFIX)/lib
+else ifeq ($(TARGET_OS), Darwin)
+	( \
+	  cd external/ngfx && \
+	  $(CMAKE_SETUP) -D$(NGFX_GRAPHICS_BACKEND)=ON && \
+	  $(CMAKE_COMPILE) && \
+	  $(CMAKE_INSTALL) --prefix ../$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE) \
+	)
+	cp external/$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE)/lib/libngfx.dylib $(PREFIX)/lib
+endif
+ifeq ($(NGFX_GRAPHICS_BACKEND), NGFX_GRAPHICS_BACKEND_DIRECT3D12)
+	-(cd ./external/ngfx && ./$(CMAKE_BUILD_DIR)/$(CMAKE_BUILD_TYPE)/compile_shaders_dx12.exe d3dBlitOp)
+endif
+
+ngl-debug-tools: $(PREFIX_DONE)
+	( cd ngl-debug-tools && $(CMAKE_SETUP) )
+ifeq ($(TARGET_OS), Windows)
+ifeq ($(DEBUG),yes)
+	# Set RuntimeLibrary to MultithreadedDLL
+	bash build_scripts/$(TARGET_OS_LOWERCASE)/patch_vcxproj_files.sh --set-runtime-library MultiThreadedDLL ngl-debug-tools/$(CMAKE_BUILD_DIR)
+endif
+endif
+	( cd ngl-debug-tools && $(CMAKE_COMPILE) )
 
 #
 # We do not pull meson from pip on MinGW for the same reasons we don't pull
@@ -350,3 +472,5 @@ coverage-xml:
 .PHONY: clean clean_py
 .PHONY: coverage-html coverage-xml
 .PHONY: external-download external-install
+.PHONY: ngfx-install
+.PHONY: ngl-debug-tools
