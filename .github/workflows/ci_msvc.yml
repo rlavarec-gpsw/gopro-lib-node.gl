@@ -63,6 +63,7 @@ jobs:
           read -r -d '' COMMANDS << EOM || true
           export VULKAN_SDK='C:\VulkanSDK\${{env.VULKAN_SDK_VERSION}}'
           source build_scripts/windows/set_env.sh
+          bash build_scripts/windows/patch_pkg_config_files.sh
           make -j$(($(nproc)+1))
           EOM
           tmpfile=$(mktemp)
