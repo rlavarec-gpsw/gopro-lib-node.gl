@@ -20,6 +20,7 @@ jobs:
         # is no longer supported
         # See https://github.com/microsoft/vcpkg/issues/16658
         VCPKG_SHADERC_COMMIT_ID: 09a647a5261e981cbbc8219292c838490ed0b06f
+        VULKAN_SDK_VERSION: 1.2.162.1
 
     defaults:
       run:
@@ -57,9 +58,9 @@ jobs:
           sudo apt -y update
           sudo apt -y install build-essential unzip
           pip.exe install meson
-          wget https://sdk.lunarg.com/sdk/download/1.2.162.1/windows/VulkanSDK-1.2.162.1-Installer.exe
-          chmod a+x VulkanSDK-1.2.162.1-Installer.exe
-          ./VulkanSDK-1.2.162.1-Installer.exe /S
+          wget https://sdk.lunarg.com/sdk/download/${{env.VULKAN_SDK_VERSION}}/windows/VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe
+          chmod a+x VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe
+          ./VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe /S
           cd /mnt/c/vcpkg
           ./vcpkg.exe install --triplet ${{env.VCPKG_TRIPLET}} ${{env.VCPKG_INSTALL_PACKAGES}}
 
@@ -72,7 +73,9 @@ jobs:
           cd gopro-lib-node.gl
           # Save the following commands to a variable
           read -r -d '' COMMANDS << EOM || true
+          export VULKAN_SDK='C:\VulkanSDK\${{env.VULKAN_SDK_VERSION}}'
           source build_scripts/windows/set_env.sh
+          bash build_scripts/windows/patch_pkg_config_files.sh
           make -j$(($(nproc)+1))
           EOM
           tmpfile=$(mktemp)
