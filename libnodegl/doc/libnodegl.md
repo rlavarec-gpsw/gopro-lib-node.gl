@@ -292,6 +292,16 @@ Parameter | Flags | Type | Description | Default
 **Source**: [node_circle.c](/libnodegl/node_circle.c)
 
 
+## ColorStats
+
+Parameter | Flags | Type | Description | Default
+--------- | ----- | ---- | ----------- | :-----:
+`texture` |  [`nonull`](#Parameter-flags) | [`node`](#parameter-types) ([Texture2D](#texture2d)) | source texture to compute the color stats from | 
+
+
+**Source**: [node_colorstats.c](/libnodegl/node_colorstats.c)
+
+
 ## Compute
 
 Parameter | Flags | Type | Description | Default

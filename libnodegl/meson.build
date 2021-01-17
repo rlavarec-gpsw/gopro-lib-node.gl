@@ -148,6 +148,7 @@ lib_src = files(
   'node_buffer.c',
   'node_camera.c',
   'node_circle.c',
+  'node_colorstats.c',
   'node_compute.c',
   'node_computeprogram.c',
   'node_filters.c',
@@ -594,6 +595,9 @@ endforeach
 # GLSL to C (header)
 #
 shaders = {
+  'colorstats_init.comp': 'colorstats_init_comp.h',
+  'colorstats_sumscale.comp': 'colorstats_sumscale_comp.h',
+  'colorstats_waveform.comp': 'colorstats_waveform_comp.h',
   'filter_alpha.glsl': 'filter_alpha.h',
   'filter_contrast.glsl': 'filter_contrast.h',
   'filter_exposure.glsl': 'filter_exposure.h',
