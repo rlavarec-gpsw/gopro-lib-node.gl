@@ -37,7 +37,7 @@ building and running the complete `node.gl` stack.
 ## Quick user installation on Windows (MSVC toolchain)
 
 - Install [Python](https://www.python.org/downloads/windows/) 3.x using the Windows Installer
-- Install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/) Community 2019 or greater and make sure the
+- Install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/) 2019 or greater and make sure the
 following components are included:
     - Desktop development with C++
     - MSVC - VS 2019 C++ x64/x86 build tools
