@@ -1,14 +1,13 @@
 #!/usr/bin/bash
 
-if [[ ! -v VCPKG_DIR ]]; then
+if [[ -z "${VCPKG_DIR}" ]]; then
   export VCPKG_DIR='C:\vcpkg'
 fi
-
-CURRENT_DIR=`wslpath -wa .`
+export CURRENT_DIR=`wslpath -wa .`
 export PKG_CONFIG=$CURRENT_DIR'\venv\Scripts\pkgconf.exe'
 export TARGET_OS=Windows
-
-export DEBUG_GPU_CAPTURE=yes
+export DEBUG=yes
+export NGFX_GRAPHICS_BACKEND=NGFX_GRAPHICS_BACKEND_DIRECT3D12
 
 export PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1
 export PKG_CONFIG_ALLOW_SYSTEM_LIBS=1
