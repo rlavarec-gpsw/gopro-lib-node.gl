@@ -21,11 +21,12 @@
 
 TAR  ?= tar
 CURL ?= curl
+UNZIP ?= unzip
 
 MOLTENVK_VERSION ?= 1.1.1
 SHADERC_VERSION  ?= 2020.3
-SXPLAYER_VERSION ?= 9.7.0
-PKGCONF_VERSION ?= 1.7.3
+SXPLAYER_COMMIT_ID ?= d2e76248e3e35f0e2f53fbccb5ee3b03e78a7498
+PKGCONF_COMMIT_ID ?= dcf529b83d621ed09e99e41fc35fdffd068bd87a
 RENDERDOC_VERSION ?= 1.12
 
 DEPENDENCIES = sxplayer
@@ -44,13 +45,17 @@ endif
 DEPENDENCIES += renderdoc
 endif
 
+ifeq ($(ENABLE_NGFX_BACKEND),1)
+DEPENDENCIES += ngfx
+endif
+
 all: $(DEPENDENCIES)
 
 MoltenVK: MoltenVK-$(MOLTENVK_VERSION)
 	ln -snf $< $@
 
-MoltenVK-$(MOLTENVK_VERSION): MoltenVK-$(MOLTENVK_VERSION).tar.gz
-	$(TAR) xf $<
+MoltenVK-$(MOLTENVK_VERSION): | MoltenVK-$(MOLTENVK_VERSION).tar.gz
+	$(TAR) xf MoltenVK-$(MOLTENVK_VERSION).tar.gz
 
 MoltenVK-$(MOLTENVK_VERSION).tar.gz:
 	$(CURL) -L https://github.com/KhronosGroup/MoltenVK/archive/v$(MOLTENVK_VERSION).tar.gz -o $@
@@ -58,8 +63,8 @@ MoltenVK-$(MOLTENVK_VERSION).tar.gz:
 shaderc: shaderc-$(SHADERC_VERSION)
 	ln -snf $< $@
 
-shaderc-$(SHADERC_VERSION): shaderc-$(SHADERC_VERSION).tar.gz
-	$(TAR) xf $<
+shaderc-$(SHADERC_VERSION): | shaderc-$(SHADERC_VERSION).tar.gz
+	$(TAR) xf shaderc-$(SHADERC_VERSION).tar.gz
 
 shaderc-$(SHADERC_VERSION).tar.gz:
 	$(CURL) -L https://github.com/google/shaderc/archive/v$(SHADERC_VERSION).tar.gz -o $@
@@ -74,27 +79,27 @@ shaderc-$(SHADERC_VERSION).tar.gz:
 # The `touch` command makes sure the source target directory is more recent
 # than the prerequisite directory of the sxplayer rule. If this isn't true, the
 # symlink will be re-recreated on the next `make` call
-sxplayer: sxplayer-$(SXPLAYER_VERSION)
+sxplayer: sxplayer-$(SXPLAYER_COMMIT_ID)
 ifneq ($(TARGET_OS),$(filter $(TARGET_OS),MinGW-w64 Windows))
 	ln -snf $< $@
 else
 	cp -r $< $@
 endif
 
-sxplayer-$(SXPLAYER_VERSION): sxplayer-$(SXPLAYER_VERSION).tar.gz
-	$(TAR) -xf $<
+sxplayer-$(SXPLAYER_COMMIT_ID): | sxplayer-$(SXPLAYER_COMMIT_ID).zip
+	$(UNZIP) sxplayer-$(SXPLAYER_COMMIT_ID).zip
 
-sxplayer-$(SXPLAYER_VERSION).tar.gz:
-	$(CURL) -L https://github.com/Stupeflix/sxplayer/archive/v$(SXPLAYER_VERSION).tar.gz -o $@
+sxplayer-$(SXPLAYER_COMMIT_ID).zip:
+	$(CURL) -L https://github.com/jmoguillansky-gpsw/sxplayer/archive/$(SXPLAYER_COMMIT_ID).zip -o $@
 
-pkgconf: pkgconf-$(PKGCONF_VERSION)
+pkgconf: pkgconf-$(PKGCONF_COMMIT_ID)
 	cp -r $< $@
 
-pkgconf-$(PKGCONF_VERSION): pkgconf-$(PKGCONF_VERSION).tar.xz
-	$(TAR) -xf $<
+pkgconf-$(PKGCONF_COMMIT_ID): | pkgconf-$(PKGCONF_COMMIT_ID).zip
+	$(UNZIP) pkgconf-$(PKGCONF_COMMIT_ID).zip
 
-pkgconf-$(PKGCONF_VERSION).tar.xz:
-	$(CURL) -L https://distfiles.dereferenced.org/pkgconf/$@ -o $@
+pkgconf-$(PKGCONF_COMMIT_ID).zip:
+	$(CURL) -L https://codeload.github.com/pkgconf/pkgconf/zip/$(PKGCONF_COMMIT_ID) -o $@
 
 renderdoc: $(RENDERDOC_TARGET)
 ifneq ($(TARGET_OS),$(filter $(TARGET_OS),MinGW-w64 Windows))
@@ -111,5 +116,8 @@ RenderDoc_$(RENDERDOC_VERSION)_64.zip renderdoc_$(RENDERDOC_VERSION).tar.gz:
 
 renderdoc_$(RENDERDOC_VERSION): renderdoc_$(RENDERDOC_VERSION).tar.gz
 	$(TAR) -xf $<
+
+ngfx:
+	git clone https://github.com/gopro/ngfx.git -b develop
 
 .PHONY: all
