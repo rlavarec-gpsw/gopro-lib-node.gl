@@ -21,11 +21,12 @@
 
 TAR  ?= tar
 CURL ?= curl
+UNZIP ?= unzip
 
 MOLTENVK_VERSION ?= 1.1.1
 SHADERC_VERSION  ?= 2020.3
 SXPLAYER_VERSION ?= 9.8.1
-PKGCONF_VERSION ?= 1.7.3
+PKGCONF_VERSION ?= 1.7.4
 RENDERDOC_VERSION ?= 1.12
 
 DEPENDENCIES = sxplayer
@@ -42,6 +43,10 @@ RENDERDOC_TARGET = renderdoc_$(RENDERDOC_VERSION)
 endif
 DEPENDENCIES += renderdoc
 endif
+endif
+
+ifeq ($(ENABLE_NGFX_BACKEND),1)
+DEPENDENCIES += ngfx
 endif
 
 all: $(DEPENDENCIES)
@@ -104,12 +109,15 @@ else
 endif
 
 RenderDoc_$(RENDERDOC_VERSION)_64: RenderDoc_$(RENDERDOC_VERSION)_64.zip
-	unzip -q -o $<
+	$(UNZIP) -q -o $<
 
 RenderDoc_$(RENDERDOC_VERSION)_64.zip renderdoc_$(RENDERDOC_VERSION).tar.gz:
 	$(CURL) -L https://renderdoc.org/stable/$(RENDERDOC_VERSION)/$@ -o $@
 
 renderdoc_$(RENDERDOC_VERSION): renderdoc_$(RENDERDOC_VERSION).tar.gz
 	$(TAR) -xf $<
+
+ngfx:
+	git clone https://github.com/gopro/ngfx.git -b develop
 
 .PHONY: all
