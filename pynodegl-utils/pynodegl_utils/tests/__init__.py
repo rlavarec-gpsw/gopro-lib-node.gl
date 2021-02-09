@@ -23,6 +23,15 @@
 import os
 import os.path as op
 import sys
+import platform
+
+
+if platform.system() == 'Windows':
+    env_path = os.getenv('PATH').split(';')
+    for p in env_path:
+        if op.exists(p):
+            os.add_dll_directory(p)
+
 
 from pynodegl_utils.com import load_script
 
