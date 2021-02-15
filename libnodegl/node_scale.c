@@ -64,13 +64,15 @@ static int scale_init(struct ngl_node *node)
     return 0;
 }
 
-static int update_factors(struct ngl_node *node)
+static int update_factors(struct ngl_node *node, const struct param_value *value)
 {
     struct scale_priv *s = node->priv_data;
     if (s->anim) {
         LOG(ERROR, "updating factors while the animation is set is unsupported");
         return NGL_ERROR_INVALID_USAGE;
     }
+    const float *factors = value->data.ptr;
+    memcpy(s->factors, factors, sizeof(s->factors));
     update_trf_matrix(node, s->factors);
     return 0;
 }
@@ -99,7 +101,7 @@ static const struct node_param scale_params[] = {
     {"factors", NGLI_PARAM_TYPE_VEC3, OFFSET(factors),
                 {.vec={1.0, 1.0, 1.0}},
                 .flags=NGLI_PARAM_FLAG_ALLOW_LIVE_CHANGE,
-                .update_func=update_factors,
+                .set_func=update_factors,
                 .desc=NGLI_DOCSTRING("scaling factors (how much to scale on each axis)")},
     {"anchor",  NGLI_PARAM_TYPE_VEC3, OFFSET(anchor),
                 .desc=NGLI_DOCSTRING("vector to the center point of the scale")},

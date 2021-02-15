@@ -65,13 +65,14 @@ static int rotatequat_init(struct ngl_node *node)
     return 0;
 }
 
-static int update_quat(struct ngl_node *node)
+static int update_quat(struct ngl_node *node, const struct param_value *value)
 {
     struct rotatequat_priv *s = node->priv_data;
     if (s->anim) {
         LOG(ERROR, "updating quat while the animation is set is unsupported");
         return NGL_ERROR_INVALID_USAGE;
     }
+    memcpy(s->quat, value->data.ptr, sizeof(s->quat));
     update_trf_matrix(node, s->quat);
     return 0;
 }
@@ -99,7 +100,7 @@ static const struct node_param rotatequat_params[] = {
                .desc=NGLI_DOCSTRING("scene to rotate")},
     {"quat",   NGLI_PARAM_TYPE_VEC4, OFFSET(quat), {.vec=NGLI_QUAT_IDENTITY},
                .flags=NGLI_PARAM_FLAG_ALLOW_LIVE_CHANGE,
-               .update_func=update_quat,
+               .set_func=update_quat,
                .desc=NGLI_DOCSTRING("quaternion")},
     {"anchor", NGLI_PARAM_TYPE_VEC3, OFFSET(anchor), {.vec={0.0, 0.0, 0.0}},
                .desc=NGLI_DOCSTRING("vector to the center point of the rotation")},

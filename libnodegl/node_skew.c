@@ -76,13 +76,14 @@ static int skew_init(struct ngl_node *node)
     return 0;
 }
 
-static int update_angles(struct ngl_node *node)
+static int update_angles(struct ngl_node *node, const struct param_value *value)
 {
     struct skew_priv *s = node->priv_data;
     if (s->anim) {
         LOG(ERROR, "updating angles while the animation is set is unsupported");
         return NGL_ERROR_INVALID_USAGE;
     }
+    memcpy(s->angles, value->data.ptr, sizeof(s->angles));
     update_trf_matrix(node, s->angles);
     return 0;
 }
@@ -108,9 +109,19 @@ static const struct node_param skew_params[] = {
     {"child",  NGLI_PARAM_TYPE_NODE, OFFSET(trf.child),
                .flags=NGLI_PARAM_FLAG_NON_NULL,
                .desc=NGLI_DOCSTRING("scene to skew")},
+<<<<<<< HEAD
     {"angles", NGLI_PARAM_TYPE_VEC3,  OFFSET(angles),
                .flags=NGLI_PARAM_FLAG_ALLOW_LIVE_CHANGE,
                .update_func=update_angles,
+||||||| parent of 2a2ab821 (WIP)
+    {"angles", PARAM_TYPE_VEC3,  OFFSET(angles),
+               .flags=PARAM_FLAG_ALLOW_LIVE_CHANGE,
+               .update_func=update_angles,
+=======
+    {"angles", PARAM_TYPE_VEC3,  OFFSET(angles),
+               .flags=PARAM_FLAG_ALLOW_LIVE_CHANGE,
+               .set_func=update_angles,
+>>>>>>> 2a2ab821 (WIP)
                .desc=NGLI_DOCSTRING("skewing angles, only components forming a plane opposite to `axis` should be set")},
     {"axis",   NGLI_PARAM_TYPE_VEC3, OFFSET(axis), {.vec={1.0, 0.0, 0.0}},
                .desc=NGLI_DOCSTRING("skew axis")},

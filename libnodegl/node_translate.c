@@ -21,6 +21,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 #include "log.h"
 #include "nodegl.h"
 #include "nodes.h"
@@ -40,13 +41,14 @@ static void update_trf_matrix(struct ngl_node *node, const float *vec)
     ngli_mat4_translate(trf->matrix, vec[0], vec[1], vec[2]);
 }
 
-static int update_vector(struct ngl_node *node)
+static int update_vector(struct ngl_node *node, const struct param_value *value)
 {
     struct translate_priv *s = node->priv_data;
     if (s->anim) {
         LOG(ERROR, "updating vector while the animation is set is unsupported");
         return NGL_ERROR_INVALID_USAGE;
     }
+    memcpy(s->vector, value->data.ptr, sizeof(s->vector));
     update_trf_matrix(node, s->vector);
     return 0;
 }
@@ -82,7 +84,7 @@ static const struct node_param translate_params[] = {
                .desc=NGLI_DOCSTRING("scene to translate")},
     {"vector", NGLI_PARAM_TYPE_VEC3, OFFSET(vector),
                .flags=NGLI_PARAM_FLAG_ALLOW_LIVE_CHANGE,
-               .update_func=update_vector,
+               .set_func=update_vector,
                .desc=NGLI_DOCSTRING("translation vector")},
     {"anim",   NGLI_PARAM_TYPE_NODE, OFFSET(anim),
                .node_types=(const int[]){NGL_NODE_ANIMATEDVEC3, NGL_NODE_STREAMEDVEC3, -1},

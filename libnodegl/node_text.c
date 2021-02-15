@@ -111,9 +111,27 @@ static const struct param_choices halign_choices = {
     }
 };
 
-static int set_live_changed(struct ngl_node *node)
+static int set_live_changed(struct ngl_node *node, const struct param_value *value)
 {
     struct text_priv *s = node->priv_data;
+    char *dup = ngli_strdup(value->str);
+    if (!dup)
+        return NGL_ERROR_MEMORY;
+    ngli_freep(&s->text);
+    s->text = dup;
+    s->live_changed = 1;
+    return 0;
+}
+
+static int set_live_aspect_ratio(struct ngl_node *node, const struct param_value *value)
+{
+    struct text_priv *s = node->priv_data;
+    if (!value->r[1]) {
+        LOG(ERROR, "invalid aspect ratio (%d/%d)", value->r[0], value->r[1]);
+        return NGL_ERROR_INVALID_ARG;
+    }
+    s->aspect_ratio[0] = value->r[0];
+    s->aspect_ratio[1] = value->r[1];
     s->live_changed = 1;
     return 0;
 }
@@ -122,7 +140,7 @@ static int set_live_changed(struct ngl_node *node)
 static const struct node_param text_params[] = {
     {"text",         NGLI_PARAM_TYPE_STR, OFFSET(text), {.str=""},
                      .flags=NGLI_PARAM_FLAG_ALLOW_LIVE_CHANGE | NGLI_PARAM_FLAG_NON_NULL,
-                     .update_func=set_live_changed,
+                     .set_func=set_live_changed,
                      .desc=NGLI_DOCSTRING("text string to rasterize")},
     {"fg_color",     NGLI_PARAM_TYPE_VEC4, OFFSET(fg_color), {.vec={1.0, 1.0, 1.0, 1.0}},
                      .flags=NGLI_PARAM_FLAG_ALLOW_LIVE_CHANGE,
@@ -148,7 +166,7 @@ static const struct node_param text_params[] = {
                      .desc=NGLI_DOCSTRING("horizontal alignment of the text in the box")},
     {"aspect_ratio", NGLI_PARAM_TYPE_RATIONAL, OFFSET(aspect_ratio),
                      .flags=NGLI_PARAM_FLAG_ALLOW_LIVE_CHANGE,
-                     .update_func=set_live_changed,
+                     .set_func=set_live_changed,
                      .desc=NGLI_DOCSTRING("box aspect ratio")},
     {NULL}
 };

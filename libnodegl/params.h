@@ -70,6 +70,26 @@ struct param_choices {
     const struct param_const consts[];
 };
 
+struct param_value {
+    int type;
+    union {
+        int i;
+        unsigned u;
+        int64_t i64;
+        double dbl;
+        const char *str;
+        struct {
+            const void *ptr;
+            int size;
+        } data;
+        struct {
+            const char *key;
+            struct ngl_node *value;
+        } dict;
+        int r[2];
+    };
+};
+
 struct ngl_node;
 
 #define NGLI_PARAM_FLAG_NON_NULL (1<<0)
@@ -95,7 +115,8 @@ struct node_param {
     const int *node_types;
     const char *desc;
     const struct param_choices *choices;
-    int (*update_func)(struct ngl_node *node);
+    int (*add_func)(struct ngl_node *node, int nb_elems, void *elems);
+    int (*set_func)(struct ngl_node *node, const struct param_value *value);
 };
 
 int ngli_params_get_select_val(const struct param_const *consts, const char *s, int *dst);
@@ -104,6 +125,7 @@ int ngli_params_get_flags_val(const struct param_const *consts, const char *s, i
 char *ngli_params_get_flags_str(const struct param_const *consts, int val);
 const struct node_param *ngli_params_find(const struct node_param *params, const char *key);
 void ngli_params_bstr_print_val(struct bstr *b, uint8_t *base_ptr, const struct node_param *par);
+int ngli_params_set_value(struct param_value *value, const struct node_param *par, va_list *ap);
 int ngli_params_set(uint8_t *base_ptr, const struct node_param *par, va_list *ap);
 int ngli_params_vset(uint8_t *base_ptr, const struct node_param *par, ...);
 int ngli_params_set_defaults(uint8_t *base_ptr, const struct node_param *params);

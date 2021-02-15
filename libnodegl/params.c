@@ -331,9 +331,9 @@ static void node_hmap_free(void *user_arg, void *data)
     ngl_node_unrefp(&node);
 }
 
-int ngli_params_set(uint8_t *base_ptr, const struct node_param *par, va_list *ap)
+int ngli_params_set_value(struct param_value *value, const struct node_param *par, va_list *ap)
 {
-    uint8_t *dstp = base_ptr + par->offset;
+    value->type = par->type;
 
     switch (par->type) {
         case NGLI_PARAM_TYPE_SELECT: {
@@ -345,7 +345,7 @@ int ngli_params_set(uint8_t *base_ptr, const struct node_param *par, va_list *ap
                 return ret;
             }
             LOG(VERBOSE, "set %s to %s (%d)", par->key, s, v);
-            memcpy(dstp, &v, sizeof(v));
+            value->i = v;
             break;
         }
         case NGLI_PARAM_TYPE_FLAGS: {
@@ -357,7 +357,7 @@ int ngli_params_set(uint8_t *base_ptr, const struct node_param *par, va_list *ap
                 return ret;
             }
             LOG(VERBOSE, "set %s to %s (%d)", par->key, s, v);
-            memcpy(dstp, &v, sizeof(v));
+            value->i = v;
             break;
         }
         case NGLI_PARAM_TYPE_BOOL:
@@ -366,13 +366,166 @@ int ngli_params_set(uint8_t *base_ptr, const struct node_param *par, va_list *ap
             if (par->type == NGLI_PARAM_TYPE_BOOL && v != -1)
                 v = !!v;
             LOG(VERBOSE, "set %s to %d", par->key, v);
-            memcpy(dstp, &v, sizeof(v));
+            value->i = v;
             break;
         }
         case NGLI_PARAM_TYPE_UINT: {
             unsigned v = va_arg(*ap, unsigned);
             LOG(VERBOSE, "set %s to %u", par->key, v);
-            memcpy(dstp, &v, sizeof(v));
+            value->u = v;
+            break;
+        }
+        case NGLI_PARAM_TYPE_DBL: {
+            double v = va_arg(*ap, double);
+            LOG(VERBOSE, "set %s to %g", par->key, v);
+            value->dbl = v;
+            break;
+        }
+        case NGLI_PARAM_TYPE_STR: {
+            const char *arg_str = va_arg(*ap, const char *);
+            value->str = arg_str;
+            LOG(VERBOSE, "set %s to \"%s\"", par->key, arg_str ? arg_str : "NULL");
+            break;
+        }
+        case NGLI_PARAM_TYPE_DATA: {
+            int size = va_arg(*ap, int);
+            void *data = va_arg(*ap, void *);
+            LOG(VERBOSE, "set %s to %p (of size %d)", par->key, data, size);
+            value->data.ptr = data;
+            value->data.size = size;
+        }
+        case NGLI_PARAM_TYPE_IVEC2: {
+            const int *iv = va_arg(*ap, const int *);
+            LOG(VERBOSE, "set %s to (%d,%d)", par->key, NGLI_ARG_VEC2(iv));
+            value->data.ptr = iv;
+            value->data.size = 2 * sizeof(*iv);
+            break;
+        }
+        case NGLI_PARAM_TYPE_IVEC3: {
+            const int *iv = va_arg(*ap, const int *);
+            LOG(VERBOSE, "set %s to (%d,%d,%d)", par->key, NGLI_ARG_VEC3(iv));
+            value->data.ptr = iv;
+            value->data.size = 3 * sizeof(*iv);
+            break;
+        }
+        case NGLI_PARAM_TYPE_IVEC4: {
+            const int *iv = va_arg(*ap, const int *);
+            LOG(VERBOSE, "set %s to (%d,%d,%d,%d)", par->key, NGLI_ARG_VEC4(iv));
+            value->data.ptr = iv;
+            value->data.size = 4 * sizeof(*iv);
+            break;
+        }
+        case NGLI_PARAM_TYPE_UIVEC2: {
+            const unsigned *uv = va_arg(*ap, const unsigned *);
+            LOG(VERBOSE, "set %s to (%u,%u)", par->key, NGLI_ARG_VEC2(uv));
+            value->data.ptr = uv;
+            value->data.size = 2 * sizeof(*uv);
+            break;
+        }
+        case NGLI_PARAM_TYPE_UIVEC3: {
+            const unsigned *uv = va_arg(*ap, const unsigned *);
+            LOG(VERBOSE, "set %s to (%u,%u,%u)", par->key, NGLI_ARG_VEC3(uv));
+            value->data.ptr = uv;
+            value->data.size = 3 * sizeof(*uv);
+            break;
+        }
+        case NGLI_PARAM_TYPE_UIVEC4: {
+            const unsigned *uv = va_arg(*ap, const unsigned *);
+            LOG(VERBOSE, "set %s to (%u,%u,%u,%u)", par->key, NGLI_ARG_VEC4(uv));
+            value->data.ptr = uv;
+            value->data.size = 4 * sizeof(*uv);
+            break;
+        }
+        case NGLI_PARAM_TYPE_VEC2: {
+            const float *v = va_arg(*ap, const float *);
+            LOG(VERBOSE, "set %s to (%g,%g)", par->key, NGLI_ARG_VEC2(v));
+            value->data.ptr = v;
+            value->data.size = 2 * sizeof(*v);
+            break;
+        }
+        case NGLI_PARAM_TYPE_VEC3: {
+            const float *v = va_arg(*ap, const float *);
+            LOG(VERBOSE, "set %s to (%g,%g,%g)", par->key, NGLI_ARG_VEC3(v));
+            value->data.ptr = v;
+            value->data.size = 3 * sizeof(*v);
+            break;
+        }
+        case NGLI_PARAM_TYPE_VEC4: {
+            const float *v = va_arg(*ap, const float *);
+            LOG(VERBOSE, "set %s to (%g,%g,%g,%g)", par->key, NGLI_ARG_VEC4(v));
+            value->data.ptr = v;
+            value->data.size = 4 * sizeof(*v);
+            break;
+        }
+        case NGLI_PARAM_TYPE_MAT4: {
+            const float *v = va_arg(*ap, const float *);
+            LOG(VERBOSE,
+                "set %s to (%g,%g,%g,%g %g,%g,%g,%g %g,%g,%g,%g %g,%g,%g,%g)",
+                par->key, NGLI_ARG_MAT4(v));
+            value->data.ptr = v;
+            value->data.size = 4 * 4 * sizeof(*v);
+            break;
+        }
+        case NGLI_PARAM_TYPE_NODE: {
+            struct ngl_node *node = va_arg(*ap, struct ngl_node *);
+            if (!allowed_node(node, par->node_types)) {
+                LOG(ERROR, "%s (%s) is not an allowed type for %s",
+                    node->label, node->class->name, par->key);
+                return NGL_ERROR_INVALID_ARG;
+            }
+            LOG(VERBOSE, "set %s to %s", par->key, node->label);
+            value->data.ptr = node;
+            break;
+        }
+        case NGLI_PARAM_TYPE_NODEDICT: {
+            const char *name = va_arg(*ap, const char *);
+            struct ngl_node *node = va_arg(*ap, struct ngl_node *);
+            if (node && !allowed_node(node, par->node_types)) {
+                LOG(ERROR, "%s (%s) is not an allowed type for %s",
+                    node->label, node->class->name, par->key);
+                return NGL_ERROR_INVALID_ARG;
+            }
+            LOG(VERBOSE, "set %s to (%s,%p)", par->key, name, node);
+            value->dict.key = name;
+            value->dict.value = node;
+            break;
+        }
+        case NGLI_PARAM_TYPE_RATIONAL: {
+            const int num = va_arg(*ap, int);
+            const int den = va_arg(*ap, int);
+            LOG(VERBOSE, "set %s to %d/%d", par->key, num, den);
+            value->r[0] = num;
+            value->r[1] = den;
+            break;
+        }
+    }
+    return 0;
+}
+
+int ngli_params_set(uint8_t *base_ptr, const struct node_param *par, va_list *ap)
+{
+    struct param_value value = {0};
+    int ret = ngli_params_set_value(&value, par, ap);
+    if (ret < 0)
+        return ret;
+
+    uint8_t *dstp = base_ptr + par->offset;
+    switch (value.type) {
+        case NGLI_PARAM_TYPE_SELECT: {
+            memcpy(dstp, &value.i, sizeof(value.i));
+            break;
+        }
+        case NGLI_PARAM_TYPE_FLAGS: {
+            memcpy(dstp, &value.i, sizeof(value.i));
+            break;
+        }
+        case NGLI_PARAM_TYPE_BOOL:
+        case NGLI_PARAM_TYPE_INT: {
+            memcpy(dstp, &value.i, sizeof(value.i));
+            break;
+        }
+        case NGLI_PARAM_TYPE_UINT: {
+            memcpy(dstp, &value.u, sizeof(value.u));
             break;
         }
         case NGLI_PARAM_TYPE_DBL: {
@@ -383,8 +536,8 @@ int ngli_params_set(uint8_t *base_ptr, const struct node_param *par, va_list *ap
         }
         case NGLI_PARAM_TYPE_STR: {
             char *s = NULL;
-            const char *arg_str = va_arg(*ap, const char *);
-            if (!arg_str)
+            const char *arg_str = NULL;
+            if (!value.str)
                 arg_str = par->def_value.str;
             if (arg_str) {
                 s = ngli_strdup(arg_str);
