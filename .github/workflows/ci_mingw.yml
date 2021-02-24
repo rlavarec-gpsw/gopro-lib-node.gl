@@ -31,4 +31,4 @@ jobs:
       - name: Build
         run: |
           $env:CHERE_INVOKING = 'yes'  # Preserve the current working directory
-          C:\msys64\usr\bin\bash -lc "make -j$(($(nproc)+1)) TARGET_OS=MinGW-w64"
+          C:\msys64\usr\bin\bash -lc "PKG_CONFIG_PATH=`$PKG_CONFIG_PATH:`$PWD/venv/lib/pkgconfig && make TARGET_OS=MinGW-w64"
