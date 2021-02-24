@@ -39,6 +39,12 @@ else
 PYTHON     ?= python$(if $(shell which python$(PYTHON_MAJOR) 2> /dev/null),$(PYTHON_MAJOR),)
 endif
 
+ifeq ($(TARGET_OS),Windows)
+PIP = $(PREFIX)/Scripts/pip.exe
+else
+PIP = $(PREFIX)/bin/pip
+endif
+TARGET_OS_LOWERCASE = $(shell $(PYTHON) -c "print('$(TARGET_OS)'.lower())" )
 DEBUG_GL    ?= no
 DEBUG_MEM   ?= no
 DEBUG_SCENE ?= no
@@ -64,12 +70,12 @@ $(error "Python $(PYTHON_MAJOR) not found")
 endif
 
 ifeq ($(TARGET_OS),Windows)
-ACTIVATE = $(CMD) $(VCVARS64) \&\& "$(PREFIX_FULLPATH)\\Scripts\\activate.bat"
+ACTIVATE = "$(PREFIX_FULLPATH)\\Scripts\\activate.bat"
 else
-ACTIVATE = . $(PREFIX_FULLPATH)/bin/activate
+ACTIVATE = $(PREFIX_FULLPATH)/bin/activate
 endif
 
-RPATH_LDFLAGS ?= -Wl,-rpath,$(PREFIX_FULLPATH)/lib
+RPATH_LDFLAGS = -Wl,-rpath,$(PREFIX_FULLPATH)/lib
 
 ifeq ($(TARGET_OS),Windows)
 MESON = meson.exe
@@ -162,11 +168,7 @@ ngl-tools-install: nodegl-install
 	$(MESON_COMPILE) -C $(MESON_BUILDDIR)/ngl-tools && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/ngl-tools
 
 pynodegl-utils-install: pynodegl-utils-deps-install
-ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& pip -v install -e pynodegl-utils)
-else
-	($(ACTIVATE) && pip -v install -e ./pynodegl-utils)
-endif
+	($(PIP) install -e ./pynodegl-utils)
 
 #
 # pynodegl-install is in dependency to prevent from trying to install pynodegl
@@ -189,27 +191,13 @@ endif
 # decorator and other related utils.
 #
 pynodegl-utils-deps-install: pynodegl-install
-ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& pip install -r pynodegl-utils\\requirements.txt)
-else ifneq ($(TARGET_OS),MinGW-w64)
-	($(ACTIVATE) && pip install -r ./pynodegl-utils/requirements.txt)
-endif
+	($(PIP) install -r ./pynodegl-utils/requirements.txt)
 
 pynodegl-install: pynodegl-deps-install
-ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& pip -v install -e .\\pynodegl)
-	$(CMD) xcopy /Y $(MESON_BUILDDIR)\\sxplayer\\*.dll pynodegl\\.
-	$(CMD) xcopy /Y /C $(MESON_BUILDDIR)\\libnodegl\\*.dll pynodegl\\.
-else
-	($(ACTIVATE) && PKG_CONFIG_PATH=$(PREFIX_FULLPATH)/lib/pkgconfig LDFLAGS=$(RPATH_LDFLAGS) pip -v install -e ./pynodegl)
-endif
+	($(PIP) -v install -e ./pynodegl)
 
-pynodegl-deps-install: $(PREFIX) nodegl-install
-ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& pip install -r pynodegl\\requirements.txt)
-else
-	($(ACTIVATE) && pip install -r ./pynodegl/requirements.txt)
-endif
+pynodegl-deps-install: $(PREFIX_DONE) nodegl-install
+	($(PIP) install -r ./pynodegl/requirements.txt)
 
 nodegl-install: nodegl-setup
 	($(MESON_COMPILE) -C $(MESON_BUILDDIR)/libnodegl && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/libnodegl)
@@ -235,10 +223,10 @@ external-download:
 #
 $(PREFIX_DONE):
 ifeq ($(TARGET_OS),Windows)
-	($(CMD) $(PYTHON) -m venv $(PREFIX))
-	($(ACTIVATE) \&\& pip install meson ninja)
+	($(PYTHON) -m venv $(PREFIX))
+	(mkdir $(PREFIX)/Lib/pkgconfig)
 else ifeq ($(TARGET_OS),MinGW-w64)
-	$(PYTHON) -m venv --system-site-packages $(PREFIX)
+	$(PYTHON) -m venv --system-site-packages  $(PREFIX)
 else
 	$(PYTHON) -m venv $(PREFIX)
 	($(ACTIVATE) && pip install meson ninja)
@@ -286,9 +274,9 @@ clean: clean_py
 # We don't use `meson coverage` here because of
 # https://github.com/mesonbuild/meson/issues/7895
 coverage-html:
-	($(ACTIVATE) && ninja -C $(MESON_BUILDDIR)/libnodegl coverage-html)
+	(ninja -C $(MESON_BUILDDIR)/libnodegl coverage-html)
 coverage-xml:
-	($(ACTIVATE) && ninja -C $(MESON_BUILDDIR)/libnodegl coverage-xml)
+	(ninja -C $(MESON_BUILDDIR)/libnodegl coverage-xml)
 
 .PHONY: all
 .PHONY: ngl-tools-install
@@ -300,3 +288,5 @@ coverage-xml:
 .PHONY: clean clean_py
 .PHONY: coverage-html coverage-xml
 .PHONY: external-download
+
+#
