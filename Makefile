@@ -132,6 +132,8 @@ ifneq ($(TESTS_SUITE),)
 MESON_TESTS_SUITE_OPTS += --suite $(TESTS_SUITE)
 endif
 
+MESON_BUILDDIR ?= builddir
+
 all: ngl-tools-install pynodegl-utils-install
 	@echo
 	@echo "    Install completed."
@@ -151,10 +153,10 @@ endif
 
 ngl-tools-install: nodegl-install
 ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& $(MESON_SETUP) ngl-tools builddir\\ngl-tools \&\& $(MESON_COMPILE) -C builddir\\ngl-tools \&\& $(MESON_INSTALL) -C builddir\\ngl-tools)
-	$(CMD) xcopy /Y builddir\\ngl-tools\\*.dll "$(PREFIX_FULLPATH)\\Scripts\\."
+	($(ACTIVATE) \&\& $(MESON_SETUP) ngl-tools $(MESON_BUILDDIR)\\ngl-tools \&\& $(MESON_COMPILE) -C $(MESON_BUILDDIR)\\ngl-tools \&\& $(MESON_INSTALL) -C $(MESON_BUILDDIR)\\ngl-tools)
+	$(CMD) xcopy /Y $(MESON_BUILDDIR)\\ngl-tools\\*.dll "$(PREFIX_FULLPATH)\\Scripts\\."
 else
-	($(ACTIVATE) && $(MESON_SETUP) ngl-tools builddir/ngl-tools && $(MESON_COMPILE) -C builddir/ngl-tools && $(MESON_INSTALL) -C builddir/ngl-tools)
+	($(ACTIVATE) && $(MESON_SETUP) ngl-tools $(MESON_BUILDDIR)/ngl-tools && $(MESON_COMPILE) -C $(MESON_BUILDDIR)/ngl-tools && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/ngl-tools)
 endif
 
 pynodegl-utils-install: pynodegl-utils-deps-install
@@ -192,8 +194,8 @@ endif
 pynodegl-install: pynodegl-deps-install
 ifeq ($(TARGET_OS),Windows)
 	($(ACTIVATE) \&\& pip -v install -e .\\pynodegl)
-	$(CMD) xcopy /Y builddir\\sxplayer\\*.dll pynodegl\\.
-	$(CMD) xcopy /Y /C builddir\\libnodegl\\*.dll pynodegl\\.
+	$(CMD) xcopy /Y $(MESON_BUILDDIR)\\sxplayer\\*.dll pynodegl\\.
+	$(CMD) xcopy /Y /C $(MESON_BUILDDIR)\\libnodegl\\*.dll pynodegl\\.
 else
 	($(ACTIVATE) && PKG_CONFIG_PATH=$(PREFIX_FULLPATH)/lib/pkgconfig LDFLAGS=$(RPATH_LDFLAGS) pip -v install -e ./pynodegl)
 endif
@@ -207,9 +209,9 @@ endif
 
 nodegl-install: nodegl-setup
 ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& $(MESON_COMPILE) -C builddir\\libnodegl \&\& $(MESON_INSTALL) -C builddir\\libnodegl)
+	($(ACTIVATE) \&\& $(MESON_COMPILE) -C $(MESON_BUILDDIR)\\libnodegl \&\& $(MESON_INSTALL) -C $(MESON_BUILDDIR)\\libnodegl)
 else
-	($(ACTIVATE) && $(MESON_COMPILE) -C builddir/libnodegl && $(MESON_INSTALL) -C builddir/libnodegl)
+	($(ACTIVATE) && $(MESON_COMPILE) -C $(MESON_BUILDDIR)/libnodegl && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/libnodegl)
 endif
 
 NODEGL_DEPS = sxplayer-install
@@ -221,22 +223,22 @@ endif
 
 nodegl-setup: $(NODEGL_DEPS)
 ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& $(MESON_SETUP) $(NODEGL_DEBUG_OPTS) libnodegl builddir\\libnodegl)
+	($(ACTIVATE) \&\& $(MESON_SETUP) $(NODEGL_DEBUG_OPTS) libnodegl $(MESON_BUILDDIR)\\libnodegl)
 else
-	($(ACTIVATE) && $(MESON_SETUP) $(NODEGL_DEBUG_OPTS) libnodegl builddir/libnodegl)
+	($(ACTIVATE) && $(MESON_SETUP) $(NODEGL_DEBUG_OPTS) libnodegl $(MESON_BUILDDIR)/libnodegl)
 endif
 
 pkg-config-install: external-download $(PREFIX)
 ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& $(MESON_SETUP) -Dtests=false external\\pkgconf builddir\\pkgconf \&\& $(MESON_COMPILE) -C builddir\\pkgconf \&\& $(MESON_INSTALL) -C builddir\\pkgconf)
+	($(ACTIVATE) \&\& $(MESON_SETUP) -Dtests=false external\\pkgconf $(MESON_BUILDDIR)\\pkgconf \&\& $(MESON_COMPILE) -C $(MESON_BUILDDIR)\\pkgconf \&\& $(MESON_INSTALL) -C $(MESON_BUILDDIR)\\pkgconf)
 	($(CMD) copy "$(PREFIX_FULLPATH)\\Scripts\\pkgconf.exe" "$(PREFIX_FULLPATH)\\Scripts\\pkg-config.exe")
 endif
 
 sxplayer-install: external-download pkg-config-install $(PREFIX)
 ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& $(MESON_SETUP) external\\sxplayer builddir\\sxplayer \&\& $(MESON_COMPILE) -C builddir\\sxplayer \&\& $(MESON_INSTALL) -C builddir\\sxplayer)
+	($(ACTIVATE) \&\& $(MESON_SETUP) external\\sxplayer $(MESON_BUILDDIR)\\sxplayer \&\& $(MESON_COMPILE) -C $(MESON_BUILDDIR)\\sxplayer \&\& $(MESON_INSTALL) -C $(MESON_BUILDDIR)\\sxplayer)
 else
-	($(ACTIVATE) && $(MESON_SETUP) external/sxplayer builddir/sxplayer && $(MESON_COMPILE) -C builddir/sxplayer && $(MESON_INSTALL) -C builddir/sxplayer)
+	($(ACTIVATE) && $(MESON_SETUP) external/sxplayer $(MESON_BUILDDIR)/sxplayer && $(MESON_COMPILE) -C $(MESON_BUILDDIR)/sxplayer && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/sxplayer)
 endif
 
 renderdoc-install: external-download pkg-config-install $(PREFIX)
@@ -269,30 +271,30 @@ $(PREFIX): $(PREFIX_DONE)
 
 tests: nodegl-tests tests-setup
 ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& meson test $(MESON_TESTS_SUITE_OPTS) -C builddir\\tests)
+	($(ACTIVATE) \&\& meson test $(MESON_TESTS_SUITE_OPTS) -C $(MESON_BUILDDIR)\\tests)
 else
-	($(ACTIVATE) && meson test $(MESON_TESTS_SUITE_OPTS) -C builddir/tests)
+	($(ACTIVATE) && meson test $(MESON_TESTS_SUITE_OPTS) -C $(MESON_BUILDDIR)/tests)
 endif
 
 tests-setup: ngl-tools-install pynodegl-utils-install
 ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& $(MESON_SETUP_NINJA) builddir\\tests tests)
+	($(ACTIVATE) \&\& $(MESON_SETUP_NINJA) $(MESON_BUILDDIR)\\tests tests)
 else
-	($(ACTIVATE) && $(MESON_SETUP) builddir/tests tests)
+	($(ACTIVATE) && $(MESON_SETUP) $(MESON_BUILDDIR)/tests tests)
 endif
 
 nodegl-tests: nodegl-install
 ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& meson test -C builddir\\libnodegl)
+	($(ACTIVATE) \&\& meson test -C $(MESON_BUILDDIR)\\libnodegl)
 else
-	($(ACTIVATE) && meson test -C builddir/libnodegl)
+	($(ACTIVATE) && meson test -C $(MESON_BUILDDIR)/libnodegl)
 endif
 
 nodegl-%: nodegl-setup
 ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& $(MESON_COMPILE) -C builddir\\libnodegl $(subst nodegl-,,$@))
+	($(ACTIVATE) \&\& $(MESON_COMPILE) -C $(MESON_BUILDDIR)\\libnodegl $(subst nodegl-,,$@))
 else
-	($(ACTIVATE) && $(MESON_COMPILE) -C builddir/libnodegl $(subst nodegl-,,$@))
+	($(ACTIVATE) && $(MESON_COMPILE) -C $(MESON_BUILDDIR)/libnodegl $(subst nodegl-,,$@))
 endif
 
 clean_py:
@@ -306,19 +308,19 @@ clean_py:
 	$(RM) -r pynodegl-utils/.eggs
 
 clean: clean_py
-	$(RM) -r builddir/sxplayer
-	$(RM) -r builddir/libnodegl
-	$(RM) -r builddir/ngl-tools
-	$(RM) -r builddir/tests
+	$(RM) -r $(MESON_BUILDDIR)/sxplayer
+	$(RM) -r $(MESON_BUILDDIR)/libnodegl
+	$(RM) -r $(MESON_BUILDDIR)/ngl-tools
+	$(RM) -r $(MESON_BUILDDIR)/tests
 
 # You need to build and run with COVERAGE set to generate data.
 # For example: `make clean && make -j8 tests COVERAGE=yes`
 # We don't use `meson coverage` here because of
 # https://github.com/mesonbuild/meson/issues/7895
 coverage-html:
-	($(ACTIVATE) && ninja -C builddir/libnodegl coverage-html)
+	($(ACTIVATE) && ninja -C $(MESON_BUILDDIR)/libnodegl coverage-html)
 coverage-xml:
-	($(ACTIVATE) && ninja -C builddir/libnodegl coverage-xml)
+	($(ACTIVATE) && ninja -C $(MESON_BUILDDIR)/libnodegl coverage-xml)
 
 .PHONY: all
 .PHONY: ngl-tools-install
