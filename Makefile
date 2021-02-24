@@ -72,23 +72,19 @@ endif
 RPATH_LDFLAGS ?= -Wl,-rpath,$(PREFIX_FULLPATH)/lib
 
 ifeq ($(TARGET_OS),Windows)
+MESON = meson.exe
 MESON_SETUP_PARAMS  = \
     --prefix="$(PREFIX_FULLPATH)" --bindir="$(PREFIX_FULLPATH)\\Scripts" --includedir="$(PREFIX_FULLPATH)\\Include" \
-    --libdir="$(PREFIX_FULLPATH)\\Lib" --pkg-config-path="$(VCPKG_DIR)\\installed\x64-windows\\lib\\pkgconfig;$(PREFIX_FULLPATH)\\Lib\\pkgconfig" -Drpath=true
-MESON_SETUP         = meson setup --backend vs $(MESON_SETUP_PARAMS)
-MESON_SETUP_NINJA   = meson setup --backend ninja $(MESON_SETUP_PARAMS)
+    --libdir="$(PREFIX_FULLPATH)\\Lib" --pkg-config-path="$(VCPKG_DIR)\\installed\x64-$(TARGET_OS_LOWERCASE)\\lib\\pkgconfig;$(PREFIX_FULLPATH)\\Lib\\pkgconfig"
 else
-MESON_SETUP         = meson setup --prefix=$(PREFIX_FULLPATH) --pkg-config-path=$(PREFIX_FULLPATH)/lib/pkgconfig -Drpath=true
+MESON = meson
+MESON_SETUP_PARAMS = --prefix=$(PREFIX_FULLPATH) --pkg-config-path=$(PREFIX_FULLPATH)/lib/pkgconfig -Drpath=true
 endif
-# MAKEFLAGS= is a workaround (not working on Windows due to incompatible Make
-# syntax) for the issue described here:
-# https://github.com/ninja-build/ninja/issues/1139#issuecomment-724061270
-ifeq ($(TARGET_OS),Windows)
-MESON_COMPILE = meson compile
-else
-MESON_COMPILE = MAKEFLAGS= meson compile
-endif
-MESON_INSTALL = meson install
+MESON_SETUP         = $(MESON) setup --backend $(MESON_BACKEND) $(MESON_SETUP_PARAMS)
+MESON_TEST          = $(MESON) test
+
+MESON_COMPILE = MAKEFLAGS= $(MESON) compile -j8
+MESON_INSTALL = $(MESON) install
 ifeq ($(COVERAGE),yes)
 MESON_SETUP += -Db_coverage=true
 DEBUG = yes
@@ -132,6 +128,16 @@ ifneq ($(TESTS_SUITE),)
 MESON_TESTS_SUITE_OPTS += --suite $(TESTS_SUITE)
 endif
 
+NODEGL_SETUP_OPTS =
+
+ifeq ($(TARGET_OS),Windows)
+MESON_BACKEND ?= vs
+else ifeq ($(TARGET_OS),Darwin)
+MESON_BACKEND ?= xcode
+else
+MESON_BACKEND ?= ninja
+endif
+
 MESON_BUILDDIR ?= builddir
 
 all: ngl-tools-install pynodegl-utils-install
@@ -152,12 +158,8 @@ endif
 	@echo
 
 ngl-tools-install: nodegl-install
-ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& $(MESON_SETUP) ngl-tools $(MESON_BUILDDIR)\\ngl-tools \&\& $(MESON_COMPILE) -C $(MESON_BUILDDIR)\\ngl-tools \&\& $(MESON_INSTALL) -C $(MESON_BUILDDIR)\\ngl-tools)
-	$(CMD) xcopy /Y $(MESON_BUILDDIR)\\ngl-tools\\*.dll "$(PREFIX_FULLPATH)\\Scripts\\."
-else
-	($(ACTIVATE) && $(MESON_SETUP) ngl-tools $(MESON_BUILDDIR)/ngl-tools && $(MESON_COMPILE) -C $(MESON_BUILDDIR)/ngl-tools && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/ngl-tools)
-endif
+	$(MESON_SETUP) --backend $(MESON_BACKEND) ngl-tools $(MESON_BUILDDIR)/ngl-tools
+	$(MESON_COMPILE) -C $(MESON_BUILDDIR)/ngl-tools && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/ngl-tools
 
 pynodegl-utils-install: pynodegl-utils-deps-install
 ifeq ($(TARGET_OS),Windows)
@@ -173,13 +175,15 @@ endif
 # version), and it would fail anyway because pynodegl is currently not
 # available on PyPi.
 #
-# We do not pull the requirements on MinGW because of various issues:
+# We do not pull the requirements on Windows because of various issues:
 # - PySide2 can't be pulled (required to be installed by the user outside the
 #   Python virtualenv)
 # - Pillow fails to find zlib (required to be installed by the user outside the
 #   Python virtualenv)
-# - ngl-control works partially, export cannot work because of our subprocess
-#   usage, passing fd is not supported on Windows
+# - ngl-control can not currently work because of:
+#     - temporary files handling
+#     - subprocess usage, passing fd is not supported on Windows
+#     - subprocess usage, Windows cannot execute directly hooks shell scripts
 #
 # Still, we want the module to be installed so we can access the scene()
 # decorator and other related utils.
@@ -208,45 +212,19 @@ else
 endif
 
 nodegl-install: nodegl-setup
-ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& $(MESON_COMPILE) -C $(MESON_BUILDDIR)\\libnodegl \&\& $(MESON_INSTALL) -C $(MESON_BUILDDIR)\\libnodegl)
-else
-	($(ACTIVATE) && $(MESON_COMPILE) -C $(MESON_BUILDDIR)/libnodegl && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/libnodegl)
-endif
+	($(MESON_COMPILE) -C $(MESON_BUILDDIR)/libnodegl && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/libnodegl)
 
-NODEGL_DEPS = sxplayer-install
-ifeq ($(DEBUG_GPU_CAPTURE),yes)
-ifeq ($(TARGET_OS),$(filter $(TARGET_OS),MinGW-w64 Windows))
-NODEGL_DEPS += renderdoc-install
-endif
-endif
-
+NODEGL_DEPS=sxplayer-install
 nodegl-setup: $(NODEGL_DEPS)
+	($(MESON_SETUP) --backend $(MESON_BACKEND) $(NODEGL_SETUP_OPTS) $(NODEGL_DEBUG_OPTS) --default-library shared libnodegl $(MESON_BUILDDIR)/libnodegl)
+
+pkg-config-install: external-download $(PREFIX_DONE)
 ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& $(MESON_SETUP) $(NODEGL_DEBUG_OPTS) libnodegl $(MESON_BUILDDIR)\\libnodegl)
-else
-	($(ACTIVATE) && $(MESON_SETUP) $(NODEGL_DEBUG_OPTS) libnodegl $(MESON_BUILDDIR)/libnodegl)
+	($(MESON_SETUP) -Dtests=false external/pkgconf $(MESON_BUILDDIR)/pkgconf && $(MESON_COMPILE) -C builddir/pkgconf && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/pkgconf)
 endif
 
-pkg-config-install: external-download $(PREFIX)
-ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& $(MESON_SETUP) -Dtests=false external\\pkgconf $(MESON_BUILDDIR)\\pkgconf \&\& $(MESON_COMPILE) -C $(MESON_BUILDDIR)\\pkgconf \&\& $(MESON_INSTALL) -C $(MESON_BUILDDIR)\\pkgconf)
-	($(CMD) copy "$(PREFIX_FULLPATH)\\Scripts\\pkgconf.exe" "$(PREFIX_FULLPATH)\\Scripts\\pkg-config.exe")
-endif
-
-sxplayer-install: external-download pkg-config-install $(PREFIX)
-ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& $(MESON_SETUP) external\\sxplayer $(MESON_BUILDDIR)\\sxplayer \&\& $(MESON_COMPILE) -C $(MESON_BUILDDIR)\\sxplayer \&\& $(MESON_INSTALL) -C $(MESON_BUILDDIR)\\sxplayer)
-else
-	($(ACTIVATE) && $(MESON_SETUP) external/sxplayer $(MESON_BUILDDIR)/sxplayer && $(MESON_COMPILE) -C $(MESON_BUILDDIR)/sxplayer && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/sxplayer)
-endif
-
-renderdoc-install: external-download pkg-config-install $(PREFIX)
-ifeq ($(TARGET_OS),Windows)
-	$(CMD) xcopy /Y "$(RENDERDOC_DIR)\renderdoc.dll" "$(PREFIX_FULLPATH)\Scripts\."
-else
-	cp $(RENDERDOC_DIR)/renderdoc.dll $(PREFIX_FULLPATH)/bin/
-endif
+sxplayer-install: external-download pkg-config-install $(PREFIX_DONE)
+	($(MESON_SETUP) external/sxplayer $(MESON_BUILDDIR)/sxplayer && $(MESON_COMPILE) -C $(MESON_BUILDDIR)/sxplayer && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/sxplayer)
 
 external-download:
 	$(MAKE) -C external
@@ -270,32 +248,22 @@ endif
 $(PREFIX): $(PREFIX_DONE)
 
 tests: nodegl-tests tests-setup
-ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& meson test $(MESON_TESTS_SUITE_OPTS) -C $(MESON_BUILDDIR)\\tests)
-else
-	($(ACTIVATE) && meson test $(MESON_TESTS_SUITE_OPTS) -C $(MESON_BUILDDIR)/tests)
-endif
+	($(MESON) test $(MESON_TESTS_SUITE_OPTS) -C $(MESON_BUILDDIR)/tests)
 
 tests-setup: ngl-tools-install pynodegl-utils-install
-ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& $(MESON_SETUP_NINJA) $(MESON_BUILDDIR)\\tests tests)
-else
-	($(ACTIVATE) && $(MESON_SETUP) $(MESON_BUILDDIR)/tests tests)
-endif
+	$(MESON_SETUP) --backend ninja $(MESON_BUILDDIR)/tests tests
 
 nodegl-tests: nodegl-install
-ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& meson test -C $(MESON_BUILDDIR)\\libnodegl)
-else
-	($(ACTIVATE) && meson test -C $(MESON_BUILDDIR)/libnodegl)
-endif
+	$(MESON_TEST) -C $(MESON_BUILDDIR)/libnodegl
+
+compile-%:
+	$(MESON_COMPILE) -C $(MESON_BUILDDIR)/$(subst compile-,,$@)
+
+install-%: compile-%
+	$(MESON_INSTALL) -C $(MESON_BUILDDIR)/$(subst install-,,$@)
 
 nodegl-%: nodegl-setup
-ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& $(MESON_COMPILE) -C $(MESON_BUILDDIR)\\libnodegl $(subst nodegl-,,$@))
-else
-	($(ACTIVATE) && $(MESON_COMPILE) -C $(MESON_BUILDDIR)/libnodegl $(subst nodegl-,,$@))
-endif
+	$(MESON_COMPILE) -C $(MESON_BUILDDIR)/libnodegl $(subst nodegl-,,$@)
 
 clean_py:
 	$(RM) pynodegl/nodes_def.pyx
