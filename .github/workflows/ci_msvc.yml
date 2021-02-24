@@ -36,7 +36,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt -y update
-          sudo apt -y install build-essential unzip
+          sudo apt -y install build-essential unzip wget python3-venv p7zip-full
           pip.exe install meson
           cd /mnt/c/vcpkg
           ./vcpkg.exe install pthreads:x64-windows opengl-registry:x64-windows ffmpeg[ffmpeg,ffprobe]:x64-windows sdl2:x64-windows
