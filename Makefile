@@ -52,7 +52,9 @@ ifeq ($(TARGET_OS),Windows)
 VCVARS64 ?= "$(shell powershell.exe .\\scripts\\find_vcvars64.ps1)"
 VCPKG_DIR ?= C:\\vcpkg
 PKG_CONF_DIR = external\\pkgconf\\build
-CMD = PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1 PKG_CONFIG_ALLOW_SYSTEM_LIBS=1 PKG_CONFIG="$(PREFIX_FULLPATH)\\Scripts\\pkg-config.exe" PKG_CONFIG_PATH="$(VCPKG_DIR)\\installed\\x64-windows\\lib\\pkgconfig" WSLENV=PKG_CONFIG/w:PKG_CONFIG_PATH/w:PKG_CONFIG_ALLOW_SYSTEM_LIBS/w:PKG_CONFIG_ALLOW_SYSTEM_CFLAGS/w cmd.exe /C
+# General way to call cmd from bash: https://github.com/microsoft/WSL/issues/2835
+# Add the character @ after /C
+CMD = cmd.exe /C @
 else
 CMD =
 endif
