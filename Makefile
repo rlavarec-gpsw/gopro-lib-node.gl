@@ -229,7 +229,6 @@ else ifeq ($(TARGET_OS),MinGW-w64)
 	$(PYTHON) -m venv --system-site-packages  $(PREFIX)
 else
 	$(PYTHON) -m venv $(PREFIX)
-	($(ACTIVATE) && pip install meson ninja)
 endif
 	touch $(PREFIX_DONE)
 
@@ -288,5 +287,3 @@ coverage-xml:
 .PHONY: clean clean_py
 .PHONY: coverage-html coverage-xml
 .PHONY: external-download
-
-#
