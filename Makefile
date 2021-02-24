@@ -31,9 +31,6 @@ endif
 
 PYTHON_MAJOR = 3
 
-#
-# User configuration
-#
 DEBUG      ?= no
 COVERAGE   ?= no
 ifeq ($(TARGET_OS),Windows)
@@ -48,10 +45,6 @@ DEBUG_SCENE ?= no
 export DEBUG_GPU_CAPTURE ?= no
 TESTS_SUITE ?=
 V           ?=
-
-$(info PYTHON: $(PYTHON))
-$(info PREFIX: $(PREFIX))
-$(info PREFIX_FULLPATH: $(PREFIX_FULLPATH))
 
 ifeq ($(TARGET_OS),Windows)
 # Initialize VCVARS64 and VCPKG_DIR to a default value
