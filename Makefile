@@ -19,7 +19,9 @@
 # under the License.
 #
 
-PREFIX          ?= venv
+# Currently we don't support custom prefix
+PREFIX = venv
+PREFIX_DONE     = .venv-done
 ifeq ($(TARGET_OS),Windows)
 PREFIX_FULLPATH = $(shell wslpath -wa .)\$(PREFIX)
 else
@@ -256,16 +258,19 @@ external-download:
 # We do not pull meson from pip on MinGW for the same reasons we don't pull
 # Pillow and PySide2. We require the users to have it on their system.
 #
-$(PREFIX):
+$(PREFIX_DONE):
 ifeq ($(TARGET_OS),Windows)
-	($(CMD) $(PYTHON) -m venv "$@")
+	($(CMD) $(PYTHON) -m venv $(PREFIX))
 	($(ACTIVATE) \&\& pip install meson ninja)
 else ifeq ($(TARGET_OS),MinGW-w64)
-	$(PYTHON) -m venv --system-site-packages $@
+	$(PYTHON) -m venv --system-site-packages $(PREFIX)
 else
-	$(PYTHON) -m venv $@
+	$(PYTHON) -m venv $(PREFIX)
 	($(ACTIVATE) && pip install meson ninja)
 endif
+	touch $(PREFIX_DONE)
+
+$(PREFIX): $(PREFIX_DONE)
 
 tests: nodegl-tests tests-setup
 ifeq ($(TARGET_OS),Windows)
