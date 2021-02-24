@@ -21,6 +21,7 @@ jobs:
       - uses: Vampire/setup-wsl@v1
         with:
           distribution: Ubuntu-20.04
+          wsl-shell-command: bash --noprofile --norc -x
 
       - uses: actions/checkout@v2
 
