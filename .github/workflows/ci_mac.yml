@@ -16,9 +16,11 @@ jobs:
 
     - name: Install dependencies
       run: |
-        brew install python3 curl pkg-config sdl2 ffmpeg
+        brew install python3 curl pkg-config sdl2 ffmpeg ninja
         # https://docs.brew.sh/Homebrew-and-Python
-        python3 -m pip install --upgrade pip
+        pip3 install --upgrade pip
+        # Install meson
+        pip3 install meson
 
     - name: Build
       run: |
