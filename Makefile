@@ -22,6 +22,7 @@
 # Currently we don't support custom prefix
 PREFIX = venv
 PREFIX_DONE     = .venv-done
+export TARGET_OS ?= $(shell uname -s)
 ifeq ($(TARGET_OS),Windows)
 PREFIX_FULLPATH = $(shell wslpath -wa .)\$(PREFIX)
 else
@@ -40,7 +41,6 @@ PYTHON     ?= python.exe
 else
 PYTHON     ?= python$(if $(shell which python$(PYTHON_MAJOR) 2> /dev/null),$(PYTHON_MAJOR),)
 endif
-export TARGET_OS ?= $(shell uname -s)
 
 DEBUG_GL    ?= no
 DEBUG_MEM   ?= no
