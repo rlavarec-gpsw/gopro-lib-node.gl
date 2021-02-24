@@ -31,7 +31,7 @@ jobs:
         with:
           path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
           # if you change the vcpkg install packages, please change this key using a version number
-          key: vcpkg-binary-cache-v0.0.1
+          key: vcpkg-binary-cache-v0.0.2
 
       - name: Install dependencies
         run: |
@@ -45,5 +45,20 @@ jobs:
 
       - name: Build
         run: |
-          make TARGET_OS=Windows DEBUG_GPU_CAPTURE=yes \
-          VCPKG_DIR='C:\\vcpkg'
+          cd /mnt/c
+          # Workaround for meson issue #8329
+          # Currently meson requires the project to be on the same drive as dependencies
+          cp -Rf /mnt/d/a/gopro-lib-node.gl/gopro-lib-node.gl .
+          cd gopro-lib-node.gl
+          # Save the following commands to a variable
+          read -r -d '' COMMANDS << EOM
+          export VCPKG_DIR='C:\vcpkg'
+          source build_scripts/windows/setenv.sh
+          bash build_scripts/windows/patch_pkg_config_files.sh
+          make DEBUG_GPU_CAPTURE=yes
+          EOM
+          tmpfile=$(mktemp)
+          echo "$COMMANDS" > $tmpfile
+          # Execute the commands in an msvc dev environment
+          bash build_scripts/windows/start_msvc_env.sh $tmpfile
+
