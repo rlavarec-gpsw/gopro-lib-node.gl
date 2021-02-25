@@ -177,7 +177,7 @@ pynodegl-utils-install: pynodegl-utils-deps-install
 # version), and it would fail anyway because pynodegl is currently not
 # available on PyPi.
 #
-# We do not pull the requirements on Windows because of various issues:
+# We do not pull the requirements on MinGW because of various issues:
 # - PySide2 can't be pulled (required to be installed by the user outside the
 #   Python virtualenv)
 # - Pillow fails to find zlib (required to be installed by the user outside the
@@ -191,7 +191,9 @@ pynodegl-utils-install: pynodegl-utils-deps-install
 # decorator and other related utils.
 #
 pynodegl-utils-deps-install: pynodegl-install
+ifneq ($(TARGET_OS),MinGW-w64)
 	($(PIP) install -r ./pynodegl-utils/requirements.txt)
+endif
 
 pynodegl-install: pynodegl-deps-install
 	($(PIP) -v install -e ./pynodegl)
