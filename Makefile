@@ -84,7 +84,7 @@ MESON_SETUP_PARAMS  = \
     --libdir="$(PREFIX_FULLPATH)\\Lib" --pkg-config-path="$(VCPKG_DIR)\\installed\x64-$(TARGET_OS_LOWERCASE)\\lib\\pkgconfig;$(PREFIX_FULLPATH)\\Lib\\pkgconfig"
 else
 MESON = meson
-MESON_SETUP_PARAMS = --prefix=$(PREFIX_FULLPATH) --pkg-config-path=$(PREFIX_FULLPATH)/lib/pkgconfig -Drpath=true
+MESON_SETUP_PARAMS = --prefix=$(PREFIX_FULLPATH) --pkg-config-path=$$PKG_CONFIG_PATH:$(PREFIX_FULLPATH)/lib/pkgconfig -Drpath=true
 endif
 MESON_SETUP         = $(MESON) setup --backend $(MESON_BACKEND) $(MESON_SETUP_PARAMS)
 MESON_TEST          = $(MESON) test
