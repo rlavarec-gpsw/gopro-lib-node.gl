@@ -427,7 +427,8 @@ int ngli_node_attach_ctx(struct ngl_node *node, struct ngl_ctx *ctx)
 
 void ngli_node_detach_ctx(struct ngl_node *node, struct ngl_ctx *ctx)
 {
-    ctx->gctx->cls->wait_idle(ctx->gctx);
+    if (ctx->gctx)
+        ctx->gctx->cls->wait_idle(ctx->gctx);
     int ret = node_set_ctx(node, NULL, ctx);
     ngli_assert(ret == 0);
 }
