@@ -38,6 +38,7 @@ extern const struct hwmap_class ngli_hwmap_vt_darwin_gl_class;
 extern const struct hwmap_class ngli_hwmap_vt_darwin_vk_class;
 extern const struct hwmap_class ngli_hwmap_vt_ios_gl_class;
 extern const struct hwmap_class ngli_hwmap_vaapi_gl_class;
+extern const struct hwmap_class ngli_hwmap_vt_darwin_ngfx_class;
 
 static const struct hwmap_class *hwupload_gl_class_map[] = {
     [SXPLAYER_PIXFMT_RGBA]        = &ngli_hwmap_common_class,
@@ -63,6 +64,17 @@ static const struct hwmap_class *hwupload_vk_class_map[] = {
 #ifdef BACKEND_VK
 #if defined(TARGET_DARWIN)
     [SXPLAYER_PIXFMT_VT]          = &ngli_hwmap_vt_darwin_vk_class,
+#endif
+#endif
+};
+
+static const struct hwmap_class* hwupload_ngfx_class_map[] = {
+    [SXPLAYER_PIXFMT_RGBA] = &ngli_hwmap_common_class,
+    [SXPLAYER_PIXFMT_BGRA] = &ngli_hwmap_common_class,
+    [SXPLAYER_SMPFMT_FLT] = &ngli_hwmap_common_class,
+#ifdef BACKEND_NGFX
+#if defined(TARGET_DARWIN)
+    [SXPLAYER_PIXFMT_VT]          = &ngli_hwmap_vt_darwin_ngfx_class,
 #endif
 #endif
 };
