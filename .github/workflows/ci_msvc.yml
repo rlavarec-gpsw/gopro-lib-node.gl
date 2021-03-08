@@ -12,6 +12,9 @@ jobs:
   msvc:
 
     runs-on: windows-latest
+    env:
+        VCPKG_TRIPLET: x64-windows
+        VCPKG_INSTALL_PACKAGES: pthreads opengl-registry ffmpeg[ffmpeg,ffprobe] sdl2
 
     defaults:
       run:
@@ -25,13 +28,18 @@ jobs:
 
       - uses: actions/checkout@v2
 
+      - name: Get vcpkg cache key
+        id: get-vcpkg-cache-key
+        run: |
+          VCPKG_COMMIT_ID=$(cd /mnt/c/vcpkg && git rev-parse HEAD)
+          echo "::set-output name=key::$(echo $VCPKG_COMMIT_ID ${{env.VCPKG_TRIPLET}} ${{env.VCPKG_INSTALL_PACKAGES}} | /usr/bin/md5sum | /bin/cut -f1 -d" ")"
+
       - name: Restore vcpkg binary cache archives
         id: restore_vcpkg_binary_cache
         uses: actions/cache@v2
         with:
           path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
-          # if you change the vcpkg install packages, please change this key using a version number
-          key: vcpkg-binary-cache-v0.0.2
+          key: ${{ steps.get-vcpkg-cache-key.outputs.key }}
 
       - name: Install dependencies
         run: |
@@ -39,7 +47,7 @@ jobs:
           sudo apt -y install build-essential unzip wget python3-venv p7zip-full
           pip.exe install meson
           cd /mnt/c/vcpkg
-          ./vcpkg.exe install pthreads:x64-windows opengl-registry:x64-windows ffmpeg[ffmpeg,ffprobe]:x64-windows sdl2:x64-windows
+          ./vcpkg.exe install --triplet ${{env.VCPKG_TRIPLET}} ${{env.VCPKG_INSTALL_PACKAGES}}
           # TODO: remove vcpkg.exe integrate install
           ./vcpkg.exe integrate install
 
