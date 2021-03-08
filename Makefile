@@ -58,21 +58,16 @@ ifeq ($(TARGET_OS),Windows)
 VCVARS64 ?= "$(shell powershell.exe .\\scripts\\find_vcvars64.ps1)"
 VCPKG_DIR ?= C:\\vcpkg
 PKG_CONF_DIR = external\\pkgconf\\build
-# General way to call cmd from bash: https://github.com/microsoft/WSL/issues/2835
-# Add the character @ after /C
-CMD = cmd.exe /C @
-else
-CMD =
 endif
 
-ifneq ($(shell $(CMD) $(PYTHON) -c "import sys;print(sys.version_info.major)"),$(PYTHON_MAJOR))
+ifneq ($(shell $(PYTHON) -c "import sys;print(sys.version_info.major)"),$(PYTHON_MAJOR))
 $(error "Python $(PYTHON_MAJOR) not found")
 endif
 
 ifeq ($(TARGET_OS),Windows)
-ACTIVATE = "$(PREFIX_FULLPATH)\\Scripts\\activate.bat"
+ACTIVATE = . $(PREFIX)/Scripts/activate
 else
-ACTIVATE = $(PREFIX_FULLPATH)/bin/activate
+ACTIVATE = . $(PREFIX)/bin/activate
 endif
 
 RPATH_LDFLAGS = -Wl,-rpath,$(PREFIX_FULLPATH)/lib
@@ -151,24 +146,15 @@ all: ngl-tools-install pynodegl-utils-install
 	@echo "    Install completed."
 	@echo
 	@echo "    You can now enter the venv with:"
-ifeq ($(TARGET_OS),Windows)
-	@echo "        (via Windows Command Prompt)"
-	@echo "            cmd.exe"
-	@echo "            $(PREFIX)\\\Scripts\\\activate.bat"
-	@echo "        (via Windows PowerShell)"
-	@echo "            powershell.exe"
-	@echo "            $(PREFIX)\\\Scripts\\\Activate.ps1"
-else
 	@echo "        $(ACTIVATE)"
-endif
 	@echo
 
 ngl-tools-install: nodegl-install
-	$(MESON_SETUP) --backend $(MESON_BACKEND) ngl-tools $(MESON_BUILDDIR)/ngl-tools
-	$(MESON_COMPILE) -C $(MESON_BUILDDIR)/ngl-tools && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/ngl-tools
+	($(ACTIVATE) && $(MESON_SETUP) --backend $(MESON_BACKEND) ngl-tools $(MESON_BUILDDIR)/ngl-tools)
+	($(ACTIVATE) && $(MESON_COMPILE) -C $(MESON_BUILDDIR)/ngl-tools && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/ngl-tools)
 
 pynodegl-utils-install: pynodegl-utils-deps-install
-	($(PIP) install -e ./pynodegl-utils)
+	($(ACTIVATE) && $(PIP) install -e ./pynodegl-utils)
 
 #
 # pynodegl-install is in dependency to prevent from trying to install pynodegl
@@ -192,29 +178,29 @@ pynodegl-utils-install: pynodegl-utils-deps-install
 #
 pynodegl-utils-deps-install: pynodegl-install
 ifneq ($(TARGET_OS),MinGW-w64)
-	($(PIP) install -r ./pynodegl-utils/requirements.txt)
+	($(ACTIVATE) && $(PIP) install -r ./pynodegl-utils/requirements.txt)
 endif
 
 pynodegl-install: pynodegl-deps-install
-	($(PIP) -v install -e ./pynodegl)
+	($(ACTIVATE) && $(PIP) -v install -e ./pynodegl)
 
 pynodegl-deps-install: $(PREFIX_DONE) nodegl-install
-	($(PIP) install -r ./pynodegl/requirements.txt)
+	($(ACTIVATE) && $(PIP) install -r ./pynodegl/requirements.txt)
 
 nodegl-install: nodegl-setup
-	($(MESON_COMPILE) -C $(MESON_BUILDDIR)/libnodegl && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/libnodegl)
+	($(ACTIVATE) && $(MESON_COMPILE) -C $(MESON_BUILDDIR)/libnodegl && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/libnodegl)
 
 NODEGL_DEPS=sxplayer-install
 nodegl-setup: $(NODEGL_DEPS)
-	($(MESON_SETUP) --backend $(MESON_BACKEND) $(NODEGL_SETUP_OPTS) $(NODEGL_DEBUG_OPTS) --default-library shared libnodegl $(MESON_BUILDDIR)/libnodegl)
+	($(ACTIVATE) && $(MESON_SETUP) --backend $(MESON_BACKEND) $(NODEGL_SETUP_OPTS) $(NODEGL_DEBUG_OPTS) --default-library shared libnodegl $(MESON_BUILDDIR)/libnodegl)
 
 pkg-config-install: external-download $(PREFIX_DONE)
 ifeq ($(TARGET_OS),Windows)
-	($(MESON_SETUP) -Dtests=false external/pkgconf $(MESON_BUILDDIR)/pkgconf && $(MESON_COMPILE) -C builddir/pkgconf && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/pkgconf)
+	($(ACTIVATE) && $(MESON_SETUP) -Dtests=false external/pkgconf $(MESON_BUILDDIR)/pkgconf && $(MESON_COMPILE) -C builddir/pkgconf && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/pkgconf)
 endif
 
 sxplayer-install: external-download pkg-config-install $(PREFIX_DONE)
-	($(MESON_SETUP) external/sxplayer $(MESON_BUILDDIR)/sxplayer && $(MESON_COMPILE) -C $(MESON_BUILDDIR)/sxplayer && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/sxplayer)
+	($(ACTIVATE) && $(MESON_SETUP) external/sxplayer $(MESON_BUILDDIR)/sxplayer && $(MESON_COMPILE) -C $(MESON_BUILDDIR)/sxplayer && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/sxplayer)
 
 external-download:
 	$(MAKE) -C external
@@ -225,10 +211,13 @@ external-download:
 #
 $(PREFIX_DONE):
 ifeq ($(TARGET_OS),Windows)
-	($(PYTHON) -m venv $(PREFIX))
-	(mkdir $(PREFIX)/Lib/pkgconfig)
+	$(PYTHON) -m venv $(PREFIX)
+	# Convert windows to unix style line endings in the activate bash script
+	# See https://bugs.python.org/issue43437
+	sed -i 's/\r$///' $(PREFIX)/Scripts/activate
+	mkdir $(PREFIX)/Lib/pkgconfig
 else ifeq ($(TARGET_OS),MinGW-w64)
-	$(PYTHON) -m venv --system-site-packages  $(PREFIX)
+	$(PYTHON) -m venv --system-site-packages $(PREFIX)
 else
 	$(PYTHON) -m venv $(PREFIX)
 endif
@@ -237,22 +226,22 @@ endif
 $(PREFIX): $(PREFIX_DONE)
 
 tests: nodegl-tests tests-setup
-	($(MESON) test $(MESON_TESTS_SUITE_OPTS) -C $(MESON_BUILDDIR)/tests)
+	($(ACTIVATE) && $(MESON) test $(MESON_TESTS_SUITE_OPTS) -C $(MESON_BUILDDIR)/tests)
 
 tests-setup: ngl-tools-install pynodegl-utils-install
-	$(MESON_SETUP) --backend ninja $(MESON_BUILDDIR)/tests tests
+	($(ACTIVATE) && $(MESON_SETUP) --backend ninja $(MESON_BUILDDIR)/tests tests)
 
 nodegl-tests: nodegl-install
-	$(MESON_TEST) -C $(MESON_BUILDDIR)/libnodegl
+	($(ACTIVATE) && $(MESON_TEST) -C $(MESON_BUILDDIR)/libnodegl)
 
 compile-%:
-	$(MESON_COMPILE) -C $(MESON_BUILDDIR)/$(subst compile-,,$@)
+	($(ACTIVATE) && $(MESON_COMPILE) -C $(MESON_BUILDDIR)/$(subst compile-,,$@))
 
 install-%: compile-%
-	$(MESON_INSTALL) -C $(MESON_BUILDDIR)/$(subst install-,,$@)
+	($(ACTIVATE) && $(MESON_INSTALL) -C $(MESON_BUILDDIR)/$(subst install-,,$@))
 
 nodegl-%: nodegl-setup
-	$(MESON_COMPILE) -C $(MESON_BUILDDIR)/libnodegl $(subst nodegl-,,$@)
+	($(ACTIVATE) && $(MESON_COMPILE) -C $(MESON_BUILDDIR)/libnodegl $(subst nodegl-,,$@))
 
 clean_py:
 	$(RM) pynodegl/nodes_def.pyx
