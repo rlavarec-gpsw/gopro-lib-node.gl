@@ -49,8 +49,7 @@ following components are included:
     .\bootstrap-vcpkg.bat
     .\vcpkg.exe install opengl-registry:x64-windows ffmpeg[ffmpeg,ffprobe]:x64-windows sdl2:x64-windows
     ```
-- Install [VulkanSDK] (optional, from https://vulkan.lunarg.com/sdk/home#windows)
-
+- Install [Vulkan SDK](https://vulkan.lunarg.com/sdk/home#windows) (optional)
 - Enable [WSL (Windows Subsystem for Linux)](https://docs.microsoft.com/en-us/windows/wsl/install-win10)
 - Install Ubuntu into WSL from Microsoft Store.
 - In WSL, install other needed dependencies as
