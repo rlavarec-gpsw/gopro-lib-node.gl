@@ -20,5 +20,5 @@ jobs:
 
     - name: Build
       run: |
-        make -j$(($(sysctl -n hw.logicalcpu)+1)) DEBUG_GPU_CAPTURE=yes
+        make -j$(($(sysctl -n hw.logicalcpu)+1)) DEBUG_GPU_CAPTURE=yes MESON_BACKEND=ninja
 
