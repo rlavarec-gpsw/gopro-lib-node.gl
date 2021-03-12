@@ -19,7 +19,7 @@ jobs:
 
     defaults:
       run:
-        shell: powershell
+        shell: pwsh
 
     steps:
       - uses: actions/checkout@v2
@@ -45,8 +45,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip.exe install meson
-          wget https://sdk.lunarg.com/sdk/download/${{env.VULKAN_SDK_VERSION}}/windows/VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe
-          chmod a+x VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe
+          iwr https://sdk.lunarg.com/sdk/download/${{env.VULKAN_SDK_VERSION}}/windows/VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe -OutFile VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe && `
           ./VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe /S
           cd C:\vcpkg
           .\vcpkg.exe install --triplet ${{env.VCPKG_TRIPLET}} ${{env.VCPKG_INSTALL_PACKAGES}}
@@ -54,5 +53,16 @@ jobs:
       - name: Build
         run: |
           .\scripts\msvc-env.ps1
-          python.exe .\configure.py --debug gpu_capture
+          $env:VULKAN_SDK='C:\VulkanSDK\${{env.VULKAN_SDK_VERSION}}'
+          python.exe .\configure.py --buildtype debug --debug gl gpu_capture --enable-ngfx-backend
           nmake
+
+      - uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: nodegl-msvc-build-logs
+          path: |
+            builddir/**/*.txt
+            builddir/**/*.cmake
+            builddir/**/*.log
+            builddir/Makefile
