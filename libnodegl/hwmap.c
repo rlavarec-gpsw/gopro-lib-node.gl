@@ -36,6 +36,7 @@
 extern const struct hwmap_class ngli_hwmap_common_class;
 extern const struct hwmap_class *ngli_hwmap_gl_classes[];
 extern const struct hwmap_class *ngli_hwmap_vk_classes[];
+extern const struct hwmap_class *ngli_hwmap_ngfx_classes[];
 
 static const struct hwmap_class *get_hwmap_class(const struct hwmap *hwmap, struct sxplayer_frame *frame)
 {
@@ -142,6 +143,11 @@ int ngli_hwmap_init(struct hwmap *hwmap, struct ngl_ctx *ctx, const struct hwmap
 #ifdef BACKEND_VK
     if (config->backend == NGL_BACKEND_VULKAN)
         hwmap->hwmap_classes = ngli_hwmap_vk_classes;
+#endif
+
+#ifdef BACKEND_NGFX
+    if (config->backend == NGL_BACKEND_NGFX)
+        hwmap->hwmap_classes = ngli_hwmap_ngfx_classes;
 #endif
 
     return 0;
