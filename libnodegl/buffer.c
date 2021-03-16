@@ -39,12 +39,12 @@ int ngli_buffer_upload(struct buffer *s, const void *data, int size, int offset)
     return s->gctx->cls->buffer_upload(s, data, size, offset);
 }
 
-int ngli_buffer_download(struct buffer *s, void *data, uint32_t size, uint32_t offset)
+int ngli_buffer_download(struct buffer *s, void *data, int size, int offset)
 {
     return s->gctx->cls->buffer_download(s, data, size, offset);
 }
 
-int ngli_buffer_map(struct buffer *s, int size, uint32_t offset, void **data)
+int ngli_buffer_map(struct buffer *s, int size, int offset, void **data)
 {
     return s->gctx->cls->buffer_map(s, size, offset, data);
 }
