@@ -615,7 +615,9 @@ static int vk_init(struct gctx *s)
     switch (vk->api_version) {
     case VK_API_VERSION_1_0: env_version = shaderc_env_version_vulkan_1_0; break;
     case VK_API_VERSION_1_1: env_version = shaderc_env_version_vulkan_1_1; break;
+#if 0 //TODO: enable vulkan API 1.2 when vcpkg updates shaderc
     case VK_API_VERSION_1_2: env_version = shaderc_env_version_vulkan_1_2; break;
+#endif
     default:                 env_version = shaderc_env_version_vulkan_1_0;
     }
 
