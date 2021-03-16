@@ -10,13 +10,34 @@ jobs:
   macos:
 
     runs-on: macos-latest
+    env:
+        SHADERC_VERSION: 2020.3
 
     steps:
     - uses: actions/checkout@v2
 
+    - name: Restore ShaderC from Cache
+      id: restore_shaderc_cache
+      uses: actions/cache@v2
+      with:
+        path: shaderc
+        key: ${{runner.os}}-shaderc-${{env.SHADERC_VERSION}}
+
+    - name: Build ShaderC
+      if: steps.restore_shaderc_cache.outputs.cache-hit != 'true'
+      run: |
+        curl -L https://github.com/google/shaderc/archive/v${{env.SHADERC_VERSION}}.tar.gz -o shaderc.tgz && \
+        tar xzf shaderc.tgz && \
+        mv shaderc-${{env.SHADERC_VERSION}} shaderc
+        cd shaderc && \
+        ./utils/git-sync-deps && \
+        cmake -H. -Bcmake-build-release -DCMAKE_BUILD_TYPE=Release && \
+        cmake --build cmake-build-release -j8
+
     - name: Install dependencies
       run: |
-        brew install python3 curl pkg-config sdl2 ffmpeg
+        (cd shaderc && sudo cmake --install cmake-build-release)
+        brew install python3 curl pkg-config sdl2 ffmpeg glm spirv-cross
         # https://docs.brew.sh/Homebrew-and-Python
         python3 -m pip install --upgrade pip
 
