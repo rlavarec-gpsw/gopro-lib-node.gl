@@ -219,6 +219,17 @@ lib_deps = [
   dependency('libsxplayer', version: '>= 9.7.0'),
   dependency('threads'),
 ]
+if (cc.get_id() == 'msvc')
+  pthreads_dir = get_option('pthreads_dir')
+  pthreads_dep = declare_dependency(
+      compile_args: [ '-D_TIMESPEC_DEFINED' ],
+      include_directories: [ pthreads_dir / 'include' ],
+      link_args: [
+        '-L' + pthreads_dir / 'lib', '-lpthreadVC3',
+      ],
+    )
+  lib_deps += pthreads_dep
+endif
 
 host_cfg = hosts_cfg.get(host_system, {})
 foreach dep : host_cfg.get('deps', [])

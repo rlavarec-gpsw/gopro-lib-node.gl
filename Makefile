@@ -225,7 +225,7 @@ endif
 
 nodegl-setup: $(NODEGL_DEPS)
 ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) \&\& $(MESON_SETUP) $(NODEGL_DEBUG_OPTS) libnodegl builddir\\libnodegl)
+	($(ACTIVATE) \&\& $(MESON_SETUP) $(NODEGL_DEBUG_OPTS) libnodegl builddir\\libnodegl -D pthreads_dir=$(VCPKG_DIR)\\installed\\x64-windows)
 else
 	($(ACTIVATE) && $(MESON_SETUP) $(NODEGL_DEBUG_OPTS) libnodegl builddir/libnodegl)
 endif
