@@ -748,13 +748,13 @@ static void gl_wait_idle(struct gpu_ctx *s)
 static void gl_destroy(struct gpu_ctx *s)
 {
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
-    timer_reset(s);
-    rendertarget_reset(s);
 #if DEBUG_GPU_CAPTURE
     if (s->gpu_capture)
         ngli_gpu_capture_end(s->gpu_capture_ctx);
     ngli_gpu_capture_freep(&s->gpu_capture_ctx);
 #endif
+    timer_reset(s);
+    rendertarget_reset(s);
     ngli_glcontext_freep(&s_priv->glcontext);
 }
 
