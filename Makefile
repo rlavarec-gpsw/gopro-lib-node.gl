@@ -191,6 +191,11 @@ else
 	($(ACTIVATE) && $(MESON_SETUP) ngl-tools builddir/ngl-tools && $(MESON_COMPILE) -C builddir/ngl-tools && $(MESON_INSTALL) -C builddir/ngl-tools)
 endif
 
+ngl-debug-tools-install:
+	$(CMAKE) -S ngl-debug-tools -B builddir/ngl-debug-tools -G $(CMAKE_GENERATOR) $(CMAKE_SETUP_OPTIONS) && \
+	$(CMAKE) --build builddir/ngl-debug-tools $(CMAKE_COMPILE_OPTIONS) && \
+	$(CMAKE) --install builddir/ngl-debug-tools $(CMAKE_INSTALL_OPTIONS)
+
 pynodegl-utils-install: pynodegl-utils-deps-install
 ifeq ($(TARGET_OS),Windows)
 	($(ACTIVATE) \&\& pip -v install -e pynodegl-utils)
@@ -386,6 +391,7 @@ coverage-xml:
 
 .PHONY: all
 .PHONY: ngl-tools-install
+.PHONY: ngl-debug-tools-install
 .PHONY: pynodegl-utils-install pynodegl-utils-deps-install
 .PHONY: pynodegl-install pynodegl-deps-install
 .PHONY: nodegl-install nodegl-setup
