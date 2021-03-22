@@ -108,6 +108,34 @@ endif
 ifneq ($(V),)
 MESON_COMPILE += -v
 endif
+
+ifeq ($(TARGET_OS),Windows)
+CMAKE ?= cmake.exe
+else
+CMAKE ?= cmake
+endif
+
+ifeq ($(TARGET_OS),Windows)
+CMAKE_GENERATOR ?= "Visual Studio 16 2019"
+else ifeq ($(TARGET_OS),Linux)
+CMAKE_GENERATOR ?= "Ninja"
+else ifeq ($(TARGET_OS),Darwin)
+CMAKE_GENERATOR ?= "Xcode"
+endif
+
+ifeq ($(DEBUG),yes)
+CMAKE_BUILD_TYPE = Debug
+else
+CMAKE_BUILD_TYPE = Release
+endif
+
+CMAKE_SETUP_OPTIONS = -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) -DCMAKE_INSTALL_PREFIX=$(PREFIX)
+CMAKE_COMPILE_OPTIONS = --config $(CMAKE_BUILD_TYPE)
+ifeq ($(V),1)
+CMAKE_COMPILE_OPTIONS += -v
+endif
+CMAKE_INSTALL_OPTIONS =
+
 NODEGL_DEBUG_OPTS-$(DEBUG_GL)    += gl
 NODEGL_DEBUG_OPTS-$(DEBUG_VK)    += vk
 NODEGL_DEBUG_OPTS-$(DEBUG_MEM)   += mem
@@ -267,8 +295,10 @@ endif
 shaderc-install: SHADERC_LIB_FILENAME = libshaderc_shared.1.dylib
 shaderc-install: external-download $(PREFIX)
 	cd external/shaderc && ./utils/git-sync-deps
-	cmake -B builddir/shaderc -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$(PREFIX) external/shaderc
-	ninja -C builddir/shaderc install
+	# Use Ninja backend, XCode backend isn't supported
+	$(CMAKE) -S external/shaderc -B builddir/shaderc -G Ninja $(CMAKE_SETUP_OPTIONS)  && \
+	$(CMAKE) --build builddir/shaderc $(CMAKE_COMPILE_OPTIONS) && \
+	$(CMAKE) --install builddir/shaderc $(CMAKE_INSTALL_OPTIONS)
 	install_name_tool -id @rpath/$(SHADERC_LIB_FILENAME) $(PREFIX)/lib/$(SHADERC_LIB_FILENAME)
 
 # Note: somehow xcodebuild sets name @rpath/libMoltenVK.dylib automatically
