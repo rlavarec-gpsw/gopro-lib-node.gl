@@ -28,17 +28,17 @@
 
 #if defined(BACKEND_VK)
 #include <MoltenVK/vk_mvk_moltenvk.h>
-#include "backends/vk/gctx_vk.h"
+#include "backends/vk/gpu_ctx_vk.h"
 #endif
 
 struct gpu_capture_ctx {
-    struct gctx *gctx;
+    struct gpu_ctx *gpu_ctx;
 };
 
-struct gpu_capture_ctx *gpu_capture_ctx_create(struct gctx *gctx)
+struct gpu_capture_ctx *gpu_capture_ctx_create(struct gpu_ctx *gpu_ctx)
 {
     struct gpu_capture_ctx *s = ngli_calloc(1, sizeof(*s));
-    s->gctx = gctx;
+    s->gpu_ctx = gpu_ctx;
     return s;
 }
 
@@ -55,9 +55,9 @@ int gpu_capture_begin(struct gpu_capture_ctx *s)
     if (!capture_descriptor)
         return NGL_ERROR_EXTERNAL;
 #if defined(BACKEND_VK)
-    if (s->gctx->config.backend == NGL_BACKEND_VULKAN) {
-        struct gctx_vk *gctx_vk = (struct gctx_vk *)s->gctx;
-        struct vkcontext *vkcontext = gctx_vk->vkcontext;
+    if (s->gpu_ctx->config.backend == NGL_BACKEND_VULKAN) {
+        struct gpu_ctx_vk *gpu_ctx_vk = (struct gpu_ctx_vk *)s->gpu_ctx;
+        struct vkcontext *vkcontext = gpu_ctx_vk->vkcontext;
         id<MTLDevice> mtl_device;
         vkGetMTLDeviceMVK(vkcontext->phy_device, &mtl_device);
         capture_descriptor.captureObject = mtl_device;
