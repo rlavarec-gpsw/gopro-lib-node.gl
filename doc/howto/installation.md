@@ -30,6 +30,7 @@ building and running the complete `node.gl` stack.
     pacman -S mingw-w64-x86_64-python3-{pillow,pip}
     pacman -S mingw-w64-x86_64-pyside2-qt5
     pacman -S mingw-w64-x86_64-meson
+    pacman -S mingw-w64-x86_64-graphviz
     ```
 - From MinGW64, build with `make -jN TARGET_OS=MinGW-w64` where `N` is the number of parallel processes
 - Enter the virtual environment with `. venv/bin/activate`
@@ -37,7 +38,9 @@ building and running the complete `node.gl` stack.
 ## Quick user installation on Windows (MSVC toolchain)
 
 - Install [Python](https://www.python.org/downloads/windows/) 3.x using the Windows Installer
-- Install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/) 2019 or greater and make sure the
+- Install [Graphviz](https://graphviz.org/download/) using the Windows Installer and make sure to select the option to add Graphviz
+to the system PATH during its installation
+- Install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/) Community 2019 or greater and make sure the
 following components are included:
     - Desktop development with C++
     - MSVC - VS 2019 C++ x64/x86 build tools
@@ -45,8 +48,7 @@ following components are included:
 - Install [Vcpkg](https://github.com/microsoft/vcpkg) from Windows PowerShell:
     ```shell
     .\bootstrap-vcpkg.bat
-    .\vcpkg.exe install pthreads:x64-windows opengl-registry:x64-windows ffmpeg[ffmpeg,ffprobe]:x64-windows sdl2:x64-windows
-    .\vcpkg.exe integrate install
+    .\vcpkg.exe install opengl-registry:x64-windows ffmpeg[ffmpeg,ffprobe]:x64-windows sdl2:x64-windows
     ```
 - Install [VulkanSDK] (optional, from https://vulkan.lunarg.com/sdk/home#windows)
 
