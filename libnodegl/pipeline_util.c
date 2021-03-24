@@ -33,9 +33,10 @@ int pipeline_update_blocks(struct pipeline *s,  const struct pipeline_resource_p
         if (!ubuffer)
             continue;
         const struct block *ublock = params->ublock[i];
-        s->udata[i] = (uint8_t*)ngli_calloc(1, ublock->size);
+        s->udata[i] = (uint8_t*)ngli_realloc(s->udata[i], ublock->size);
         if (!s->udata[i])
             return NGL_ERROR_MEMORY;
+        memset(s->udata[i], 0, ublock->size);
     }
     return 0;
 }
