@@ -285,16 +285,13 @@ static int handle_tag_info(const uint8_t *data, int size, int fd, struct ctx *s)
 {
     if (size != 0)
         return NGL_ERROR_INVALID_DATA;
-    static const char * const backend_map[] = {
-        [NGL_BACKEND_OPENGL]   = "opengl",
-        [NGL_BACKEND_OPENGLES] = "opengles",
-    };
+
     /* Note: we use the player ngl_config and not the local config because the
      * former contains the backend in use after the configure call */
     const struct ngl_config *cfg = &s->p.ngl_config;
-    if (cfg->backend < 0 || cfg->backend >= ARRAY_NB(backend_map))
+    if (cfg->backend < 0 || cfg->backend >= ARRAY_NB(NGL_BACKEND_MAP))
         return NGL_ERROR_BUG;
-    const char *backend_str = backend_map[cfg->backend];
+    const char *backend_str = NGL_BACKEND_MAP[cfg->backend];
     if (!backend_str)
         return NGL_ERROR_BUG;
 
