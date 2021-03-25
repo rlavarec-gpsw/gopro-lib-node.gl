@@ -384,6 +384,12 @@ enum {
     NGL_BACKEND_OPENGLES,
 };
 
+static const char* const NGL_BACKEND_MAP[] = {
+    "auto",
+    "opengl",
+    "opengles",
+};
+
 /**
  * Capture buffer types
  */
