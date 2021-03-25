@@ -93,14 +93,29 @@ static int get_backend(const char *id)
         return NGL_BACKEND_AUTO;
 
     int nb_backends;
-    struct ngl_backend *backends;
-    int ret = ngl_backends_probe(NULL, &nb_backends, &backends);
+    struct ngl_backend *backends = NULL;
+    struct ngl_config cfg = {
+        .width = 1,
+        .height = 1,
+        .offscreen = 1,
+    };
+    for (int j = 0; j < ARRAY_NB(NGL_BACKEND_MAP); j++) {
+        if (0 == strcmp(id, NGL_BACKEND_MAP[j]))
+            cfg.backend = j;
+    }
+    int ret = ngl_backends_probe(&cfg, &nb_backends, &backends);
     if (ret < 0)
-        return ret;
-    for (int i = 0; i < nb_backends; i++)
-        if (!strcmp(backends[i].string_id, id))
-            return backends[i].id;
-    return NGL_ERROR_NOT_FOUND;
+        goto end;
+    for (int i = 0; i < nb_backends; i++) {
+        if (!strcmp(backends[i].string_id, id)) {
+            ret = backends[i].id;
+            goto end;
+        }
+    }
+    ret = NGL_ERROR_NOT_FOUND;
+end:
+    ngl_backends_freep(&backends);
+    return ret;
 }
 
 static int opt_backend(const char *arg, void *dst)
