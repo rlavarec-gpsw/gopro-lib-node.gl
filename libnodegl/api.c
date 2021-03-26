@@ -486,7 +486,7 @@ static int load_caps(struct ngl_backend *backend, const struct gctx *gctx)
     return 0;
 }
 
-static int backend_probe(struct ngl_backend *backend, const struct ngl_config *config)
+static int backend_probe(struct ngl_backend *backend, const struct ngl_config *config, int dummy)
 {
     struct gctx *gctx = ngli_gctx_create(config);
     if (!gctx)
@@ -498,6 +498,9 @@ static int backend_probe(struct ngl_backend *backend, const struct ngl_config *c
     backend->id         = config->backend;
     backend->string_id  = gctx->backend_str;
     backend->name       = gctx->cls->name;
+
+    if (dummy)
+        return 0;
 
     int ret = ngli_gctx_init(gctx);
     if (ret < 0)
@@ -522,7 +525,7 @@ static const int backend_ids[] = {
 #endif
 };
 
-int ngl_backends_probe(const struct ngl_config *user_config, int *nb_backendsp, struct ngl_backend **backendsp)
+static int backends_probe(const struct ngl_config *user_config, int *nb_backendsp, struct ngl_backend **backendsp, int dummy)
 {
     static const struct ngl_config default_config = {
         .width     = 1,
@@ -547,7 +550,7 @@ int ngl_backends_probe(const struct ngl_config *user_config, int *nb_backendsp, 
         config.backend = backend_ids[i];
         config.platform = platform;
 
-        int ret = backend_probe(&backends[nb_backends], &config);
+        int ret = backend_probe(&backends[nb_backends], &config, dummy);
         if (ret < 0)
             continue;
         backends[nb_backends].is_default = backend_ids[i] == DEFAULT_BACKEND;
@@ -561,6 +564,16 @@ int ngl_backends_probe(const struct ngl_config *user_config, int *nb_backendsp, 
     *backendsp = backends;
     *nb_backendsp = nb_backends;
     return 0;
+}
+
+int ngl_backends_probe(const struct ngl_config *user_config, int *nb_backendsp, struct ngl_backend **backendsp)
+{
+    return backends_probe(user_config, nb_backendsp, backendsp, 0);
+}
+
+int ngl_backends_get(const struct ngl_config *user_config, int *nb_backendsp, struct ngl_backend **backendsp)
+{
+    return backends_probe(user_config, nb_backendsp, backendsp, 1);
 }
 
 void ngl_backends_freep(struct ngl_backend **backendsp)
