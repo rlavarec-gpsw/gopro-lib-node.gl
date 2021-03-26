@@ -79,3 +79,4 @@ jobs:
           echo "$COMMANDS" > $tmpfile
           # Execute the commands in an msvc dev environment
           bash build_scripts/windows/start_msvc_env.sh $tmpfile
+ 
