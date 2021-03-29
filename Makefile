@@ -129,7 +129,6 @@ else
 CMAKE_BUILD_TYPE = Release
 endif
 
-CMAKE_SETUP_OPTIONS = -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) -DCMAKE_INSTALL_PREFIX=$(PREFIX)
 CMAKE_COMPILE_OPTIONS = --config $(CMAKE_BUILD_TYPE)
 ifeq ($(V),1)
 CMAKE_COMPILE_OPTIONS += -v
@@ -203,7 +202,14 @@ CMAKE_BUILD_TYPE = Release
 CMAKE_BUILD_DIR = cmake-build-release
 endif
 
-CMAKE_SETUP_OPTIONS = -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) -G $(CMAKE_GENERATOR)
+CMAKE_SETUP_OPTIONS = -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) -DCMAKE_INSTALL_PREFIX=$(PREFIX) -G $(CMAKE_GENERATOR)
+ifeq ($(TARGET_OS),Windows)
+# Always use MultiThreadedDLL (/MD), not MultiThreadedDebugDLL (/MDd)
+# Some external libraries are only available in Release mode, not in Debug mode
+# MSVC toolchain doesn't allow mixing libraries built in /MD mode with libraries built in /MDd mode
+CMAKE_SETUP_OPTIONS += -DCMAKE_MSVC_RUNTIME_LIBRARY:STRING=MultiThreadedDLL
+endif
+
 ifeq ($(TARGET_OS),Windows)
 # Set Windows SDK Version
 CMAKE_SYSTEM_VERSION ?= 10.0.18362.0
@@ -238,15 +244,8 @@ all: ngl-tools-install pynodegl-utils-install
 	@echo
 
 ngl-tools-install: nodegl-install
-	($(ACTIVATE) && $(MESON_SETUP) --backend $(MESON_BACKEND) ngl-tools $(BUILDDIR)/ngl-tools)
-ifeq ($(TARGET_OS),Windows)
-ifeq ($(DEBUG),yes)
-	# Set RuntimeLibrary to MultithreadedDLL using a script
-	# Note: Meson doesn't support
-	bash build_scripts/$(TARGET_OS_LOWERCASE)/patch_vcxproj_files.sh --set-runtime-library MultiThreadedDLL $(BUILDDIR)/ngl-tools
-endif
-endif
-	($(ACTIVATE) && $(MESON_COMPILE) -C $(BUILDDIR)/ngl-tools && $(MESON_INSTALL) -C $(BUILDDIR)/ngl-tools)
+	($(ACTIVATE) && $(MESON_SETUP) --backend $(MESON_BACKEND) ngl-tools $(BUILDDIR)/ngl-tools && \
+	$(MESON_COMPILE) -C $(BUILDDIR)/ngl-tools && $(MESON_INSTALL) -C $(BUILDDIR)/ngl-tools)
 
 ngl-debug-tools-install:
 	$(CMAKE) -S ngl-debug-tools -B builddir/ngl-debug-tools -G $(CMAKE_GENERATOR) $(CMAKE_SETUP_OPTIONS) && \
@@ -303,14 +302,6 @@ NODEGL_DEPS+=ngfx-install
 endif
 nodegl-setup: $(NODEGL_DEPS)
 	($(ACTIVATE) && $(MESON_SETUP) --backend $(MESON_BACKEND) $(NODEGL_SETUP_OPTS) $(NODEGL_DEBUG_OPTS) --default-library shared libnodegl $(BUILDDIR)/libnodegl)
-ifeq ($(TARGET_OS),Windows)
-ifeq ($(DEBUG),yes)
-	# Set RuntimeLibrary to MultithreadedDLL
-	bash build_scripts/$(TARGET_OS_LOWERCASE)/patch_vcxproj_files.sh --set-runtime-library MultiThreadedDLL $(BUILDDIR)/libnodegl
-endif
-	# Enable MultiProcessorCompilation
-	bash build_scripts/$(TARGET_OS_LOWERCASE)/patch_vcxproj_files.sh --set-multiprocessor-compilation true $(BUILDDIR)/libnodegl
-endif
 
 pkg-config-install: external-download $(PREFIX_DONE)
 ifeq ($(TARGET_OS),Windows)
@@ -358,31 +349,13 @@ MoltenVK-install: external-download $(PREFIX)
 
 ngfx-install: external-download $(PREFIX_DONE)
 	bash build_scripts/sync_deps.sh $(TARGET_OS)
+	( cd external/ngfx && $(CMAKE_SETUP) -D$(NGFX_GRAPHICS_BACKEND)=ON && \
+	$(CMAKE_COMPILE) && $(CMAKE_INSTALL) --prefix ../$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE) )
 ifeq ($(TARGET_OS), Windows)
-	( cd external/ngfx && $(CMAKE_SETUP) -D$(NGFX_GRAPHICS_BACKEND)=ON)
-ifeq ($(DEBUG),yes)
-	# Set RuntimeLibrary to MultithreadedDLL
-	bash build_scripts/$(TARGET_OS_LOWERCASE)/patch_vcxproj_files.sh --set-runtime-library MultiThreadedDLL external/ngfx/$(CMAKE_BUILD_DIR)
-	# Enable MultiProcessorCompilation
-	bash build_scripts/$(TARGET_OS_LOWERCASE)/patch_vcxproj_files.sh --set-multiprocessor-compilation true external/ngfx/$(CMAKE_BUILD_DIR)
-endif
-	( cd external/ngfx && $(CMAKE_COMPILE) && $(CMAKE_INSTALL) --prefix ../$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE) )
 	cp external/$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE)/lib/ngfx.lib $(PREFIX)/Lib
 else ifeq ($(TARGET_OS), Linux)
-	( \
-	  cd external/ngfx && \
-	  $(CMAKE_SETUP) -D$(NGFX_GRAPHICS_BACKEND)=ON && \
-	  $(CMAKE_COMPILE) && \
-	  $(CMAKE_INSTALL) --prefix ../$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE) \
-	)
 	cp external/$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE)/lib/libngfx.so $(PREFIX)/lib
 else ifeq ($(TARGET_OS), Darwin)
-	( \
-	  cd external/ngfx && \
-	  $(CMAKE_SETUP) -D$(NGFX_GRAPHICS_BACKEND)=ON && \
-	  $(CMAKE_COMPILE) && \
-	  $(CMAKE_INSTALL) --prefix ../$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE) \
-	)
 	cp external/$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE)/lib/libngfx.dylib $(PREFIX)/lib
 endif
 ifeq ($(NGFX_GRAPHICS_BACKEND), NGFX_GRAPHICS_BACKEND_DIRECT3D12)
@@ -390,14 +363,7 @@ ifeq ($(NGFX_GRAPHICS_BACKEND), NGFX_GRAPHICS_BACKEND_DIRECT3D12)
 endif
 
 ngl-debug-tools: $(PREFIX_DONE)
-	( cd ngl-debug-tools && $(CMAKE_SETUP) )
-ifeq ($(TARGET_OS), Windows)
-ifeq ($(DEBUG),yes)
-	# Set RuntimeLibrary to MultithreadedDLL
-	bash build_scripts/$(TARGET_OS_LOWERCASE)/patch_vcxproj_files.sh --set-runtime-library MultiThreadedDLL ngl-debug-tools/$(CMAKE_BUILD_DIR)
-endif
-endif
-	( cd ngl-debug-tools && $(CMAKE_COMPILE) )
+	( cd ngl-debug-tools && $(CMAKE_SETUP) && $(CMAKE_COMPILE) )
 
 #
 # We do not pull meson from pip on MinGW for the same reasons we don't pull
