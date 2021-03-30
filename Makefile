@@ -305,9 +305,7 @@ EXTERNAL_DEPS = sxplayer-install MoltenVK-install
 ifeq ($(TARGET_OS),$(filter $(TARGET_OS),Darwin Windows))
 EXTERNAL_DEPS += shaderc-install
 endif
-ifeq ($(ENABLE_NGFX_BACKEND), 1)
-EXTERNAL_DEPS += ngfx-install
-endif
+
 external-install: $(EXTERNAL_DEPS)
 
 shaderc-install: SHADERC_CMAKE_SETUP_OPTIONS_0 = $(subst -G$(CMAKE_GENERATOR),-GNinja,$(CMAKE_SETUP_OPTIONS))
@@ -342,7 +340,7 @@ ngfx-install: external-download pkg-config-install shaderc-install $(PREFIX_DONE
 	$(CMAKE) --build $(BUILDDIR)/ngfx $(CMAKE_COMPILE_OPTIONS) && \
 	$(CMAKE) --install $(BUILDDIR)/ngfx $(CMAKE_INSTALL_OPTIONS)
 ifeq ($(NGFX_GRAPHICS_BACKEND), NGFX_GRAPHICS_BACKEND_DIRECT3D12)
-	-(cd external/ngfx && ../../$(BUILDDIR)/ngfx/$(CMAKE_BUILD_TYPE)/compile_shaders_dx12.exe d3dBlitOp)
+	-(./$(PREFIX)/Scripts/ngfx_compile_shaders_dx12.exe $(PREFIX)/share/ngfx/data $(PREFIX)/share/ngfx/data d3dBlitOp)
 endif
 
 #
