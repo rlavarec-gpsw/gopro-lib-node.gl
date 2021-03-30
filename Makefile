@@ -85,6 +85,7 @@ else
 MESON = meson
 MESON_SETUP         = $(MESON) setup --prefix=$(PREFIX_FULLPATH) --pkg-config-path=$(PREFIX_FULLPATH)/lib/pkgconfig -Drpath=true
 endif
+MESON_SETUP += --backend $(MESON_BACKEND)
 
 # MAKEFLAGS= is a workaround (not working on Windows due to incompatible Make
 # syntax) for the issue described here:
@@ -108,32 +109,6 @@ endif
 ifneq ($(V),)
 MESON_COMPILE += -v
 endif
-
-ifeq ($(TARGET_OS),Windows)
-CMAKE ?= cmake.exe
-else
-CMAKE ?= cmake
-endif
-
-ifeq ($(TARGET_OS),Windows)
-CMAKE_GENERATOR ?= "Visual Studio 16 2019"
-else ifeq ($(TARGET_OS),Linux)
-CMAKE_GENERATOR ?= "Ninja"
-else ifeq ($(TARGET_OS),Darwin)
-CMAKE_GENERATOR ?= "Xcode"
-endif
-
-ifeq ($(DEBUG),yes)
-CMAKE_BUILD_TYPE = Debug
-else
-CMAKE_BUILD_TYPE = Release
-endif
-
-CMAKE_COMPILE_OPTIONS = --config $(CMAKE_BUILD_TYPE)
-ifeq ($(V),1)
-CMAKE_COMPILE_OPTIONS += -v
-endif
-CMAKE_INSTALL_OPTIONS =
 
 NODEGL_DEBUG_OPTS-$(DEBUG_GL)    += gl
 NODEGL_DEBUG_OPTS-$(DEBUG_VK)    += vk
@@ -196,13 +171,15 @@ endif
 
 ifeq ($(DEBUG),yes)
 CMAKE_BUILD_TYPE = Debug
-CMAKE_BUILD_DIR = cmake-build-debug
 else
 CMAKE_BUILD_TYPE = Release
-CMAKE_BUILD_DIR = cmake-build-release
 endif
 
-CMAKE_SETUP_OPTIONS = -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) -DCMAKE_INSTALL_PREFIX=$(PREFIX) -G $(CMAKE_GENERATOR)
+CMAKE_SETUP_OPTIONS = -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) -G$(CMAKE_GENERATOR) -DCMAKE_INSTALL_PREFIX=$(PREFIX)
+ifeq ($(TARGET_OS),Windows)
+# Python venv uses a non-conventional directory structure on Windows
+CMAKE_SETUP_OPTIONS += -DCMAKE_INSTALL_INCLUDEDIR=Include -DCMAKE_INSTALL_LIBDIR=Lib
+endif
 ifeq ($(TARGET_OS),Windows)
 # Always use MultiThreadedDLL (/MD), not MultiThreadedDebugDLL (/MDd)
 # Some external libraries are only available in Release mode, not in Debug mode
@@ -227,12 +204,11 @@ endif
 
 CMAKE_SETUP_OPTIONS += -DEXTERNAL_DIR='$(EXTERNAL_DIR)'
 
-CMAKE_SETUP = $(CMAKE) -H. -B$(CMAKE_BUILD_DIR) $(CMAKE_SETUP_OPTIONS)
-CMAKE_COMPILE = $(CMAKE) --build $(CMAKE_BUILD_DIR) --config $(CMAKE_BUILD_TYPE) -j8
+CMAKE_COMPILE_OPTIONS = --config $(CMAKE_BUILD_TYPE) -j8
 ifeq ($(V),1)
-CMAKE_COMPILE += -v
+CMAKE_COMPILE_OPTIONS += -v
 endif
-CMAKE_INSTALL = $(CMAKE) --install $(CMAKE_BUILD_DIR) --config $(CMAKE_BUILD_TYPE)
+CMAKE_INSTALL_OPTIONS = --config $(CMAKE_BUILD_TYPE)
 
 
 all: ngl-tools-install pynodegl-utils-install
@@ -244,13 +220,13 @@ all: ngl-tools-install pynodegl-utils-install
 	@echo
 
 ngl-tools-install: nodegl-install
-	($(ACTIVATE) && $(MESON_SETUP) --backend $(MESON_BACKEND) ngl-tools $(BUILDDIR)/ngl-tools && \
+	($(ACTIVATE) && $(MESON_SETUP) ngl-tools $(BUILDDIR)/ngl-tools && \
 	$(MESON_COMPILE) -C $(BUILDDIR)/ngl-tools && $(MESON_INSTALL) -C $(BUILDDIR)/ngl-tools)
 
 ngl-debug-tools-install:
-	$(CMAKE) -S ngl-debug-tools -B builddir/ngl-debug-tools -G $(CMAKE_GENERATOR) $(CMAKE_SETUP_OPTIONS) && \
-	$(CMAKE) --build builddir/ngl-debug-tools $(CMAKE_COMPILE_OPTIONS) && \
-	$(CMAKE) --install builddir/ngl-debug-tools $(CMAKE_INSTALL_OPTIONS)
+	$(CMAKE) -S ngl-debug-tools -B $(BUILDDIR)/ngl-debug-tools $(CMAKE_SETUP_OPTIONS) && \
+	$(CMAKE) --build $(BUILDDIR)/ngl-debug-tools $(CMAKE_COMPILE_OPTIONS) && \
+	$(CMAKE) --install $(BUILDDIR)/ngl-debug-tools $(CMAKE_INSTALL_OPTIONS)
 
 pynodegl-utils-install: pynodegl-utils-deps-install
 	($(ACTIVATE) && $(PIP) -v install -e ./pynodegl-utils)
@@ -301,15 +277,15 @@ ifeq ($(ENABLE_NGFX_BACKEND), 1)
 NODEGL_DEPS+=ngfx-install
 endif
 nodegl-setup: $(NODEGL_DEPS)
-	($(ACTIVATE) && $(MESON_SETUP) --backend $(MESON_BACKEND) $(NODEGL_SETUP_OPTS) $(NODEGL_DEBUG_OPTS) --default-library shared libnodegl $(BUILDDIR)/libnodegl)
+	($(ACTIVATE) && $(MESON_SETUP) $(NODEGL_SETUP_OPTS) $(NODEGL_DEBUG_OPTS) --default-library shared libnodegl $(BUILDDIR)/libnodegl)
 
 pkg-config-install: external-download $(PREFIX_DONE)
 ifeq ($(TARGET_OS),Windows)
-	($(ACTIVATE) && $(MESON_SETUP) --backend $(MESON_BACKEND) -Dtests=false external/pkgconf $(BUILDDIR)/pkgconf && $(MESON_COMPILE) -C $(BUILDDIR)/pkgconf && $(MESON_INSTALL) -C $(BUILDDIR)/pkgconf)
+	($(ACTIVATE) && $(MESON_SETUP) -Dtests=false external/pkgconf $(BUILDDIR)/pkgconf && $(MESON_COMPILE) -C $(BUILDDIR)/pkgconf && $(MESON_INSTALL) -C $(BUILDDIR)/pkgconf)
 endif
 
 sxplayer-install: external-download pkg-config-install $(PREFIX)
-	($(ACTIVATE) && $(MESON_SETUP) --backend $(MESON_BACKEND) external/sxplayer $(BUILDDIR)/sxplayer && $(MESON_COMPILE) -C $(BUILDDIR)/sxplayer && $(MESON_INSTALL) -C $(BUILDDIR)/sxplayer)
+	($(ACTIVATE) && $(MESON_SETUP) external/sxplayer $(BUILDDIR)/sxplayer && $(MESON_COMPILE) -C $(BUILDDIR)/sxplayer && $(MESON_INSTALL) -C $(BUILDDIR)/sxplayer)
 
 renderdoc-install: external-download pkg-config-install $(PREFIX)
 ifeq ($(TARGET_OS),Windows)
@@ -319,7 +295,10 @@ endif
 external-download:
 	$(MAKE) -C external
 ifeq ($(TARGET_OS),Darwin)
-	$(MAKE) -C external MoltenVK shaderc
+	$(MAKE) -C external MoltenVK
+endif
+ifeq ($(TARGET_OS),$(filter $(TARGET_OS),Darwin Windows))
+	$(MAKE) -C external shaderc
 endif
 
 ifeq ($(TARGET_OS),Darwin)
@@ -328,14 +307,21 @@ else
 external-install: sxplayer-install
 endif
 
+shaderc-install: SHADERC_CMAKE_SETUP_OPTIONS_0 = $(subst -G$(CMAKE_GENERATOR),-GNinja,$(CMAKE_SETUP_OPTIONS))
+shaderc-install: SHADERC_CMAKE_SETUP_OPTIONS = $(subst -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE),-DCMAKE_BUILD_TYPE=Release,$(SHADERC_CMAKE_SETUP_OPTIONS_0))
+shaderc-install: SHADERC_CMAKE_COMPILE_OPTIONS = $(subst --config $(CMAKE_BUILD_TYPE),--config Release,$(CMAKE_COMPILE_OPTIONS))
+shaderc-install: SHADERC_CMAKE_INSTALL_OPTIONS = $(subst --config $(CMAKE_BUILD_TYPE),--config Release,$(CMAKE_INSTALL_OPTIONS))
+ifeq ($(TARGET_OS),Darwin)
 shaderc-install: SHADERC_LIB_FILENAME = libshaderc_shared.1.dylib
+endif
 shaderc-install: external-download $(PREFIX)
 	cd external/shaderc && ./utils/git-sync-deps
-	# Use Ninja backend, XCode backend isn't supported
-	$(CMAKE) -S external/shaderc -B builddir/shaderc -G Ninja $(CMAKE_SETUP_OPTIONS)  && \
-	$(CMAKE) --build builddir/shaderc $(CMAKE_COMPILE_OPTIONS) && \
-	$(CMAKE) --install builddir/shaderc $(CMAKE_INSTALL_OPTIONS)
+	$(CMAKE) -S external/shaderc -B $(BUILDDIR)/shaderc $(SHADERC_CMAKE_SETUP_OPTIONS) -DSHADERC_SKIP_TESTS=ON && \
+	$(CMAKE) --build $(BUILDDIR)/shaderc $(SHADERC_CMAKE_COMPILE_OPTIONS) && \
+	$(CMAKE) --install $(BUILDDIR)/shaderc $(SHADERC_CMAKE_INSTALL_OPTIONS)
+ifeq ($(TARGET_OS),Darwin)
 	install_name_tool -id @rpath/$(SHADERC_LIB_FILENAME) $(PREFIX)/lib/$(SHADERC_LIB_FILENAME)
+endif
 
 # Note: somehow xcodebuild sets name @rpath/libMoltenVK.dylib automatically
 # (according to otool -l) so we don't have to do anything special
@@ -349,21 +335,12 @@ MoltenVK-install: external-download $(PREFIX)
 
 ngfx-install: external-download $(PREFIX_DONE)
 	bash build_scripts/sync_deps.sh $(TARGET_OS)
-	( cd external/ngfx && $(CMAKE_SETUP) -D$(NGFX_GRAPHICS_BACKEND)=ON && \
-	$(CMAKE_COMPILE) && $(CMAKE_INSTALL) --prefix ../$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE) )
-ifeq ($(TARGET_OS), Windows)
-	cp external/$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE)/lib/ngfx.lib $(PREFIX)/Lib
-else ifeq ($(TARGET_OS), Linux)
-	cp external/$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE)/lib/libngfx.so $(PREFIX)/lib
-else ifeq ($(TARGET_OS), Darwin)
-	cp external/$(TARGET_OS_LOWERCASE)/ngfx_x64-$(TARGET_OS_LOWERCASE)/lib/libngfx.dylib $(PREFIX)/lib
-endif
+	$(CMAKE) -S external/ngfx -B $(BUILDDIR)/ngfx $(CMAKE_SETUP_OPTIONS) -D$(NGFX_GRAPHICS_BACKEND)=ON && \
+	$(CMAKE) --build $(BUILDDIR)/ngfx $(CMAKE_COMPILE_OPTIONS) && \
+	$(CMAKE) --install $(BUILDDIR)/ngfx $(CMAKE_INSTALL_OPTIONS)
 ifeq ($(NGFX_GRAPHICS_BACKEND), NGFX_GRAPHICS_BACKEND_DIRECT3D12)
-	-(cd ./external/ngfx && ./$(CMAKE_BUILD_DIR)/$(CMAKE_BUILD_TYPE)/compile_shaders_dx12.exe d3dBlitOp)
+	# TODO -(cd ./$(BUILDDIR)/ngfx && ./compile_shaders_dx12.exe d3dBlitOp)
 endif
-
-ngl-debug-tools: $(PREFIX_DONE)
-	( cd ngl-debug-tools && $(CMAKE_SETUP) && $(CMAKE_COMPILE) )
 
 #
 # We do not pull meson from pip on MinGW for the same reasons we don't pull
@@ -375,7 +352,6 @@ ifeq ($(TARGET_OS),Windows)
 	# Convert windows to unix style line endings in the activate bash script
 	# See https://bugs.python.org/issue43437
 	sed -i 's/\r$///' $(PREFIX)/Scripts/activate
-	cp $(VCPKG_DIR_WSL)/installed/x64-windows/tools/shaderc_shared.dll $(PREFIX)/Scripts/.
 	cp $(VCPKG_DIR_WSL)/installed/x64-windows/bin/*.dll $(PREFIX)/Scripts/.
 	($(ACTIVATE) && $(PIP) install meson ninja)
 else ifeq ($(TARGET_OS),MinGW-w64)
@@ -391,8 +367,9 @@ $(PREFIX): $(PREFIX_DONE)
 tests: nodegl-tests tests-setup
 	($(ACTIVATE) && $(MESON) test $(MESON_TESTS_SUITE_OPTS) -C $(BUILDDIR)/tests)
 
+tests-setup: TESTS_MESON_SETUP = $(subst --backend $(MESON_BACKEND),--backend ninja, $(MESON_SETUP))
 tests-setup: ngl-tools-install pynodegl-utils-install
-	($(ACTIVATE) && $(MESON_SETUP) --backend ninja $(BUILDDIR)/tests tests)
+	($(ACTIVATE) && $(TESTS_MESON_SETUP) $(BUILDDIR)/tests tests)
 
 nodegl-tests: nodegl-install
 	($(ACTIVATE) && $(MESON) test -C $(BUILDDIR)/libnodegl)
