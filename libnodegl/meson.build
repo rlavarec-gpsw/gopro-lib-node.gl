@@ -228,8 +228,8 @@ lib_deps = [
 ]
 
 lib_c_args = []
-lib_include_dirs = []
-lib_link_args = []
+lib_include_dirs = [ get_option('prefix') / get_option('includedir') ]
+lib_link_args = [ '-L' + get_option('prefix') / get_option('libdir') ]
 
 host_cfg = hosts_cfg.get(host_system, {})
 foreach dep : host_cfg.get('deps', [])
@@ -455,7 +455,7 @@ if enable_ngfx_backend
     )
     ngfx_deps += glm_dep
 
-    ngfx_includes = [ '../external/windows/ngfx_x64-windows/include' ]
+    ngfx_includes = []
     if ngfx_graphics_backend == 'NGFX_GRAPHICS_BACKEND_DIRECT3D12'
       ngfx_includes += '../external/windows/d3dx12'
     endif
@@ -463,7 +463,7 @@ if enable_ngfx_backend
       compile_args: ngfx_cflags,
       include_directories: ngfx_includes,
       link_args: [
-        '-L' + meson.current_source_dir() + '\\..\\external\\windows\\ngfx_x64-windows\\lib', '-lngfx',
+        '-lngfx',
         '-ld3d12', '-ldxgi', '-ld3dcompiler'
       ],
     )
@@ -475,9 +475,8 @@ if enable_ngfx_backend
     ]
     ngfx_dep = declare_dependency(
       compile_args: ngfx_cflags,
-      include_directories: [ '../external/linux/ngfx_x64-linux/include' ],
       link_args: [
-        '-L' + meson.current_source_dir() + '/../external/linux/ngfx_x64-linux/lib', '-lngfx',
+        '-lngfx',
       ] + spirv_cross_link_args,
     )
     ngfx_deps += ngfx_dep
@@ -488,9 +487,8 @@ if enable_ngfx_backend
     ]
     ngfx_dep = declare_dependency(
       compile_args: ngfx_cflags,
-      include_directories: [ '../external/darwin/ngfx_x64-darwin/include' ],
       link_args: [
-        '-L' + meson.current_source_dir() + '/../external/darwin/ngfx_x64-darwin/lib', '-lngfx',
+        '-lngfx',
       ] + spirv_cross_link_args,
     )
     ngfx_deps += ngfx_dep
@@ -777,6 +775,9 @@ test_progs = {
   },
 }
 
+test_include_dirs = [ get_option('prefix') / get_option('includedir') ]
+test_link_args = [ '-L' + get_option('prefix') / get_option('libdir') ]
+
 if meson.backend() != 'xcode'
   if get_option('tests')
     foreach test_key, test_data : test_progs
@@ -784,6 +785,8 @@ if meson.backend() != 'xcode'
         test_data.get('exe'),
         test_data.get('src'),
         dependencies: lib_deps,
+        include_directories: test_include_dirs,
+        link_args: test_link_args,
         build_by_default: false,
         install: false,
       )
