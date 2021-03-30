@@ -301,11 +301,14 @@ ifeq ($(TARGET_OS),$(filter $(TARGET_OS),Darwin Windows))
 	$(MAKE) -C external shaderc
 endif
 
-ifeq ($(TARGET_OS),Darwin)
-external-install: sxplayer-install MoltenVK-install shaderc-install
-else
-external-install: sxplayer-install
+EXTERNAL_DEPS = sxplayer-install MoltenVK-install
+ifeq ($(TARGET_OS),$(filter $(TARGET_OS),Darwin Windows))
+EXTERNAL_DEPS += shaderc-install
 endif
+ifeq ($(ENABLE_NGFX_BACKEND), 1)
+EXTERNAL_DEPS += ngfx-install
+endif
+external-install: $(EXTERNAL_DEPS)
 
 shaderc-install: SHADERC_CMAKE_SETUP_OPTIONS_0 = $(subst -G$(CMAKE_GENERATOR),-GNinja,$(CMAKE_SETUP_OPTIONS))
 shaderc-install: SHADERC_CMAKE_SETUP_OPTIONS = $(subst -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE),-DCMAKE_BUILD_TYPE=Release,$(SHADERC_CMAKE_SETUP_OPTIONS_0))
@@ -333,13 +336,13 @@ MoltenVK-install: external-download $(PREFIX)
 	cp -v external/MoltenVK/Package/Latest/MoltenVK/dylib/macOS/libMoltenVK.dylib $(PREFIX)/lib
 	cp -vr external/MoltenVK/Package/Latest/MoltenVK/include $(PREFIX)
 
-ngfx-install: external-download pkg-config-install $(PREFIX_DONE)
+ngfx-install: external-download pkg-config-install shaderc-install $(PREFIX_DONE)
 	bash build_scripts/sync_deps.sh $(TARGET_OS)
 	$(CMAKE) -S external/ngfx -B $(BUILDDIR)/ngfx $(CMAKE_SETUP_OPTIONS) -D$(NGFX_GRAPHICS_BACKEND)=ON && \
 	$(CMAKE) --build $(BUILDDIR)/ngfx $(CMAKE_COMPILE_OPTIONS) && \
 	$(CMAKE) --install $(BUILDDIR)/ngfx $(CMAKE_INSTALL_OPTIONS)
 ifeq ($(NGFX_GRAPHICS_BACKEND), NGFX_GRAPHICS_BACKEND_DIRECT3D12)
-	# TODO -(cd ./$(BUILDDIR)/ngfx && ./compile_shaders_dx12.exe d3dBlitOp)
+	-(cd external/ngfx && ../../$(BUILDDIR)/ngfx/$(CMAKE_BUILD_TYPE)/compile_shaders_dx12.exe d3dBlitOp)
 endif
 
 #
