@@ -178,7 +178,7 @@ endif
 CMAKE_SETUP_OPTIONS = -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) -G$(CMAKE_GENERATOR) -DCMAKE_INSTALL_PREFIX=$(PREFIX)
 ifeq ($(TARGET_OS),Windows)
 # Python venv uses a non-conventional directory structure on Windows
-CMAKE_SETUP_OPTIONS += -DCMAKE_INSTALL_INCLUDEDIR=Include -DCMAKE_INSTALL_LIBDIR=Lib
+CMAKE_SETUP_OPTIONS += -DCMAKE_INSTALL_INCLUDEDIR=Include -DCMAKE_INSTALL_LIBDIR=Lib -DCMAKE_INSTALL_BINDIR=Scripts
 endif
 ifeq ($(TARGET_OS),Windows)
 # Always use MultiThreadedDLL (/MD), not MultiThreadedDebugDLL (/MDd)
