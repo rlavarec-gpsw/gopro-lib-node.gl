@@ -333,7 +333,7 @@ MoltenVK-install: external-download $(PREFIX)
 	cp -v external/MoltenVK/Package/Latest/MoltenVK/dylib/macOS/libMoltenVK.dylib $(PREFIX)/lib
 	cp -vr external/MoltenVK/Package/Latest/MoltenVK/include $(PREFIX)
 
-ngfx-install: external-download $(PREFIX_DONE)
+ngfx-install: external-download pkg-config-install $(PREFIX_DONE)
 	bash build_scripts/sync_deps.sh $(TARGET_OS)
 	$(CMAKE) -S external/ngfx -B $(BUILDDIR)/ngfx $(CMAKE_SETUP_OPTIONS) -D$(NGFX_GRAPHICS_BACKEND)=ON && \
 	$(CMAKE) --build $(BUILDDIR)/ngfx $(CMAKE_COMPILE_OPTIONS) && \
