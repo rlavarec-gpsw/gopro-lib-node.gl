@@ -20,5 +20,6 @@ jobs:
 
     - name: Build
       run: |
+        export PKG_CONFIG_PATH=$PWD/venv/Lib/pkgconfig:$PKG_CONFIG_PATH
         make -j$(($(sysctl -n hw.logicalcpu)+1)) DEBUG_GPU_CAPTURE=yes MESON_BACKEND=ninja
 
