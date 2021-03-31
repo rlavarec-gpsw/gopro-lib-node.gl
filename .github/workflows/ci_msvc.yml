@@ -27,6 +27,11 @@ jobs:
 
       - uses: actions/checkout@v2
 
+      - name: Test
+        shell: powershell
+        run: |
+          python.exe -m venv venv0
+
       - name: Get vcpkg cache key
         id: get-vcpkg-cache-key
         run: |
