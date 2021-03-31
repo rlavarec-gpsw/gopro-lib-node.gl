@@ -119,8 +119,6 @@ ifneq ($(NODEGL_DEBUG_OPTS-yes),)
 NODEGL_DEBUG_OPTS = -Ddebug_opts=$(shell echo $(NODEGL_DEBUG_OPTS-yes) | tr ' ' ',')
 endif
 
-NODEGL_SETUP_OPTS = -Dngfx_graphics_backend=$(NGFX_GRAPHICS_BACKEND) -Dngfx_window_backend=$(NGFX_WINDOW_BACKEND)
-
 ifeq ($(DEBUG_GPU_CAPTURE),yes)
 ifeq ($(TARGET_OS),Windows)
 RENDERDOC_DIR = $(shell wslpath -wa .)\external\renderdoc
@@ -130,6 +128,9 @@ RENDERDOC_DIR = $(PWD)/external/renderdoc
 NODEGL_DEBUG_OPTS += -Drenderdoc_dir="$(RENDERDOC_DIR)"
 endif
 endif
+
+NODEGL_MESON_SETUP_OPTIONS = $(NODEGL_DEBUG_OPTS)
+
 
 # Workaround Debian/Ubuntu bug; see https://github.com/mesonbuild/meson/issues/5925
 ifeq ($(TARGET_OS),Linux)
@@ -157,16 +158,21 @@ endif
 
 ifeq ($(TARGET_OS),Windows)
 CMAKE_GENERATOR ?= "Visual Studio 16 2019"
-NGFX_GRAPHICS_BACKEND ?= "NGFX_GRAPHICS_BACKEND_DIRECT3D12"
-NGFX_WINDOW_BACKEND ?= "NGFX_WINDOW_BACKEND_WINDOWS"
 else ifeq ($(TARGET_OS),Linux)
-NGFX_GRAPHICS_BACKEND ?= "NGFX_GRAPHICS_BACKEND_VULKAN"
-NGFX_WINDOW_BACKEND ?= "NGFX_WINDOW_BACKEND_GLFW"
 CMAKE_GENERATOR ?= "CodeBlocks - Ninja"
 else ifeq ($(TARGET_OS),Darwin)
-NGFX_GRAPHICS_BACKEND ?= "NGFX_GRAPHICS_BACKEND_METAL"
-NGFX_WINDOW_BACKEND ?= "NGFX_WINDOW_BACKEND_APPKIT"
 CMAKE_GENERATOR ?= "Xcode"
+endif
+
+ifeq ($(ENABLE_NGFX_BACKEND),1)
+ifeq ($(TARGET_OS),Windows)
+NGFX_GRAPHICS_BACKEND ?= "NGFX_GRAPHICS_BACKEND_DIRECT3D12"
+else ifeq ($(TARGET_OS),Linux)
+NGFX_GRAPHICS_BACKEND ?= "NGFX_GRAPHICS_BACKEND_VULKAN"
+else ifeq ($(TARGET_OS),Darwin)
+NGFX_GRAPHICS_BACKEND ?= "NGFX_GRAPHICS_BACKEND_METAL"
+endif
+NODEGL_MESON_SETUP_OPTIONS += -Dngfx_graphics_backend=$(NGFX_GRAPHICS_BACKEND)
 endif
 
 ifeq ($(DEBUG),yes)
@@ -277,7 +283,7 @@ ifeq ($(ENABLE_NGFX_BACKEND), 1)
 NODEGL_DEPS+=ngfx-install
 endif
 nodegl-setup: $(NODEGL_DEPS)
-	($(ACTIVATE) && $(MESON_SETUP) $(NODEGL_SETUP_OPTS) $(NODEGL_DEBUG_OPTS) --default-library shared libnodegl $(BUILDDIR)/libnodegl)
+	($(ACTIVATE) && $(MESON_SETUP) $(NODEGL_MESON_SETUP_OPTIONS) --default-library shared libnodegl $(BUILDDIR)/libnodegl)
 
 pkg-config-install: external-download $(PREFIX_DONE)
 ifeq ($(TARGET_OS),Windows)
