@@ -50,8 +50,5 @@ option('enable_ngfx_backend', type: 'boolean', value: true,
 option('ngfx_graphics_backend', type: 'string', value: '',
         description: 'ngfx graphics backend (VULKAN | METAL | DIRECT3D12)')
 
-option('ngfx_window_backend', type: 'string', value: '',
-        description: 'ngfx window backend (GLFW | APPKIT | WINDOWS)')
-
 option('renderdoc_dir', type: 'string',
        description: 'Renderdoc directory')
