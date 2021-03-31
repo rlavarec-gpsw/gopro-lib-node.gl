@@ -287,8 +287,6 @@ endif
 # Graphic backend dependencies
 #
 
-ngfx_cflags = []
-
 ngfx_src = [
   'backends/ngfx/buffer_ngfx.cpp',
   'backends/ngfx/format_ngfx.cpp',
@@ -309,17 +307,15 @@ endif
 if enable_ngfx_backend
   ngfx_graphics_backend = get_option('ngfx_graphics_backend')
   if ngfx_graphics_backend == 'NGFX_GRAPHICS_BACKEND_DIRECT3D12' and host_system == 'windows'
-    ngfx_cflags += '-DNGFX_GRAPHICS_BACKEND_DIRECT3D12'
     ngfx_src += 'backends/ngfx/surface_util_ngfx_d3d.cpp'
     ngfx_src += 'backends/ngfx/swapchain_util_ngfx_d3d.cpp'
   elif ngfx_graphics_backend == 'NGFX_GRAPHICS_BACKEND_VULKAN'
-    ngfx_cflags += '-DNGFX_GRAPHICS_BACKEND_VULKAN'
     ngfx_src += 'backends/ngfx/surface_util_ngfx_vk.cpp'
     ngfx_src += 'backends/ngfx/swapchain_util_ngfx_vk.cpp'
   elif ngfx_graphics_backend == 'NGFX_GRAPHICS_BACKEND_METAL' and host_system == 'darwin'
-    ngfx_cflags += '-DNGFX_GRAPHICS_BACKEND_METAL'
     ngfx_src += 'backends/ngfx/surface_util_ngfx_mtl.mm'
     ngfx_src += 'backends/ngfx/swapchain_util_ngfx_mtl.mm'
+    ngfx_src += 'backends/ngfx/hwupload_videotoolbox_darwin_ngfx.mm'
   else
     error('invalid value for ngfx_graphics_backend: @0@'.format(ngfx_graphics_backend))
   endif
@@ -414,87 +410,20 @@ gbackends_cfg = {
     'src': files(ngfx_src),
     'cfg': 'BACKEND_NGFX',
     'hosts_cfg': {
-      'windows': {
-      },
       'linux': {
+        'deps': ['ngfx'],
       },
       'darwin': {
-        'src': files(
-          'backends/ngfx/hwupload_videotoolbox_darwin_ngfx.mm'
-        ),
+        'deps': ['ngfx'],
+      },
+      'android': {},
+      'iphone': {},
+      'windows': {
+        'deps': ['ngfx'],
       },
     },
   },
 }
-
-if enable_ngfx_backend
-  ngfx_window_backend = get_option('ngfx_window_backend')
-  if ngfx_window_backend == 'NGFX_WINDOW_BACKEND_WINDOWS' and host_system == 'windows'
-    ngfx_cflags += '-DNGFX_WINDOW_BACKEND_WINDOWS'
-  elif ngfx_window_backend == 'NGFX_WINDOW_BACKEND_GLFW'
-    ngfx_cflags += '-DNGFX_WINDOW_BACKEND_GLFW'
-  elif ngfx_window_backend == 'NGFX_WINDOW_BACKEND_APPKIT' and host_system == 'darwin'
-    ngfx_cflags += '-DNGFX_WINDOW_BACKEND_APPKIT'
-  else
-    error('invalid value for ngfx_window_backend: @0@'.format(ngfx_window_backend))
-  endif
-
-  ngfx_deps = []
-
-  json_dep = declare_dependency(
-    include_directories: [ '../external/json/include' ],
-  )
-  ngfx_deps += json_dep
-
-  if host_system == 'windows'
-    spirv_cross_dep = dependency('spirv-cross')
-    ngfx_deps += spirv_cross_dep
-
-    glm_dep = declare_dependency(
-      include_directories: [ '../external/windows/glm-0.9.9.8/glm' ]
-    )
-    ngfx_deps += glm_dep
-
-    ngfx_includes = []
-    if ngfx_graphics_backend == 'NGFX_GRAPHICS_BACKEND_DIRECT3D12'
-      ngfx_includes += '../external/windows/d3dx12'
-    endif
-    ngfx_dep = declare_dependency(
-      compile_args: ngfx_cflags,
-      include_directories: ngfx_includes,
-      link_args: [
-        '-lngfx',
-        '-ld3d12', '-ldxgi', '-ld3dcompiler'
-      ],
-    )
-    ngfx_deps += ngfx_dep
-
-  elif host_system == 'linux'
-    spirv_cross_link_args = [
-      '-lspirv-cross-cpp', '-lspirv-cross-core', '-lspirv-cross-glsl', '-lspirv-cross-hlsl', '-lspirv-cross-msl', '-lspirv-cross-reflect', '-lspirv-cross-util', '-lspirv-cross-c'
-    ]
-    ngfx_dep = declare_dependency(
-      compile_args: ngfx_cflags,
-      link_args: [
-        '-lngfx',
-      ] + spirv_cross_link_args,
-    )
-    ngfx_deps += ngfx_dep
-
-  elif host_system == 'darwin'
-    spirv_cross_link_args = [
-      '-lspirv-cross-cpp', '-lspirv-cross-core', '-lspirv-cross-glsl', '-lspirv-cross-hlsl', '-lspirv-cross-msl', '-lspirv-cross-reflect', '-lspirv-cross-util', '-lspirv-cross-c'
-    ]
-    ngfx_dep = declare_dependency(
-      compile_args: ngfx_cflags,
-      link_args: [
-        '-lngfx',
-      ] + spirv_cross_link_args,
-    )
-    ngfx_deps += ngfx_dep
-
-  endif
-endif
 
 if host_system in ['darwin', 'iphone']
   add_languages('objc')
@@ -522,10 +451,6 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
   endforeach
   if 'frameworks' in host_backend_cfg
     gbackend_deps += dependency('appleframeworks', modules: host_backend_cfg.get('frameworks'), required: opt_gbackend)
-  endif
-
-  if enable_ngfx_backend and gbackend_name == 'ngfx'
-     gbackend_deps += ngfx_deps
   endif
 
   all_dep_found = true
