@@ -25,6 +25,7 @@ UNZIP ?= unzip
 
 MOLTENVK_VERSION ?= 1.1.1
 SHADERC_VERSION  ?= 2020.3
+SPIRV_CROSS_VERSION ?= 2021-01-15
 SXPLAYER_VERSION ?= 9.8.1
 PKGCONF_VERSION ?= 1.7.4
 RENDERDOC_VERSION ?= 1.12
@@ -68,6 +69,15 @@ shaderc-$(SHADERC_VERSION): shaderc-$(SHADERC_VERSION).tar.gz
 
 shaderc-$(SHADERC_VERSION).tar.gz:
 	$(CURL) -L https://github.com/google/shaderc/archive/v$(SHADERC_VERSION).tar.gz -o $@
+
+SPIRV-Cross: SPIRV-Cross-$(SPIRV_CROSS_VERSION)
+	ln -snf $< $@
+
+SPIRV-Cross-$(SPIRV_CROSS_VERSION): SPIRV-Cross-$(SPIRV_CROSS_VERSION).tar.gz
+	$(TAR) xf $<
+
+SPIRV-Cross-$(SPIRV_CROSS_VERSION).tar.gz:
+	$(CURL) -L https://github.com/KhronosGroup/SPIRV-Cross/archive/refs/tags/$(SPIRV_CROSS_VERSION).tar.gz -o $@
 
 # Note for developers: in order to customize the sxplayer you're building
 # against, you can use your own sources post-install:

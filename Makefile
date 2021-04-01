@@ -306,6 +306,9 @@ endif
 ifeq ($(TARGET_OS),$(filter $(TARGET_OS),Darwin Windows))
 	$(MAKE) -C external shaderc
 endif
+ifeq ($(TARGET_OS),Windows)
+	$(MAKE) -C external SPIRV-Cross
+endif
 
 EXTERNAL_DEPS = sxplayer-install
 ifeq ($(TARGET_OS),Darwin)
@@ -335,6 +338,17 @@ ifeq ($(TARGET_OS),Darwin)
 endif
 endif
 
+SPIRV-Cross-install: SPIRV_CROSS_CMAKE_SETUP_OPTIONS = $(filter-out -G$(CMAKE_GENERATOR) -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE),$(CMAKE_SETUP_OPTIONS))
+SPIRV-Cross-install: SPIRV_CROSS_CMAKE_SETUP_OPTIONS +=  -GNinja -DCMAKE_BUILD_TYPE=Release
+SPIRV-Cross-install: SPIRV_CROSS_CMAKE_COMPILE_OPTIONS = $(subst --config $(CMAKE_BUILD_TYPE),--config Release,$(CMAKE_COMPILE_OPTIONS))
+SPIRV-Cross-install: SPIRV_CROSS_CMAKE_INSTALL_OPTIONS = $(subst --config $(CMAKE_BUILD_TYPE),--config Release,$(CMAKE_INSTALL_OPTIONS))
+SPIRV-Cross-install: external-download $(PREFIX)
+ifeq ($(TARGET_OS),$(filter $(TARGET_OS),Windows))
+	$(CMAKE) -S external/SPIRV-Cross -B $(BUILDDIR)/SPIRV-Cross $(SPIRV_CROSS_CMAKE_SETUP_OPTIONS) && \
+	$(CMAKE) --build $(BUILDDIR)/SPIRV-Cross $(SPIRV_CROSS_CMAKE_COMPILE_OPTIONS) && \
+	$(CMAKE) --install $(BUILDDIR)/SPIRV-Cross $(SPIRV_CROSS_CMAKE_INSTALL_OPTIONS)
+endif
+
 # Note: somehow xcodebuild sets name @rpath/libMoltenVK.dylib automatically
 # (according to otool -l) so we don't have to do anything special
 MoltenVK-install: external-download $(PREFIX)
@@ -345,7 +359,7 @@ MoltenVK-install: external-download $(PREFIX)
 	cp -v external/MoltenVK/Package/Latest/MoltenVK/dylib/macOS/libMoltenVK.dylib $(PREFIX)/lib
 	cp -vr external/MoltenVK/Package/Latest/MoltenVK/include $(PREFIX)
 
-ngfx-install: external-download pkg-config-install shaderc-install $(PREFIX_DONE)
+ngfx-install: external-download pkg-config-install shaderc-install SPIRV-Cross-install $(PREFIX_DONE)
 	bash build_scripts/sync_deps.sh $(TARGET_OS)
 	$(CMAKE) -S external/ngfx -B $(BUILDDIR)/ngfx $(CMAKE_SETUP_OPTIONS) -D$(NGFX_GRAPHICS_BACKEND)=ON && \
 	$(CMAKE) --build $(BUILDDIR)/ngfx $(CMAKE_COMPILE_OPTIONS) && \
