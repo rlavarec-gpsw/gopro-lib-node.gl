@@ -44,7 +44,8 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt -y update
-          sudo apt -y install build-essential unzip
+          sudo apt -y install build-essential unzip ninja-build
+          pip.exe install meson
           wget https://sdk.lunarg.com/sdk/download/${{env.VULKAN_SDK_VERSION}}/windows/VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe
           chmod a+x VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe
           ./VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe /S
