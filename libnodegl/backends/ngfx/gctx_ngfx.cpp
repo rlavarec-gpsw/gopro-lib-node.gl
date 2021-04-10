@@ -136,6 +136,10 @@ static void ngfx_set_clear_color(struct gctx *s, const float *color);
 static int ngfx_init(struct gctx *s)
 {
     const ngl_config *config = &s->config;
+    if (config->width == 0 || config->height == 0) {
+        LOG(ERROR, "invalid config: width = %d height = %d", config->width, config->height);
+            return NGL_ERROR_INVALID_ARG;
+    }
     gctx_ngfx *ctx = (gctx_ngfx *)s;
 #if DEBUG_GPU_CAPTURE
     const char* var = getenv("NGL_GPU_CAPTURE");
