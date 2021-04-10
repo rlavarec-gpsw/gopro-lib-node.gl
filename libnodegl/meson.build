@@ -488,7 +488,7 @@ enable_gpu_capture = false
 if 'gpu_capture' in debug_opts
   if host_system == 'darwin'
     if 'vk' in gbackends
-      lib_src += files('gpu_capture_metal.m')
+      lib_src += files('gpu_capture_metal.mm')
       enable_gpu_capture = true
     endif
   else
