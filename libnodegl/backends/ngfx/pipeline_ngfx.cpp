@@ -170,7 +170,7 @@ static int pipeline_graphics_init(pipeline *s, const pipeline_params *params)
 
     state.numSamples = glm::max(rt_desc->samples, 1);
 
-#ifdef NGFX_GRAPHICS_BACKEND_DIRECT3D12
+#if defined(NGFX_GRAPHICS_BACKEND_DIRECT3D12) || defined(NGFX_GRAPHICS_BACKEND_METAL)
     state.frontFace = FRONT_FACE_CLOCKWISE;
 #else
     state.frontFace = FRONT_FACE_COUNTER_CLOCKWISE;
