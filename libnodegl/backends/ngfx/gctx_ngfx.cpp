@@ -321,18 +321,10 @@ static int ngfx_transform_cull_mode(struct gctx *s, int cull_mode)
 
 static void ngfx_transform_projection_matrix(struct gctx *s, float *dst)
 {
-#if defined(NGFX_GRAPHICS_BACKEND_VULKAN)
+#if defined(NGFX_GRAPHICS_BACKEND_VULKAN) || defined(NGFX_GRAPHICS_BACKEND_METAL)
     static const NGLI_ALIGNED_MAT(matrix) = {
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f,-1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 0.5f, 0.0f,
-        0.0f, 0.0f, 0.5f, 1.0f,
-    };
-    ngli_mat4_mul(dst, matrix, dst);
-#elif defined(NGFX_GRAPHICS_BACKEND_METAL)
-    static const NGLI_ALIGNED_MAT(matrix) = {
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
         0.0f, 0.0f, 0.5f, 0.0f,
         0.0f, 0.0f, 0.5f, 1.0f,
     };
