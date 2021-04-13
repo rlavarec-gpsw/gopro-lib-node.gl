@@ -217,6 +217,10 @@ static int ngfx_init(struct gctx *s)
     s->limits.max_compute_work_group_count[0] = INT_MAX;
     s->limits.max_compute_work_group_count[1] = INT_MAX;
     s->limits.max_compute_work_group_count[2] = INT_MAX;
+
+    if (config->hud)
+        ctx->enable_profiling = true;
+
     return 0;
 }
 
@@ -256,7 +260,11 @@ static int ngfx_begin_draw(struct gctx *s, double t)
     }
     s_priv->cur_command_buffer = s_priv->graphics_context->drawCommandBuffer();
     CommandBuffer *cmd_buf = s_priv->cur_command_buffer;
+    const struct ngl_config *config = &s->config;
     cmd_buf->begin();
+    if (s_priv->enable_profiling) {
+        s_priv->graphics->beginProfile(cmd_buf);
+    }
     ngfx_begin_render_pass(s, s_priv->default_rendertarget);
     int *vp = s_priv->viewport;
     s_priv->graphics->setViewport(cmd_buf, { vp[0], vp[1], uint32_t(vp[2]), uint32_t(vp[3]) });
@@ -271,6 +279,9 @@ static int ngfx_end_draw(struct gctx *s, double t)
     gctx_ngfx *s_priv = (gctx_ngfx *)s;
     GraphicsContext *ctx = s_priv->graphics_context;
     ngfx_end_render_pass(s);
+    if (s_priv->enable_profiling) {
+        s_priv->profile_data.time = s_priv->graphics->endProfile(s_priv->cur_command_buffer);
+    }
     s_priv->cur_command_buffer->end();
     if (s->config.offscreen) {
         uint32_t size = s->config.width * s->config.height * 4;
@@ -286,6 +297,13 @@ static int ngfx_end_draw(struct gctx *s, double t)
         s_priv->swapchain_util->present(s_priv->cur_command_buffer);
     }
     return 0;
+}
+
+static int ngfx_query_draw_time(struct gctx *s, int64_t *time)
+{
+    gctx_ngfx *s_priv = (gctx_ngfx *)s;
+    *time = s_priv->profile_data.time;
+    s_priv->profile_data.time = 0;
 }
 
 static void ngfx_wait_idle(struct gctx *s)
@@ -487,6 +505,7 @@ extern "C" const struct gctx_class ngli_gctx_ngfx = {
     .end_update   = ngfx_end_update,
     .begin_draw   = ngfx_begin_draw,
     .end_draw     = ngfx_end_draw,
+    .query_draw_time = ngfx_query_draw_time,
     .wait_idle    = ngfx_wait_idle,
     .destroy      = ngfx_destroy,
 
