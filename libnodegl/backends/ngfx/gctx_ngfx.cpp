@@ -291,7 +291,8 @@ static int ngfx_end_draw(struct gctx *s, double t)
 static void ngfx_wait_idle(struct gctx *s)
 {
     gctx_ngfx *s_priv = (gctx_ngfx *)s;
-    if (s_priv->cur_command_buffer) s_priv->graphics->waitIdle(s_priv->cur_command_buffer);
+    if (s_priv->cur_command_buffer)
+        s_priv->graphics->waitIdle(s_priv->cur_command_buffer);
 }
 
 static void ngfx_destroy(struct gctx *s)
@@ -306,12 +307,18 @@ static void ngfx_destroy(struct gctx *s)
     auto output_color_texture = ((texture *)ctx->offscreen_resources.color_texture);
     auto output_depth_texture = ((texture *)ctx->offscreen_resources.depth_texture);
     auto dummy_texture = ctx->dummy_texture;
-    if (output_depth_texture) ngli_texture_freep(&output_depth_texture);
-    if (output_color_texture) ngli_texture_freep(&output_color_texture);
-    if (dummy_texture) ngli_texture_freep(&dummy_texture);
-    if (ctx->default_rendertarget) ngli_rendertarget_freep(&ctx->default_rendertarget);
-    if (ctx->swapchain_util) delete ctx->swapchain_util;
-    if (ctx->surface) delete ctx->surface;
+    if (output_depth_texture)
+        ngli_texture_freep(&output_depth_texture);
+    if (output_color_texture)
+        ngli_texture_freep(&output_color_texture);
+    if (dummy_texture)
+        ngli_texture_freep(&dummy_texture);
+    if (ctx->default_rendertarget)
+        ngli_rendertarget_freep(&ctx->default_rendertarget);
+    if (ctx->swapchain_util)
+        delete ctx->swapchain_util;
+    if (ctx->surface)
+        delete ctx->surface;
     delete ctx->graphics;
     delete ctx->graphics_context;
 }
