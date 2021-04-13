@@ -354,12 +354,6 @@ static void ngfx_get_rendertarget_uvcoord_matrix(struct gctx *s, float *dst)
     memcpy(dst, matrix, 4 * 4 * sizeof(float));
 }
 
-static struct rendertarget *ngfx_get_rendertarget(struct gctx *s)
-{
-    struct gctx_ngfx *s_priv = (struct gctx_ngfx *)s;
-    return s_priv->cur_rendertarget;
-}
-
 static struct rendertarget *ngfx_get_default_rendertarget(struct gctx *s)
 {
     struct gctx_ngfx *s_priv = (struct gctx_ngfx *)s;
@@ -469,32 +463,6 @@ static void ngfx_set_clear_color(struct gctx *s, const float *color)
 {
     struct gctx_ngfx *s_priv = (struct gctx_ngfx *)s;
     memcpy(s_priv->clear_color, color, sizeof(s_priv->clear_color));
-}
-
-static void ngfx_get_clear_color(struct gctx *s, float *color)
-{
-    struct gctx_ngfx *s_priv = (struct gctx_ngfx *)s;
-    memcpy(color, &s_priv->clear_color, sizeof(s_priv->clear_color));
-}
-
-static void ngfx_clear_color(struct gctx *s)
-{ TODO();
-
-}
-
-static void ngfx_clear_depth_stencil(struct gctx *s)
-{ TODO();
-
-}
-
-static void ngfx_invalidate_depth_stencil(struct gctx *s)
-{ TODO();
-
-}
-
-static void ngfx_flush(struct gctx *s)
-{ TODO();
-
 }
 
 static int ngfx_get_preferred_depth_format(struct gctx *s)
