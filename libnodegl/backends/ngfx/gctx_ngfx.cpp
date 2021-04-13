@@ -406,8 +406,8 @@ static void end_render_pass(struct gctx_ngfx *s_priv, rendertarget_ngfx *)
 {
     Graphics *graphics = s_priv->graphics;
     CommandBuffer *cmd_buf = s_priv->cur_command_buffer;
-
-    graphics->endRenderPass(cmd_buf);
+    if (graphics->currentRenderPass)
+        graphics->endRenderPass(cmd_buf);
 }
 
 static void ngfx_begin_render_pass(struct gctx *s, struct rendertarget *rt)
