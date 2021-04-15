@@ -81,15 +81,19 @@ struct ShaderCompiler {
         //}
         string outDir = tmpDir;
         glslFiles = { tmpFile };
+#if defined(NGFX_GRAPHICS_BACKEND_VULKAN)
         spvFiles = shaderTools.compileShaders(glslFiles, outDir, ShaderTools::FORMAT_GLSL, {},
             ShaderTools::PATCH_SHADER_LAYOUTS_GLSL | ShaderTools::REMOVE_UNUSED_VARIABLES);
-#if defined(NGFX_GRAPHICS_BACKEND_VULKAN)
         glslMapFiles = shaderTools.generateShaderMaps(glslFiles, outDir, ShaderTools::FORMAT_GLSL);
 #elif defined(NGFX_GRAPHICS_BACKEND_DIRECT3D12)
+        spvFiles = shaderTools.compileShaders(glslFiles, outDir, ShaderTools::FORMAT_GLSL, {},
+            ShaderTools::PATCH_SHADER_LAYOUTS_GLSL | ShaderTools::REMOVE_UNUSED_VARIABLES);
         hlslFiles = shaderTools.convertShaders(spvFiles, outDir, ShaderTools::FORMAT_HLSL);
         dxcFiles = shaderTools.compileShaders(hlslFiles, outDir, ShaderTools::FORMAT_HLSL);
         hlslMapFiles = shaderTools.generateShaderMaps(hlslFiles, outDir, ShaderTools::FORMAT_HLSL);
 #elif defined(NGFX_GRAPHICS_BACKEND_METAL)
+        spvFiles = shaderTools.compileShaders(glslFiles, outDir, ShaderTools::FORMAT_GLSL, {},
+            ShaderTools::PATCH_SHADER_LAYOUTS_GLSL | ShaderTools::REMOVE_UNUSED_VARIABLES | ShaderTools::FLIP_VERT_Y);
         mtlFiles = shaderTools.convertShaders(spvFiles, outDir, ShaderTools::FORMAT_MSL);
         mtllibFiles = shaderTools.compileShaders(mtlFiles, outDir, ShaderTools::FORMAT_MSL);
         mtlMapFiles = shaderTools.generateShaderMaps(mtlFiles, outDir, ShaderTools::FORMAT_MSL);

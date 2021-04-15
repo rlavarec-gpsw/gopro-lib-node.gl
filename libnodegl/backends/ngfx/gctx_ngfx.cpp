@@ -307,15 +307,15 @@ static int ngfx_end_draw(struct gctx *s, double t)
     }
     s_priv->cur_command_buffer->end();
     if (s->config.offscreen) {
-        uint32_t size = s->config.width * s->config.height * 4;
-        auto &output_color_resolve_texture = s_priv->offscreen_resources.color_resolve_texture;
-        auto &output_color_texture = s_priv->offscreen_resources.color_texture;
-        auto &output_texture = ((texture_ngfx *)(output_color_resolve_texture ? output_color_resolve_texture : output_color_texture))->v;
         ctx->submit(s_priv->cur_command_buffer);
         if (s->config.capture_buffer) {
+            uint32_t size = s->config.width * s->config.height * 4;
+            auto &output_color_resolve_texture = s_priv->offscreen_resources.color_resolve_texture;
+            auto &output_color_texture = s_priv->offscreen_resources.color_texture;
+            auto &output_texture = ((texture_ngfx *)(output_color_resolve_texture ? output_color_resolve_texture : output_color_texture))->v;
             output_texture->download(s->config.capture_buffer, size);
         } else {
-            ctx->queue->waitIdle();
+            if (ctx->queue) ctx->queue->waitIdle();
         }
     }
     else {
