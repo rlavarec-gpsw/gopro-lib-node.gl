@@ -372,7 +372,7 @@ else
 	$(PYTHON) -m venv $(PREFIX)
 	($(ACTIVATE) && $(PIP) install meson ninja)
 endif
-	touch $(PREFIX_DONE)
+	touch $@
 
 $(PREFIX): $(PREFIX_DONE)
 

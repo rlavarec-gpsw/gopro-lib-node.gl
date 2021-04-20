@@ -380,10 +380,7 @@ gbackends_cfg = {
         'deps': ['shaderc', 'vulkan'],
       },
       'darwin': {
-        'src': files(
-            'backends/vk/hwupload_videotoolbox_darwin_vk.m',
-            'backends/vk/mvk_util.m'
-        ),
+        'src': files('backends/vk/hwupload_videotoolbox_darwin_vk.m'),
         'deps': ['shaderc'],
         'libs': ['MoltenVK'],
         'frameworks': ['Metal'],
@@ -491,7 +488,7 @@ enable_gpu_capture = false
 if 'gpu_capture' in debug_opts
   if host_system == 'darwin'
     if 'vk' in gbackends
-      lib_src += files('gpu_capture_metal.m')
+      lib_src += files('gpu_capture_metal.mm')
       enable_gpu_capture = true
     endif
   else

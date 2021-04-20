@@ -34,8 +34,8 @@ struct buffer_vk {
 struct buffer *ngli_buffer_vk_create(struct gctx *gctx);
 int ngli_buffer_vk_init(struct buffer *s, int size, int usage);
 int ngli_buffer_vk_upload(struct buffer *s, const void *data, int size, int offset);
-int ngli_buffer_vk_download(struct buffer *s, void *data, uint32_t size, uint32_t offset);
-int ngli_buffer_vk_map(struct buffer *s, int size, uint32_t offset, void **data);
+int ngli_buffer_vk_download(struct buffer *s, void *data, int size, int offset);
+int ngli_buffer_vk_map(struct buffer *s, int size, int offset, void **data);
 void ngli_buffer_vk_unmap(struct buffer *s);
 void ngli_buffer_vk_freep(struct buffer **sp);
 

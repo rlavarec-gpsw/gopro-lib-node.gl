@@ -53,7 +53,6 @@ jobs:
           ./vcpkg.exe install --triplet ${{env.VCPKG_TRIPLET}} ${{env.VCPKG_INSTALL_PACKAGES}}
 
       - name: Build
-        continue-on-error: true
         run: |
           cd /mnt/c
           # Workaround for meson issue #8329

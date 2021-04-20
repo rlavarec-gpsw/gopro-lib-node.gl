@@ -11,7 +11,6 @@ building and running the complete `node.gl` stack.
   - **FFmpeg** (and its libraries for compilation)
   - **Python 3.x** (you will need the package with the build headers as well,
     typically named with a `-devel` suffix on Debian based systems)
-  - **pip** (Python 3 version)
   - **Graphviz**
   - **SDL2**
 - Build with `make -jN` where `N` is the number of parallel processes
@@ -21,16 +20,18 @@ building and running the complete `node.gl` stack.
 
 - Install [MSYS2](https://www.msys2.org/) (which also brings **MinGW64**)
 - Install dependencies via pacman using **MinGW64** shell (*Not* MSYS2,
+- Install [Vulkan SDK](https://vulkan.lunarg.com/sdk/home#windows) (optional)
 "MINGW64" should be visible in the prompt):
     ```shell
     pacman -Syuu  # and restart the shell
     pacman -S git make
     pacman -S mingw-w64-x86_64-{toolchain,ffmpeg,python}
     pacman -S mingw-w64-x86_64-python-watchdog
-    pacman -S mingw-w64-x86_64-python3-{pillow,pip}
+    pacman -S mingw-w64-x86_64-python3-pillow
     pacman -S mingw-w64-x86_64-pyside2-qt5
     pacman -S mingw-w64-x86_64-meson
     pacman -S mingw-w64-x86_64-graphviz
+    pacman -S mingw-w64-x86_64-shaderc
     ```
 - From MinGW64, build with `make -jN TARGET_OS=MinGW-w64` where `N` is the number of parallel processes
 - Enter the virtual environment with `. venv/bin/activate`
@@ -45,13 +46,13 @@ following components are included:
     - Desktop development with C++
     - MSVC - VS 2019 C++ x64/x86 build tools
     - Windows 10 SDK
-- Install [Vcpkg](https://github.com/microsoft/vcpkg) from Windows PowerShell:
+- Install [Vcpkg](https://github.com/microsoft/vcpkg) from Windows PowerShell as of commit 56136ff (see issue [16658](https://github.com/microsoft/vcpkg/issues/16658)):
     ```shell
+    git.exe checkout 56136ffae69a4a7f8b9cd5452713925417d47367 -b shaderc/workaround-16658
     .\bootstrap-vcpkg.bat
     .\vcpkg.exe install opengl-registry:x64-windows ffmpeg[ffmpeg,ffprobe]:x64-windows sdl2:x64-windows
     ```
-- Install [VulkanSDK] (optional, from https://vulkan.lunarg.com/sdk/home#windows)
-
+- Install [Vulkan SDK](https://vulkan.lunarg.com/sdk/home#windows) (optional)
 - Enable [WSL (Windows Subsystem for Linux)](https://docs.microsoft.com/en-us/windows/wsl/install-win10)
 - Install Ubuntu into WSL from Microsoft Store.
 - Set MSVC Environment Variables
@@ -82,7 +83,7 @@ and `ffprobe` binaries must be available in order to run the tests)
 ## Build Customization Parameters
 
 - MESON_BACKEND: the Meson backend (ninja,vs,vs2010,vs2015,vs2017,vs2019,xcode)
-- BUILDDIR: the build output directory (default: builddir)
+- BUILDDIR: the build directory
 
 ### Known limitations
 

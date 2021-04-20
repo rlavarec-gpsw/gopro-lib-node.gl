@@ -103,7 +103,7 @@ int ngli_buffer_vk_upload(struct buffer *s, const void *data, int size, int offs
     return 0;
 }
 
-int ngli_buffer_vk_download(struct buffer *s, void *data, uint32_t size, uint32_t offset)
+int ngli_buffer_vk_download(struct buffer *s, void *data, int size, int offset)
 {
     void *src;
     int ret = ngli_buffer_map(s, size, offset, &src);
@@ -114,7 +114,7 @@ int ngli_buffer_vk_download(struct buffer *s, void *data, uint32_t size, uint32_
     return 0;
 }
 
-int ngli_buffer_vk_map(struct buffer *s, int size, uint32_t offset, void **data)
+int ngli_buffer_vk_map(struct buffer *s, int size, int offset, void **data)
 {
     struct gctx_vk *gctx_vk = (struct gctx_vk *)s->gctx;
     struct vkcontext *vk = gctx_vk->vkcontext;

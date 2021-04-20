@@ -220,7 +220,11 @@ cdef _set_node_ctx(_Node node, int type):
         raise MemoryError()
 
 
-def _probe_backends(dummy, **kwargs):
+_PROBE_MODE_FULL = 0
+_PROBE_MODE_NO_GRAPHICS = 1
+
+
+def _probe_backends(mode, **kwargs):
     cdef ngl_config config
     cdef ngl_config *configp = NULL;
     if kwargs:
@@ -231,7 +235,7 @@ def _probe_backends(dummy, **kwargs):
     cdef ngl_backend *backends = NULL
     cdef ngl_cap *cap = NULL
     cdef int ret;
-    if dummy:
+    if mode == _PROBE_MODE_NO_GRAPHICS:
         ret = ngl_backends_get(configp, &nb_backends, &backends)
     else:
         ret = ngl_backends_probe(configp, &nb_backends, &backends)
@@ -260,11 +264,11 @@ def _probe_backends(dummy, **kwargs):
 
 
 def probe_backends(**kwargs):
-    return _probe_backends(False, **kwargs)
+    return _probe_backends(_PROBE_MODE_FULL, **kwargs)
 
 
 def get_backends(**kwargs):
-    return _probe_backends(True, **kwargs)
+    return _probe_backends(_PROBE_MODE_NO_GRAPHICS, **kwargs)
 
 
 cdef class Context:

@@ -43,10 +43,6 @@
 #include "nodegl.h"
 #include "vkcontext.h"
 
-#ifdef VK_USE_PLATFORM_MACOS_MVK
-#include "mvk_util.h"
-#endif
-
 
 #ifdef DEBUG_VK
 static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
@@ -483,10 +479,6 @@ static VkResult select_physical_device(struct vkcontext *s, const struct ngl_con
         return VK_ERROR_DEVICE_LOST;
     }
 
-#ifdef VK_USE_PLATFORM_MACOS_MVK
-    mvk_util_on_physical_device_created(s->mvk_util, s->phy_device);
-#endif
-
     LOG(DEBUG, "select physical device: %s, graphics queue: %d, present queue: %d",
         s->phy_device_props.deviceName, s->graphics_queue_index, s->present_queue_index);
 
@@ -677,9 +669,6 @@ struct vkcontext *ngli_vkcontext_create(void)
 
 int ngli_vkcontext_init(struct vkcontext *s, const struct ngl_config *config)
 {
-#ifdef VK_USE_PLATFORM_MACOS_MVK
-    s->mvk_util = mvk_util_create();
-#endif
     VkResult res = create_instance(s, config->platform);
     if (res != VK_SUCCESS)
         return -1; // XXX
@@ -753,10 +742,6 @@ void ngli_vkcontext_freep(struct vkcontext **sp)
 #if defined(TARGET_LINUX)
     if (s->own_display)
         XCloseDisplay(s->display);
-#endif
-
-#ifdef VK_USE_PLATFORM_MACOS_MVK
-    mvk_util_freep(&s->mvk_util);
 #endif
 
     ngli_freep(sp);
