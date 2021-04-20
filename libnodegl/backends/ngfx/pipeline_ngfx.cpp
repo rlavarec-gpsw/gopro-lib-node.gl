@@ -37,6 +37,10 @@ extern "C" {
 #include "program_ngfx.h"
 #include "texture_ngfx.h"
 #include "util_ngfx.h"
+#if defined(NGFX_GRAPHICS_BACKEND_VULKAN)
+#include "ngfx/porting/vulkan/VKCommandBuffer.h"
+#endif
+
 #include <map>
 using namespace ngfx;
 
@@ -170,7 +174,7 @@ static int pipeline_graphics_init(pipeline *s, const pipeline_params *params)
 
     state.numSamples = glm::max(rt_desc->samples, 1);
 
-#ifdef NGFX_GRAPHICS_BACKEND_DIRECT3D12
+#if defined(NGFX_GRAPHICS_BACKEND_DIRECT3D12)
     state.frontFace = FRONT_FACE_CLOCKWISE;
 #else
     state.frontFace = FRONT_FACE_COUNTER_CLOCKWISE;
@@ -457,6 +461,7 @@ void ngli_pipeline_ngfx_draw_indexed(pipeline *s, buffer *indices, int indices_f
     gctx->graphics->drawIndexed(cmd_buf, nb_indices, nb_instances);
 
 }
+
 void ngli_pipeline_ngfx_dispatch(pipeline *s, int nb_group_x, int nb_group_y, int nb_group_z) {
     gctx_ngfx *gctx = (gctx_ngfx *)s->gctx;
     CommandBuffer *cmd_buf = gctx->cur_command_buffer;
@@ -471,6 +476,18 @@ void ngli_pipeline_ngfx_dispatch(pipeline *s, int nb_group_x, int nb_group_y, in
     TODO("pass threads_per_group as params");
     int threads_per_group_x = 1, threads_per_group_y = 1, threads_per_group_z = 1;
     gctx->graphics->dispatch(cmd_buf, nb_group_x, nb_group_y, nb_group_z, threads_per_group_x, threads_per_group_y, threads_per_group_z);
+
+#if defined(NGFX_GRAPHICS_BACKEND_VULKAN)
+    //TODO: add pipeline barrier API to NGLI and ngfx
+    const VkMemoryBarrier barrier = {
+        .sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+        .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
+        .dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+    };
+    const VkPipelineStageFlags src_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    const VkPipelineStageFlags dst_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    vkCmdPipelineBarrier(vk(cmd_buf)->v, src_stage, dst_stage, 0, 1, &barrier, 0, NULL, 0, NULL);
+#endif
 }
 
 void ngli_pipeline_ngfx_freep(pipeline **sp) {

@@ -81,8 +81,11 @@ struct ShaderCompiler {
         //}
         string outDir = tmpDir;
         glslFiles = { tmpFile };
-        spvFiles = shaderTools.compileShaders(glslFiles, outDir, ShaderTools::FORMAT_GLSL, {},
-            ShaderTools::PATCH_SHADER_LAYOUTS_GLSL | ShaderTools::REMOVE_UNUSED_VARIABLES);
+        int flags = ShaderTools::PATCH_SHADER_LAYOUTS_GLSL | ShaderTools::REMOVE_UNUSED_VARIABLES;
+#if defined(NGFX_GRAPHICS_BACKEND_METAL)
+        flags |= ShaderTools::FLIP_VERT_Y;
+#endif
+        spvFiles = shaderTools.compileShaders(glslFiles, outDir, ShaderTools::FORMAT_GLSL, {}, flags);
 #if defined(NGFX_GRAPHICS_BACKEND_VULKAN)
         glslMapFiles = shaderTools.generateShaderMaps(glslFiles, outDir, ShaderTools::FORMAT_GLSL);
 #elif defined(NGFX_GRAPHICS_BACKEND_DIRECT3D12)

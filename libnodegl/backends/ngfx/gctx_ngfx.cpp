@@ -72,8 +72,11 @@ static int create_offscreen_resources(struct gctx *s) {
         .width = config->width,
         .height = config->height,
         .samples = config->samples,
-        .usage = NGLI_TEXTURE_USAGE_SAMPLED_BIT | NGLI_TEXTURE_USAGE_TRANSFER_SRC_BIT | NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT
+        .usage = NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT | NGLI_TEXTURE_USAGE_TRANSFER_SRC_BIT
+        //TODO: if MSAA target, set to TRANSIENT_ATTACHMENT_BIT
     };
+    if (config->samples == 1)
+        color_texture_params.usage |= NGLI_TEXTURE_USAGE_SAMPLED_BIT;
 
     ngli_texture_init(color_texture, &color_texture_params);
 
@@ -99,6 +102,24 @@ static int create_offscreen_resources(struct gctx *s) {
     rt_params.colors[0].attachment = color_texture;
     rt_params.depth_stencil.attachment = depth_texture,
     rt_params.readable = 1;
+
+    if (config->samples) {
+        auto &color_resolve_texture = s_priv->offscreen_resources.color_resolve_texture;
+        color_resolve_texture = ngli_texture_create(s);
+
+        texture_params color_resolve_texture_params = {
+            .type    = NGLI_TEXTURE_TYPE_2D,
+            .format  = NGLI_FORMAT_R8G8B8A8_UNORM,
+            .width   = config->width,
+            .height  = config->height,
+            .samples = 1,
+            .usage   = NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT | NGLI_TEXTURE_USAGE_TRANSFER_SRC_BIT | NGLI_TEXTURE_USAGE_SAMPLED_BIT,
+        };
+
+        // FIXME: current function returns VkResult
+        ngli_texture_init(color_resolve_texture, &color_resolve_texture_params);
+        rt_params.colors[0].resolve_target = color_resolve_texture;
+    }
 
     auto &rt = s_priv->offscreen_resources.rt;
     rt = ngli_rendertarget_create(s);
@@ -136,6 +157,10 @@ static void ngfx_set_clear_color(struct gctx *s, const float *color);
 static int ngfx_init(struct gctx *s)
 {
     const ngl_config *config = &s->config;
+    if (config->width == 0 || config->height == 0) {
+        LOG(ERROR, "invalid config: width = %d height = %d", config->width, config->height);
+            return NGL_ERROR_INVALID_ARG;
+    }
     gctx_ngfx *ctx = (gctx_ngfx *)s;
 #if DEBUG_GPU_CAPTURE
     const char* var = getenv("NGL_GPU_CAPTURE");
@@ -213,6 +238,12 @@ static int ngfx_init(struct gctx *s)
     s->limits.max_compute_work_group_count[0] = INT_MAX;
     s->limits.max_compute_work_group_count[1] = INT_MAX;
     s->limits.max_compute_work_group_count[2] = INT_MAX;
+
+    s->limits.max_samples = 8;
+
+    if (config->hud)
+        ctx->enable_profiling = true;
+
     return 0;
 }
 
@@ -252,7 +283,11 @@ static int ngfx_begin_draw(struct gctx *s, double t)
     }
     s_priv->cur_command_buffer = s_priv->graphics_context->drawCommandBuffer();
     CommandBuffer *cmd_buf = s_priv->cur_command_buffer;
+    const struct ngl_config *config = &s->config;
     cmd_buf->begin();
+    if (s_priv->enable_profiling) {
+        s_priv->graphics->beginProfile(cmd_buf);
+    }
     ngfx_begin_render_pass(s, s_priv->default_rendertarget);
     int *vp = s_priv->viewport;
     s_priv->graphics->setViewport(cmd_buf, { vp[0], vp[1], uint32_t(vp[2]), uint32_t(vp[3]) });
@@ -267,13 +302,20 @@ static int ngfx_end_draw(struct gctx *s, double t)
     gctx_ngfx *s_priv = (gctx_ngfx *)s;
     GraphicsContext *ctx = s_priv->graphics_context;
     ngfx_end_render_pass(s);
+    if (s_priv->enable_profiling) {
+        s_priv->profile_data.time = s_priv->graphics->endProfile(s_priv->cur_command_buffer);
+    }
     s_priv->cur_command_buffer->end();
     if (s->config.offscreen) {
+        ctx->submit(s_priv->cur_command_buffer);
         if (s->config.capture_buffer) {
             uint32_t size = s->config.width * s->config.height * 4;
-            auto &output_texture = ((texture_ngfx *)s_priv->offscreen_resources.color_texture)->v;
-            ctx->submit(s_priv->cur_command_buffer);
+            auto &output_color_resolve_texture = s_priv->offscreen_resources.color_resolve_texture;
+            auto &output_color_texture = s_priv->offscreen_resources.color_texture;
+            auto &output_texture = ((texture_ngfx *)(output_color_resolve_texture ? output_color_resolve_texture : output_color_texture))->v;
             output_texture->download(s->config.capture_buffer, size);
+        } else {
+            if (ctx->queue) ctx->queue->waitIdle();
         }
     }
     else {
@@ -282,10 +324,19 @@ static int ngfx_end_draw(struct gctx *s, double t)
     return 0;
 }
 
+static int ngfx_query_draw_time(struct gctx *s, int64_t *time)
+{
+    gctx_ngfx *s_priv = (gctx_ngfx *)s;
+    *time = s_priv->profile_data.time;
+    s_priv->profile_data.time = 0;
+    return 0;
+}
+
 static void ngfx_wait_idle(struct gctx *s)
 {
     gctx_ngfx *s_priv = (gctx_ngfx *)s;
-    if (s_priv->cur_command_buffer) s_priv->graphics->waitIdle(s_priv->cur_command_buffer);
+    if (s_priv->cur_command_buffer)
+        s_priv->graphics->waitIdle(s_priv->cur_command_buffer);
 }
 
 static void ngfx_destroy(struct gctx *s)
@@ -298,14 +349,23 @@ static void ngfx_destroy(struct gctx *s)
     gpu_capture_freep(&s->gpu_capture_ctx);
 #endif
     auto output_color_texture = ((texture *)ctx->offscreen_resources.color_texture);
+    auto output_color_resolve_texture = ((texture *)ctx->offscreen_resources.color_resolve_texture);
     auto output_depth_texture = ((texture *)ctx->offscreen_resources.depth_texture);
     auto dummy_texture = ctx->dummy_texture;
-    if (output_depth_texture) ngli_texture_freep(&output_depth_texture);
-    if (output_color_texture) ngli_texture_freep(&output_color_texture);
-    if (dummy_texture) ngli_texture_freep(&dummy_texture);
-    if (ctx->default_rendertarget) ngli_rendertarget_freep(&ctx->default_rendertarget);
-    if (ctx->swapchain_util) delete ctx->swapchain_util;
-    if (ctx->surface) delete ctx->surface;
+    if (output_depth_texture)
+        ngli_texture_freep(&output_depth_texture);
+    if (output_color_texture)
+        ngli_texture_freep(&output_color_texture);
+    if (output_color_resolve_texture)
+        ngli_texture_freep(&output_color_resolve_texture);
+    if (dummy_texture)
+        ngli_texture_freep(&dummy_texture);
+    if (ctx->default_rendertarget)
+        ngli_rendertarget_freep(&ctx->default_rendertarget);
+    if (ctx->swapchain_util)
+        delete ctx->swapchain_util;
+    if (ctx->surface)
+        delete ctx->surface;
     delete ctx->graphics;
     delete ctx->graphics_context;
 }
@@ -317,7 +377,6 @@ static int ngfx_transform_cull_mode(struct gctx *s, int cull_mode)
 
 static void ngfx_transform_projection_matrix(struct gctx *s, float *dst)
 {
-#if defined(NGFX_GRAPHICS_BACKEND_VULKAN)
     static const NGLI_ALIGNED_MAT(matrix) = {
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f,-1.0f, 0.0f, 0.0f,
@@ -325,26 +384,6 @@ static void ngfx_transform_projection_matrix(struct gctx *s, float *dst)
         0.0f, 0.0f, 0.5f, 1.0f,
     };
     ngli_mat4_mul(dst, matrix, dst);
-#elif defined(NGFX_GRAPHICS_BACKEND_METAL)
-    static const NGLI_ALIGNED_MAT(matrix) = {
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 0.5f, 0.0f,
-        0.0f, 0.0f, 0.5f, 1.0f,
-    };
-    ngli_mat4_mul(dst, matrix, dst);
-#elif defined(NGFX_GRAPHICS_BACKEND_DIRECT3D12)
-    const struct ngl_config* config = &s->config;
-    if (!config->offscreen)
-        return;
-    static const NGLI_ALIGNED_MAT(matrix) = {
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f,-1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f,
-    };
-    ngli_mat4_mul(dst, matrix, dst);
-#endif
 }
 
 static void ngfx_get_rendertarget_uvcoord_matrix(struct gctx *s, float *dst)
@@ -360,12 +399,6 @@ static void ngfx_get_rendertarget_uvcoord_matrix(struct gctx *s, float *dst)
     static const NGLI_ALIGNED_MAT(matrix) = NGLI_MAT4_IDENTITY;
 #endif
     memcpy(dst, matrix, 4 * 4 * sizeof(float));
-}
-
-static struct rendertarget *ngfx_get_rendertarget(struct gctx *s)
-{
-    struct gctx_ngfx *s_priv = (struct gctx_ngfx *)s;
-    return s_priv->cur_rendertarget;
 }
 
 static struct rendertarget *ngfx_get_default_rendertarget(struct gctx *s)
@@ -402,8 +435,8 @@ static void end_render_pass(struct gctx_ngfx *s_priv, rendertarget_ngfx *)
 {
     Graphics *graphics = s_priv->graphics;
     CommandBuffer *cmd_buf = s_priv->cur_command_buffer;
-
-    graphics->endRenderPass(cmd_buf);
+    if (graphics->currentRenderPass)
+        graphics->endRenderPass(cmd_buf);
 }
 
 static void ngfx_begin_render_pass(struct gctx *s, struct rendertarget *rt)
@@ -479,32 +512,6 @@ static void ngfx_set_clear_color(struct gctx *s, const float *color)
     memcpy(s_priv->clear_color, color, sizeof(s_priv->clear_color));
 }
 
-static void ngfx_get_clear_color(struct gctx *s, float *color)
-{
-    struct gctx_ngfx *s_priv = (struct gctx_ngfx *)s;
-    memcpy(color, &s_priv->clear_color, sizeof(s_priv->clear_color));
-}
-
-static void ngfx_clear_color(struct gctx *s)
-{ TODO();
-
-}
-
-static void ngfx_clear_depth_stencil(struct gctx *s)
-{ TODO();
-
-}
-
-static void ngfx_invalidate_depth_stencil(struct gctx *s)
-{ TODO();
-
-}
-
-static void ngfx_flush(struct gctx *s)
-{ TODO();
-
-}
-
 static int ngfx_get_preferred_depth_format(struct gctx *s)
 {
     gctx_ngfx *ctx = (gctx_ngfx *)s;
@@ -527,6 +534,7 @@ extern "C" const struct gctx_class ngli_gctx_ngfx = {
     .end_update   = ngfx_end_update,
     .begin_draw   = ngfx_begin_draw,
     .end_draw     = ngfx_end_draw,
+    .query_draw_time = ngfx_query_draw_time,
     .wait_idle    = ngfx_wait_idle,
     .destroy      = ngfx_destroy,
 

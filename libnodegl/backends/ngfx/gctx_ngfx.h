@@ -41,20 +41,26 @@ struct gctx_ngfx {
 
     struct rendertarget *default_rendertarget;
     struct rendertarget_desc default_rendertarget_desc;
-
     rendertarget *cur_rendertarget;
+
     int viewport[4];
     int scissor[4];
     float clear_color[4];
 
     struct {
-        texture *color_texture = nullptr, *depth_texture = nullptr;
+        texture *color_texture = nullptr, *depth_texture = nullptr,
+                *color_resolve_texture = nullptr, *depth_resolve_texture = nullptr;
         rendertarget *rt = nullptr;
     } offscreen_resources;
 
     texture *dummy_texture = nullptr;
-    
+
     swapchain_util_ngfx *swapchain_util = nullptr;
+
+    bool enable_profiling = false;
+    struct {
+        uint64_t time = 0;
+    } profile_data;
 };
 
 #endif
