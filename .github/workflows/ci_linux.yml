@@ -16,9 +16,9 @@ jobs:
       matrix:
         include:
           - backend: "all"
-            run_tests_command: "DEBUG=yes DEBUG_GL=yes make tests"
+            custom_env:
           - backend: "opengles 2"
-            run_tests_command: "MESA_GLES_VERSION_OVERRIDE=2.0 DEBUG=yes DEBUG_GL=yes make tests TESTS_SUITE=opengles"
+            custom_env: MESA_GLES_VERSION_OVERRIDE=2.0
 
     steps:
     - uses: actions/checkout@v2
@@ -43,10 +43,22 @@ jobs:
         sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-${{env.VULKAN_SDK_VERSION}}-focal.list https://packages.lunarg.com/vulkan/${{env.VULKAN_SDK_VERSION}}/lunarg-vulkan-${{env.VULKAN_SDK_VERSION}}-focal.list
         sudo apt -y update
         sudo apt install vulkan-sdk
+
     - name: Build
       run: |
-        make DEBUG_GPU_CAPTURE=yes
+        ./configure.py --buildtype debug --debug gl gpu_capture --enable-ngfx-backend
+        make
+
+    - uses: actions/upload-artifact@v2
+      if: always()
+      with:
+          name: nodegl-linux-build-logs
+          path: |
+            builddir/**/*.txt
+            builddir/**/*.cmake
+            builddir/**/*.log
+            builddir/Makefile
+
     - name: Run tests ${{matrix.backend}}
       run: |
-        ${{matrix.run_tests_command}}
-
+        ${{matrix.custom_env}} make tests

@@ -19,19 +19,20 @@ jobs:
 
     defaults:
       run:
-        shell: wsl-bash {0}
+        shell: pwsh
 
     steps:
-      - uses: Vampire/setup-wsl@v1
-        with:
-          distribution: Ubuntu-20.04
-
       - uses: actions/checkout@v2
 
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+
       - name: Get vcpkg cache key
+        shell: bash
         id: get-vcpkg-cache-key
         run: |
-          VCPKG_COMMIT_ID=$(cd /mnt/c/vcpkg && git rev-parse HEAD)
+          VCPKG_COMMIT_ID=$(git -C C:/vcpkg rev-parse HEAD)
           echo "::set-output name=key::$(echo $VCPKG_COMMIT_ID ${{env.VCPKG_TRIPLET}} ${{env.VCPKG_INSTALL_PACKAGES}} | md5sum | cut -f1 -d" ")"
 
       - name: Restore vcpkg binary cache archives
@@ -43,29 +44,26 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt -y update
-          sudo apt -y install build-essential unzip ninja-build
           pip.exe install meson
-          wget https://sdk.lunarg.com/sdk/download/${{env.VULKAN_SDK_VERSION}}/windows/VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe
-          chmod a+x VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe
+          iwr https://sdk.lunarg.com/sdk/download/${{env.VULKAN_SDK_VERSION}}/windows/VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe -OutFile VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe && `
           ./VulkanSDK-${{env.VULKAN_SDK_VERSION}}-Installer.exe /S
-          cd /mnt/c/vcpkg
-          ./vcpkg.exe install --triplet ${{env.VCPKG_TRIPLET}} ${{env.VCPKG_INSTALL_PACKAGES}}
+          cd C:\vcpkg
+          .\vcpkg.exe install --triplet ${{env.VCPKG_TRIPLET}} ${{env.VCPKG_INSTALL_PACKAGES}}
 
       - name: Build
+        continue-on-error: true
         run: |
-          cd /mnt/c
-          # Workaround for meson issue #8329
-          # Currently meson requires the project to be on the same drive as dependencies
-          cp -Rf /mnt/d/a/gopro-lib-node.gl/gopro-lib-node.gl .
-          cd gopro-lib-node.gl
-          # Save the following commands to a variable
-          read -r -d '' COMMANDS << EOM || true
-          export VULKAN_SDK='C:\VulkanSDK\${{env.VULKAN_SDK_VERSION}}'
-          source build_scripts/windows/set_env.sh
-          make -j$(($(nproc)+1))
-          EOM
-          tmpfile=$(mktemp)
-          echo "$COMMANDS" > $tmpfile
-          # Execute the commands in an msvc dev environment
-          bash build_scripts/windows/start_msvc_env.sh $tmpfile
+          .\scripts\msvc-env.ps1
+          $env:VULKAN_SDK='C:\VulkanSDK\${{env.VULKAN_SDK_VERSION}}'
+          python.exe .\configure.py --buildtype debug --debug gl gpu_capture --enable-ngfx-backend
+          nmake
+
+      - uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: nodegl-msvc-build-logs
+          path: |
+            builddir/**/*.txt
+            builddir/**/*.cmake
+            builddir/**/*.log
+            builddir/Makefile

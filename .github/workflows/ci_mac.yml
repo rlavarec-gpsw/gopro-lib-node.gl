@@ -20,6 +20,15 @@ jobs:
 
     - name: Build
       run: |
-        export PKG_CONFIG_PATH=$PWD/venv/Lib/pkgconfig:$PKG_CONFIG_PATH
-        make -j$(($(sysctl -n hw.logicalcpu)+1)) DEBUG_GPU_CAPTURE=yes MESON_BACKEND=ninja
+        ./configure.py --buildtype debug --debug gl gpu_capture --enable-ngfx-backend
+        make
 
+    - uses: actions/upload-artifact@v2
+      if: always()
+      with:
+          name: nodegl-mac-build-logs
+          path: |
+            builddir/**/*.txt
+            builddir/**/*.cmake
+            builddir/**/*.log
+            builddir/Makefile
