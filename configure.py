@@ -369,6 +369,12 @@ def _get_make_vars(cfg):
 
     if _SYSTEM == 'Windows':
         meson_setup += ['--bindir=Scripts', '--libdir=Lib', '--includedir=Include']
+
+    if _SYSTEM == 'Windows':
+        # Use Multithreaded DLL runtime library for debug and release configurations
+        # Third party libs are compiled in release mode
+        # Visual Studio toolchain requires all libraries to use the same runtime library
+        meson_setup += ['-Db_vscrt=md']
     else:
         # Workaround Debian/Ubuntu bug; see https://github.com/mesonbuild/meson/issues/5925
         try:
