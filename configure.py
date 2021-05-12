@@ -396,7 +396,7 @@ def _get_make_vars(cfg):
     #
     meson = 'MAKEFLAGS= meson' if _SYSTEM != 'Windows' else 'meson'
 
-    buildtype = 'debugoptimized' if cfg.args.coverage or cfg.args.buildtype == 'debug' else 'release'
+    buildtype = 'debug' if cfg.args.coverage or cfg.args.buildtype == 'debug' else 'release'
     meson_setup = [
         'setup',
         '--prefix', cfg.prefix,
