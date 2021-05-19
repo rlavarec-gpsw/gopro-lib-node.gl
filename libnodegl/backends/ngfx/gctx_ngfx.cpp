@@ -235,13 +235,24 @@ static int ngfx_init(struct gctx *s)
         ctx->default_rendertarget_desc.depth_stencil.format = to_ngli_format(graphics_context->depthFormat);
     }
 
-    s->limits.max_compute_work_group_count[0] = INT_MAX;
-    s->limits.max_compute_work_group_count[1] = INT_MAX;
-    s->limits.max_compute_work_group_count[2] = INT_MAX;
+    // TODO: query programmatically
 
-    s->limits.max_uniform_block_size = INT_MAX;
-
-    s->limits.max_samples = 8;
+    s->limits.max_color_attachments              = 8;
+    s->limits.max_texture_dimension_1d           = 16384;
+    s->limits.max_texture_dimension_2d           = 16384;
+    s->limits.max_texture_dimension_3d           = 2048;
+    s->limits.max_texture_dimension_cube         = 16384;
+    s->limits.max_compute_work_group_count[0]    = 65535;
+    s->limits.max_compute_work_group_count[1]    = 65535;
+    s->limits.max_compute_work_group_count[2]    = 65535;
+    s->limits.max_compute_work_group_invocations = 1024;
+    s->limits.max_compute_work_group_size[0]     = 1024;
+    s->limits.max_compute_work_group_size[1]     = 1024;
+    s->limits.max_compute_work_group_size[2]     = 1024;
+    s->limits.max_draw_buffers                   = s->limits.max_color_attachments;
+    s->limits.max_samples                        = 8;
+    s->limits.max_texture_image_units            = 0;
+    s->limits.max_uniform_block_size             = INT_MAX;
 
     if (config->hud)
         ctx->enable_profiling = true;
