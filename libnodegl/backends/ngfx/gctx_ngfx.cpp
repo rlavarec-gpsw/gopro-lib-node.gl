@@ -239,6 +239,8 @@ static int ngfx_init(struct gctx *s)
     s->limits.max_compute_work_group_count[1] = INT_MAX;
     s->limits.max_compute_work_group_count[2] = INT_MAX;
 
+    s->limits.max_uniform_block_size = INT_MAX;
+
     s->limits.max_samples = 8;
 
     if (config->hud)
