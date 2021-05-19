@@ -331,11 +331,12 @@ def _ngfx_install(cfg):
 @_block('nodegl-setup', [_sxplayer_install])
 def _nodegl_setup(cfg):
     nodegl_setup_opts = ['--default-library', 'shared']
+    nodegl_debug_opts = []
     if cfg.args.debug_opts:
         debug_opts = ','.join(cfg.args.debug_opts)
         nodegl_debug_opts += [f'-Ddebug_opts={debug_opts}']
         if 'gpu_capture' in cfg.args.debug_opts:
-            renderdoc_dir = cfg.externals['renderdoc']
+            renderdoc_dir = cfg.externals[_RENDERDOC_ID]
             nodegl_debug_opts += [f'-Drenderdoc_dir={renderdoc_dir}']
         nodegl_setup_opts += nodegl_debug_opts
 
