@@ -1,19 +1,20 @@
 set -x
-mkdir -p build/temp.android-28-arm64v8a-3.9
-mkdir -p build/lib.android-28-arm64v8a-3.9
+BUILDDIR=build/temp.android-$ANDROID_VERSION-$ANDROID_ABI-$PYTHON_VERSION
+PREFIX=build/lib.android-$ANDROID_VERSION-$ANDROID_ABI-$PYTHON_VERSION
+
+mkdir -p $BUILDDIR
+mkdir -p $PREFIX
 
 $CC \
--Wno-unused-result -Wsign-compare -Wunreachable-code -fno-common -dynamic -DNDEBUG -g -fwrapv -O3 -Wall \
+-Wno-unused-result -Wsign-compare -Wunreachable-code -fno-common -dynamic -DNDEBUG -g -fwrapv -O3 -Wall -fPIC \
 --sysroot=$SYSROOT \
 -I$SYSROOT/usr/include \
 -I$ANDROID_PREFIX/include \
--I$SYSROOT/usr/include \
--I$ANDROID_PREFIX/include \
 -I$PYTHON_INCLUDE_DIR/python3.9d \
--I/Users/jmoguillansky/devel/.sx/build-android/arm64-v8a/nodegl/libnodegl \
+-I/Users/$USER/devel/.sx/androidframeworks/$ANDROID_ABI/include \
 -c pynodegl.c \
--o build/temp.android-28-arm64v8a-3.9/pynodegl.o
-
+-o $BUILDDIR/pynodegl.o && \
+\
 $CC \
 -shared \
 -L$SYSROOT/usr/lib \
@@ -21,10 +22,9 @@ $CC \
 --sysroot=$SYSROOT \
 -I$SYSROOT/usr/include \
 -I$ANDROID_PREFIX/include \
--I$SYSROOT/usr/include \
--I$ANDROID_PREFIX/include \
 -I$PWD/../nodegl-env/include \
-build/temp.android-28-arm64v8a-3.9/pynodegl.o \
+$BUILDDIR/pynodegl.o \
 $PYTHON_LIB_DIR/libpython3.9d.a -lm \
--L/Users/jmoguillansky/devel/.sx/build-android/arm64-v8a//nodegl/libnodegl -lnodegl \
--o build/lib.android-28-arm64v8a-3.9/pynodegl.cpython-39.so
+-L/Users/$USER/devel/.sx/androidframeworks/$ANDROID_ABI/lib -lnodegl -lEGL -landroid -lsxplayer -lavcodec -lavformat -lavfilter \
+-L${ANDROID_NDK}/platforms/android-${ANDROID_VERSION}/arch-${ABI_1}/usr/${LIB_DIR_0} \
+-o $PREFIX/pynodegl.cpython-39.so
