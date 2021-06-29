@@ -19,6 +19,7 @@
  * under the License.
  */
 
+#include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -262,6 +263,7 @@ static int common_map_frame(struct ngl_node *node, struct sxplayer_frame *frame)
 
 const struct hwmap_class ngli_hwmap_common_class = {
     .name      = "default",
+    .hwformat  = INT_MAX,
     .priv_size = sizeof(struct hwupload_common),
     .init      = common_init,
     .map_frame = common_map_frame,
