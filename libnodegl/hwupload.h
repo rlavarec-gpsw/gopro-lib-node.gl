@@ -23,6 +23,7 @@
 #define HWUPLOAD_H
 
 #include <stdlib.h>
+#include <stdint.h>
 #include <sxplayer.h>
 
 #include "hwconv.h"
@@ -31,10 +32,16 @@
 
 #define HWMAP_FLAG_FRAME_OWNER (1 << 0)
 
+#define HWMAP_BACKEND(b)       (1 << (b))
+#define HWMAP_BACKEND_OPENGL   HWMAP_BACKEND(NGL_BACKEND_OPENGL)
+#define HWMAP_BACKEND_OPENGLES HWMAP_BACKEND(NGL_BACKEND_OPENGLES)
+#define HWMAP_BACKEND_ALL      (uint32_t)-1
+
 struct hwmap_class {
     const char *name;
     int flags;
     int hwformat;
+    uint32_t backends;
     size_t priv_size;
     int (*init)(struct ngl_node *node, struct sxplayer_frame *frame);
     int (*map_frame)(struct ngl_node *node, struct sxplayer_frame *frame);
