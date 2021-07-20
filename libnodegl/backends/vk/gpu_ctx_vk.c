@@ -748,6 +748,16 @@ static int vk_init(struct gpu_ctx *s)
         s_priv->default_rendertarget_desc.depth_stencil.resolve = 0;
     }
 
+    s_priv->cur_command_buffer = s_priv->command_buffers[s_priv->frame_index];
+    const VkCommandBufferBeginInfo command_buffer_begin_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
+    };
+    res = vkBeginCommandBuffer(s_priv->cur_command_buffer, &command_buffer_begin_info);
+    if (res != VK_SUCCESS)
+        return ngli_vk_res2ret(res);
+    s_priv->cur_command_buffer_state = 1;
+
     return 0;
 }
 
@@ -874,16 +884,6 @@ static int vk_begin_draw(struct gpu_ctx *s, double t)
         struct rendertarget **rts = ngli_darray_data(&s_priv->rts);
         rt = rts[s_priv->frame_index];
     }
-
-    s_priv->cur_command_buffer = s_priv->command_buffers[s_priv->frame_index];
-    const VkCommandBufferBeginInfo command_buffer_begin_info = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
-    };
-    VkResult res = vkBeginCommandBuffer(s_priv->cur_command_buffer, &command_buffer_begin_info);
-    if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
-    s_priv->cur_command_buffer_state = 1;
 
     if (config->hud) {
         vkCmdResetQueryPool(s_priv->cur_command_buffer, s_priv->query_pool, 0, 2);
@@ -1065,9 +1065,16 @@ done:;
 
     s_priv->frame_index = (s_priv->frame_index + 1) % s_priv->nb_in_flight_frames;
 
-    /* Reset cur_command_buffer so updating resources will use a transient
-     * command buffer */
-    s_priv->cur_command_buffer = VK_NULL_HANDLE;
+    /* FIXME: rework command buffer cycle */
+    s_priv->cur_command_buffer = s_priv->command_buffers[s_priv->frame_index];
+    const VkCommandBufferBeginInfo command_buffer_begin_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
+    };
+    res = vkBeginCommandBuffer(s_priv->cur_command_buffer, &command_buffer_begin_info);
+    if (res != VK_SUCCESS)
+        return ngli_vk_res2ret(res);
+    s_priv->cur_command_buffer_state = 1;
 
     return ret;
 }
