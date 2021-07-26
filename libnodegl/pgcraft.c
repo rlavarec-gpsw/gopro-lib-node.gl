@@ -33,6 +33,7 @@
 #include "pgcraft.h"
 #include "precision.h"
 #include "type.h"
+#include "utils.h"
 
 #ifdef BACKEND_GL
 #include "backends/gl/program_gl_utils.h"
@@ -276,14 +277,21 @@ static int prepare_texture_info_fields(struct pgcraft *s, const struct pgcraft_p
                                         const struct pgcraft_texture *texture,
                                         struct pgcraft_texture_info *info)
 {
+    const struct ngl_ctx *ctx = s->ctx;
+    const struct ngl_config *config = &ctx->config;
     const int *types_map = texture_types_map[texture->type];
 
     for (int i = 0; i < NGLI_INFO_FIELD_NB; i++) {
         struct pgcraft_texture_info_field *field = &info->fields[i];
 
-        field->type = types_map[i];
-        if (field->type == NGLI_TYPE_NONE)
+        int type = types_map[i];
+        if (type == NGLI_TYPE_NONE)
             continue;
+        if (type == NGLI_TYPE_SAMPLER_EXTERNAL_OES && config->backend != NGL_BACKEND_OPENGLES)
+            continue;
+        if (type == NGLI_TYPE_SAMPLER_2D_RECT && config->backend != NGL_BACKEND_OPENGL)
+            continue;
+        field->type = type;
         int len = snprintf(field->name, sizeof(field->name), "%s%s", texture->name, texture_info_suffixes[i]);
         if (len >= sizeof(field->name)) {
             LOG(ERROR, "texture name \"%s\" is too long", texture->name);
@@ -765,6 +773,9 @@ struct token {
 static int handle_token(struct pgcraft *s, const struct pgcraft_params *params,
                         const struct token *token, const char *p, struct bstr *dst)
 {
+    ngli_unused const struct ngl_ctx *ctx = s->ctx;
+    ngli_unused const struct ngl_config *config = &ctx->config;
+
     /* Skip "ngl_XXX(" and the whitespaces */
     p += strlen(token->id);
     p += strspn(p, WHITESPACES);
@@ -804,9 +815,12 @@ static int handle_token(struct pgcraft *s, const struct pgcraft_params *params,
 
         ngli_bstr_print(dst, "(");
 #if defined(TARGET_ANDROID)
-        ngli_bstr_printf(dst, "%.*s_sampling_mode == 2 ? ", ARG_FMT(arg0));
-        ngli_bstr_printf(dst, "ngl_tex2d(%.*s_oes, %.*s) : ", ARG_FMT(arg0), ARG_FMT(coords));
+        if (config->backend == NGL_BACKEND_OPENGLES) {
+            ngli_bstr_printf(dst, "%.*s_sampling_mode == 2 ? ", ARG_FMT(arg0));
+            ngli_bstr_printf(dst, "ngl_tex2d(%.*s_oes, %.*s) : ", ARG_FMT(arg0), ARG_FMT(coords));
+        }
 #elif defined(TARGET_DARWIN)
+        if (config->backend == NGL_BACKEND_OPENGL) {
         ngli_bstr_printf(dst, " %.*s_sampling_mode == 4 ? ", ARG_FMT(arg0));
         ngli_bstr_printf(dst, "%.*s_color_matrix * vec4(ngl_tex2d(%.*s_rect_0, (%.*s) * %.*s_dimensions).r, "
                                                        "ngl_tex2d(%.*s_rect_1, (%.*s) * %.*s_dimensions / 2.0).rg, 1.0) : ",
@@ -816,6 +830,7 @@ static int handle_token(struct pgcraft *s, const struct pgcraft_params *params,
         ngli_bstr_printf(dst, "%.*s_sampling_mode == 6 ? ", ARG_FMT(arg0));
         ngli_bstr_printf(dst, "ngl_tex2d(%.*s_rect_0, (%.*s) * %.*s_dimensions) : ",
                          ARG_FMT(arg0), ARG_FMT(coords), ARG_FMT(arg0));
+        }
 #endif
         ngli_bstr_printf(dst, "%.*s_sampling_mode == 3 ? ", ARG_FMT(arg0));
         ngli_bstr_printf(dst, "%.*s_color_matrix * vec4(ngl_tex2d(%.*s,   %.*s).r, "
