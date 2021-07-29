@@ -277,27 +277,41 @@ static int cmd_make_current(struct ngl_ctx *s, void *arg)
 #define DONE_CURRENT &(int[]){0}
 static int configure_ios(struct ngl_ctx *s, struct ngl_config *config)
 {
+    pthread_mutex_lock(&s->lock);
     int ret = cmd_configure(s, config);
-    if (ret < 0)
+    if (ret < 0) {
+        pthread_mutex_unlock(&s->lock);
         return ret;
+    }
     cmd_make_current(s, DONE_CURRENT);
 
-    return dispatch_cmd(s, cmd_make_current, MAKE_CURRENT);
+    ret = dispatch_cmd_unsafe(s, cmd_make_current, MAKE_CURRENT);
+    pthread_mutex_unlock(&s->lock);
+
+    return ret;
 }
 
 static int resize_ios(struct ngl_ctx *s, const struct resize_params *params)
 {
-    int ret = dispatch_cmd(s, cmd_make_current, DONE_CURRENT);
-    if (ret < 0)
+    pthread_mutex_lock(&s->lock);
+    int ret = dispatch_cmd_unsafe(s, cmd_make_current, DONE_CURRENT);
+    if (ret < 0) {
+        pthread_mutex_unlock(&s->lock);
         return ret;
+    }
 
     cmd_make_current(s, MAKE_CURRENT);
     ret = cmd_resize(s, params);
-    if (ret < 0)
+    if (ret < 0) {
+        pthread_mutex_unlock(&s->lock);
         return ret;
+    }
     cmd_make_current(s, DONE_CURRENT);
 
-    return dispatch_cmd(s, cmd_make_current, MAKE_CURRENT);
+    ret = dispatch_cmd_unsafe(s, cmd_make_current, MAKE_CURRENT);
+    pthread_mutex_unlock(&s->lock);
+
+    return ret;
 }
 #endif
 
