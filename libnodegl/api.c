@@ -224,22 +224,17 @@ static int cmd_stop(struct ngl_ctx *s, void *arg)
     return 0;
 }
 
-static int dispatch_cmd_unsafe(struct ngl_ctx *s, cmd_func_type cmd_func, void *arg)
+static int dispatch_cmd(struct ngl_ctx *s, cmd_func_type cmd_func, void *arg)
 {
+    pthread_mutex_lock(&s->lock);
     s->cmd_func = cmd_func;
     s->cmd_arg = arg;
     pthread_cond_signal(&s->cond_wkr);
     while (s->cmd_func)
         pthread_cond_wait(&s->cond_ctl, &s->lock);
-    return s->cmd_ret;
-}
-
-static int dispatch_cmd(struct ngl_ctx *s, cmd_func_type cmd_func, void *arg)
-{
-    pthread_mutex_lock(&s->lock);
-    int ret = dispatch_cmd_unsafe(s, cmd_func, arg);
     pthread_mutex_unlock(&s->lock);
-    return ret;
+
+    return s->cmd_ret;
 }
 
 static void *worker_thread(void *arg)
