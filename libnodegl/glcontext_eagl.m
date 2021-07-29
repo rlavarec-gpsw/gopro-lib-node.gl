@@ -66,6 +66,7 @@ static int eagl_init_layer(struct glcontext *ctx)
 
     [eagl->layer setOpaque:YES];
     [eagl->layer setDrawableProperties:properties];
+    [eagl->layer setPresentsWithTransaction:NO];
 
     return 0;
 }
