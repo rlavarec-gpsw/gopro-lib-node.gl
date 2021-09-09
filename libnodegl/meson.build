@@ -414,7 +414,10 @@ libnodegl = library(
   version: meson.project_version(),
   c_args: lib_c_args,
   gnu_symbol_visibility: 'hidden',
+  name_prefix: '',
+  name_suffix: 'lib',
 )
+
 lib_header = configure_file(
   input: files('nodegl.h.in'),
   output: 'nodegl.h',

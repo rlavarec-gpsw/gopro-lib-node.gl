@@ -208,7 +208,7 @@ def _renderdoc_install(cfg):
 
 @_block('nodegl-setup', [_sxplayer_install])
 def _nodegl_setup(cfg):
-    nodegl_debug_opts = []
+    nodegl_debug_opts = ['--default-library', cfg.args.library_type]
     if cfg.args.debug_opts:
         debug_opts = ','.join(cfg.args.debug_opts)
         nodegl_debug_opts += [f'-Ddebug_opts={debug_opts}']
@@ -551,6 +551,8 @@ def _run():
                         help='Debug options')
     parser.add_argument('--build-backend', choices=('ninja', 'vs'), default=default_build_backend,
                         help='Build backend to use')
+    parser.add_argument('--library-type', choices=('shared', 'static'), default='shared',
+                        help='Library type')
     if _SYSTEM == 'Windows':
         parser.add_argument('--vcpkg-dir', default=r'C:\vcpkg',
                             help='Vcpkg directory')
