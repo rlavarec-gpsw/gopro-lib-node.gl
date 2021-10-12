@@ -36,7 +36,13 @@ void main()
 {
     ngl_out_pos = ngl_projection_matrix * ngl_modelview_matrix * vec4(ngl_position, 1.0);
     var_uvcoord = ngl_uvcoord;
-    var_tex_coord = (tex_coord_matrix * vec4(ngl_uvcoord, 0.0, 1.0)).xy;
+    mat4 m = tex_coord_matrix * mat4(
+        1.0, 0.0, 0.0, 0.0,
+        0.0, -1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 1.0, 0.0, 1.0
+    );
+    var_tex_coord = (m * vec4(ngl_uvcoord, 0.0, 1.0)).xy;
 }
 '''
 
@@ -68,6 +74,12 @@ vec3 eetf(vec3 v, float maxLum)
     const vec3 t3 = t2 * t;
     const vec3 p = (2.0 * t3 - 3.0 * t2 + vec3(1.0)) * vec3(ks) +(t3 - 2.0 * t2 + t) * vec3(1.0 - ks) + (-2.0 * t3 + 3.0 * t2) * vec3(maxLum);
     return mix(p, v, lessThan(v, vec3(ks)));
+}
+
+vec3 saturation(vec3 rgb, float sat)
+{
+    vec3 luma_weights = vec3(0.2627, 0.6780, 0.0593);
+    return mix(vec3(dot(luma_weights, rgb)), rgb, sat);
 }
 
 #define HLG 1
@@ -104,6 +116,8 @@ void main()
     float sig_max = color[sig_idx];
     float sig_orig = sig[sig_idx];
 #endif
+    // tone map bt2390
+
     // convert linear light to PQ space
     vec4 sig_pq = vec4(sig.rgb, signal_peak);
     sig_pq = pq_eotf_inverse(sig_pq);
@@ -123,14 +137,15 @@ void main()
     sig = pq_eotf(vec4(sig, 1.0)).rgb;
 
 #if DESAT == 1
-    color.rgb *= sig / l;
+    color.rgb *= sig.r / l;
 #elif DESAT == 2
     color.rgb = color.rgb * (sig / sig_orig);
 #else
     vec3 sig_lin = color.rgb * (sig[sig_idx] / sig_orig);
     float coeff = max(sig[sig_idx] - 0.180000, 1e-6) / max(sig[sig_idx], 1.0);
-    coeff = 0.9 * pow(coeff, 0.2);
+    coeff = 0.7 * pow(coeff, 1.5);
     color.rgb = mix(sig_lin, 1.000000 * sig, coeff);
+    color.rgb = sig_lin;
 #endif
 
     // convert colors from bt2020 to bt709
