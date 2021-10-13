@@ -31,6 +31,7 @@ def centered_media(cfg, uv_corner=(0, 0), uv_width=(1, 0), uv_height=(0, 1), pro
 
 @scene()
 def hdr_to_sdr(cfg):
+    target = ngl.Texture2D(width=1024, height=1024, min_filter="linear", mipmap_filter="linear")
     vert = '''
 void main()
 {
@@ -116,6 +117,13 @@ void main()
     float sig_max = color[sig_idx];
     float sig_orig = sig[sig_idx];
 #endif
+
+    vec4 a = textureLod(tex2, vec2(0, 0), 12.0);
+    a = exp(a) / (12.0/3.17);
+
+    sig *= 0.4/0.25;
+    signal_peak *= a.r/0.25;
+
     // tone map bt2390
 
     // convert linear light to PQ space
@@ -143,9 +151,8 @@ void main()
 #else
     vec3 sig_lin = color.rgb * (sig[sig_idx] / sig_orig);
     float coeff = max(sig[sig_idx] - 0.180000, 1e-6) / max(sig[sig_idx], 1.0);
-    coeff = 0.7 * pow(coeff, 1.5);
+    coeff = 0.9 * pow(coeff, 0.2);
     color.rgb = mix(sig_lin, 1.000000 * sig, coeff);
-    color.rgb = sig_lin;
 #endif
 
     // convert colors from bt2020 to bt709
@@ -157,7 +164,7 @@ void main()
 
     // delinearize (gamma 2.2)
     color.rgb = clamp(color.rgb, 0.0, 1.0);
-    color.rgb = pow(color.rgb, vec3(1.0/2.2));
+    color.rgb = pow(color.rgb, vec3(1.0/2.4));
 
     ngl_out_color = color;
 }
@@ -171,9 +178,91 @@ void main()
     t = ngl.Texture2D(data_src=m)
     p = ngl.Program(vertex=vert, fragment=frag)
     p.update_vert_out_vars(var_tex_coord=ngl.IOVec2(), var_uvcoord=ngl.IOVec2())
+    p.update_vert_out_vars(var_tex2_coord=ngl.IOVec2())
     render = ngl.Render(q, p)
-    render.update_frag_resources(tex=t)
-    return render
+    render.update_frag_resources(tex=t, tex2=target)
+
+
+    vert2 = '''
+void main()
+{
+    ngl_out_pos = ngl_projection_matrix * ngl_modelview_matrix * vec4(ngl_position, 1.0);
+    var_uvcoord = ngl_uvcoord;
+    mat4 m = tex_coord_matrix * mat4(
+        1.0, 0.0, 0.0, 0.0,
+        0.0, -1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 1.0, 0.0, 1.0
+    );
+    var_tex_coord = (m * vec4(ngl_uvcoord, 0.0, 1.0)).xy;
+}
+'''
+
+    frag2 = '''
+void main()
+{
+    vec4 color = ngl_texvideo(tex, var_tex_coord);
+
+    // hlg eotf (linearize), output range [0, 12]
+    color.rgb = clamp(color.rgb, 0.0, 1.0);
+    color.rgb = mix(vec3(4.0) * color.rgb * color.rgb, exp((color.rgb - vec3(0.559911)) * vec3(1.0/0.178833)) + vec3(0.284669), lessThan(vec3(0.5), color.rgb));
+
+    // scale hlg eotf output range from [0, 12] against the hlg reference white point (hlg_eotf(0.75)) = 3.179550717
+    color.rgb *= (1.0/3.179550717);
+
+    // hlg ootf (scene light -> display light)
+    const vec3 luma = vec3(0.2627, 0.6780, 0.0593);
+    color.rgb *= vec3(pow(dot(luma, color.rgb), 0.200000));
+
+
+    color.rgb = vec3(log(dot(luma, color.rgb)));
+
+
+    ngl_out_color = color;
+}
+'''
+
+    q = ngl.Quad((-1, -1, 0), (2, 0, 0), (0, 2, 0))
+    p = ngl.Program(vertex=vert2, fragment=frag2)
+    p.update_vert_out_vars(var_tex_coord=ngl.IOVec2(), var_uvcoord=ngl.IOVec2())
+    render2 = ngl.Render(q, p)
+    render2.update_frag_resources(tex=t)
+
+    vert3='''
+void main()
+{
+    ngl_out_pos = ngl_projection_matrix * ngl_modelview_matrix * vec4(ngl_position, 1.0);
+    var_uvcoord = ngl_uvcoord;
+    var_tex0_coord = (tex0_coord_matrix * vec4(ngl_uvcoord, 0.0, 1.0)).xy;
+}
+'''
+
+    frag3='''
+void main()
+{
+    vec4 color = ngl_tex2dlod(tex0, var_tex0_coord, 10.0);
+    color = exp(color) / 3.4;
+    //if (color.r > 0.17)
+    //discard;
+
+    ngl_out_color = color;
+}
+'''
+
+    q = ngl.Quad((0.25, 0.25, 0), (0.75, 0, 0), (0, 0.75, 0))
+    p = ngl.Program(vertex=vert3, fragment=frag3)
+    p.update_vert_out_vars(var_tex0_coord=ngl.IOVec2(), var_uvcoord=ngl.IOVec2())
+    render3 = ngl.Render(q, p)
+    render3.update_frag_resources(tex0=target)
+
+
+    rtt = ngl.RenderToTexture(render2, color_textures=(target,))
+
+
+
+
+
+    return ngl.Group(children=(rtt, render, render3))
 
 @scene(speed=scene.Range(range=[0.01, 2], unit_base=1000))
 def playback_speed(cfg, speed=1.0):
