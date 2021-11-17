@@ -31,7 +31,7 @@
 #include "log.h"
 #include "math_utils.h"
 #include "memory.h"
-#include "nodes.h"
+#include "internal.h"
 #include "pgcache.h"
 #include "vkcontext.h"
 #include "vkutils.h"
@@ -223,7 +223,7 @@ static VkResult create_swapchain_resources(struct gpu_ctx *s)
             .nb_colors = 1,
             .colors[0] = {
                 .attachment     = *wrapped_texture,
-                .load_op        = NGLI_LOAD_OP_LOAD,
+                .load_op        = NGLI_LOAD_OP_CLEAR,
                 .clear_value[0] = config->clear_color[0],
                 .clear_value[1] = config->clear_color[1],
                 .clear_value[2] = config->clear_color[2],
@@ -231,7 +231,7 @@ static VkResult create_swapchain_resources(struct gpu_ctx *s)
                 .store_op       = NGLI_STORE_OP_STORE,
             },
             .depth_stencil.attachment = *depth_texture,
-            .depth_stencil.load_op    = NGLI_LOAD_OP_LOAD,
+            .depth_stencil.load_op    = NGLI_LOAD_OP_CLEAR,
             .depth_stencil.store_op   = NGLI_STORE_OP_STORE,
         };
 
@@ -269,6 +269,23 @@ static VkResult create_swapchain_resources(struct gpu_ctx *s)
             return VK_ERROR_OUT_OF_HOST_MEMORY;
 
         res = ngli_rendertarget_vk_init(*rt, &rt_params);
+        if (res != VK_SUCCESS)
+            return res;
+
+        struct rendertarget **rt_load = ngli_darray_push(&s_priv->rts_load, NULL);
+        if (!rt_load)
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+        *rt_load = ngli_rendertarget_create(s);
+        if (!*rt_load)
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+        rt_params.colors[0].load_op = NGLI_LOAD_OP_LOAD;
+        rt_params.colors[0].store_op = NGLI_STORE_OP_STORE;
+        rt_params.depth_stencil.load_op = NGLI_LOAD_OP_LOAD;
+        rt_params.depth_stencil.store_op = NGLI_STORE_OP_DONT_CARE;
+
+        res = ngli_rendertarget_vk_init(*rt_load, &rt_params);
         if (res != VK_SUCCESS)
             return res;
     }
@@ -383,6 +400,11 @@ static void cleanup_swapchain(struct gpu_ctx *s)
         ngli_rendertarget_freep(&rts[i]);
     ngli_darray_clear(&s_priv->rts);
 
+    struct rendertarget **rts_load = ngli_darray_data(&s_priv->rts_load);
+    for (int i = 0; i < ngli_darray_count(&s_priv->rts_load); i++)
+        ngli_rendertarget_freep(&rts_load[i]);
+    ngli_darray_clear(&s_priv->rts_load);
+
     vkDestroySwapchainKHR(vk->device, s_priv->swapchain, NULL);
 }
 
@@ -465,7 +487,7 @@ static VkResult create_offscreen_resources(struct gpu_ctx *s)
             .nb_colors = 1,
             .colors[0] = {
                 .attachment     = *ms_texture,
-                .load_op        = NGLI_LOAD_OP_LOAD,
+                .load_op        = NGLI_LOAD_OP_CLEAR,
                 .clear_value[0] = config->clear_color[0],
                 .clear_value[1] = config->clear_color[1],
                 .clear_value[2] = config->clear_color[2],
@@ -473,7 +495,7 @@ static VkResult create_offscreen_resources(struct gpu_ctx *s)
                 .store_op       = NGLI_STORE_OP_STORE,
             },
             .depth_stencil.attachment = *depth_texture,
-            .depth_stencil.load_op    = NGLI_LOAD_OP_LOAD,
+            .depth_stencil.load_op    = NGLI_LOAD_OP_CLEAR,
             .depth_stencil.store_op   = NGLI_STORE_OP_STORE,
             .readable                 = 1,
         };
@@ -511,6 +533,23 @@ static VkResult create_offscreen_resources(struct gpu_ctx *s)
             return VK_ERROR_OUT_OF_HOST_MEMORY;
 
         res = ngli_rendertarget_vk_init(*rt, &rt_params);
+        if (res != VK_SUCCESS)
+            return res;
+
+        struct rendertarget **rt_load = ngli_darray_push(&s_priv->rts_load, NULL);
+        if (!rt_load)
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+        *rt_load = ngli_rendertarget_create(s);
+        if (!*rt_load)
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+        rt_params.colors[0].load_op = NGLI_LOAD_OP_LOAD;
+        rt_params.colors[0].store_op = NGLI_STORE_OP_STORE;
+        rt_params.depth_stencil.load_op = NGLI_LOAD_OP_LOAD;
+        rt_params.depth_stencil.store_op = NGLI_STORE_OP_DONT_CARE;
+
+        res = ngli_rendertarget_vk_init(*rt_load, &rt_params);
         if (res != VK_SUCCESS)
             return res;
     }
@@ -600,6 +639,7 @@ static int vk_init(struct gpu_ctx *s)
     ngli_darray_init(&s_priv->resolve_textures, sizeof(struct texture *), 0);
     ngli_darray_init(&s_priv->depth_textures, sizeof(struct texture *), 0);
     ngli_darray_init(&s_priv->rts, sizeof(struct rendertarget *), 0);
+    ngli_darray_init(&s_priv->rts_load, sizeof(struct rendertarget *), 0);
 
     ngli_darray_init(&s_priv->wait_semaphores, sizeof(VkSemaphore), 0);
     ngli_darray_init(&s_priv->wait_stages, sizeof(VkPipelineStageFlagBits), 0);
@@ -864,6 +904,7 @@ static int vk_begin_draw(struct gpu_ctx *s, double t)
     const struct ngl_config *config = &s->config;
 
     struct rendertarget *rt = NULL;
+    struct rendertarget *rt_load = NULL;
     if (!config->offscreen) {
         int ret = swapchain_acquire_image(s, &s_priv->image_index);
         if (ret < 0)
@@ -880,9 +921,16 @@ static int vk_begin_draw(struct gpu_ctx *s, double t)
         rt = rts[s_priv->image_index];
         rt->width = s_priv->extent.width;
         rt->height = s_priv->extent.height;
+
+        struct rendertarget **rts_load = ngli_darray_data(&s_priv->rts_load);
+        rt_load = rts_load[s_priv->image_index];
+        rt_load->width = s_priv->extent.width;
+        rt_load->height = s_priv->extent.height;
     } else {
         struct rendertarget **rts = ngli_darray_data(&s_priv->rts);
         rt = rts[s_priv->frame_index];
+        struct rendertarget **rts_load = ngli_darray_data(&s_priv->rts_load);
+        rt_load = rts_load[s_priv->frame_index];
     }
 
     if (config->hud) {
@@ -891,48 +939,7 @@ static int vk_begin_draw(struct gpu_ctx *s, double t)
     }
 
     s_priv->default_rendertarget = rt;
-
-    ngli_gpu_ctx_begin_render_pass(s, rt);
-
-    const VkClearAttachment clear_attachments = {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .colorAttachment = 0,
-        .clearValue = {
-            .color = {
-                .float32 = {
-                    config->clear_color[0],
-                    config->clear_color[1],
-                    config->clear_color[2],
-                    config->clear_color[3],
-                },
-            },
-        },
-    };
-
-    const VkClearAttachment dclear_attachments = {
-        .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-        .clearValue = {
-            .depthStencil = {
-                .depth = 1.0f,
-                .stencil = 0,
-            },
-        },
-    };
-
-    const VkClearRect clear_rect = {
-        .rect = {
-            .offset = {0},
-            .extent.width = rt->width,
-            .extent.height = rt->height,
-        },
-        .baseArrayLayer = 0,
-        .layerCount = 1,
-    };
-
-    VkCommandBuffer cmd_buf = s_priv->cur_command_buffer;
-
-    vkCmdClearAttachments(cmd_buf, 1, &clear_attachments, 1, &clear_rect);
-    vkCmdClearAttachments(cmd_buf, 1, &dclear_attachments, 1, &clear_rect);
+    s_priv->default_rendertarget_load = rt_load;
 
     return 0;
 }
@@ -1137,6 +1144,11 @@ static void vk_destroy(struct gpu_ctx *s)
         ngli_rendertarget_freep(&rts[i]);
     ngli_darray_reset(&s_priv->rts);
 
+    struct rendertarget **rts_load = ngli_darray_data(&s_priv->rts_load);
+    for (int i = 0; i < ngli_darray_count(&s_priv->rts_load); i++)
+        ngli_rendertarget_freep(&rts_load[i]);
+    ngli_darray_reset(&s_priv->rts_load);
+
     if (s_priv->swapchain)
         vkDestroySwapchainKHR(vk->device, s_priv->swapchain, NULL);
 
@@ -1198,10 +1210,18 @@ static void vk_get_rendertarget_uvcoord_matrix(struct gpu_ctx *s, float *dst)
     memcpy(dst, matrix, 4 * 4 * sizeof(float));
 }
 
-static struct rendertarget *vk_get_default_rendertarget(struct gpu_ctx *s)
+static struct rendertarget *vk_get_default_rendertarget(struct gpu_ctx *s, int load_op)
 {
     struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
-    return s_priv->default_rendertarget;
+    switch (load_op) {
+    case NGLI_LOAD_OP_DONT_CARE:
+    case NGLI_LOAD_OP_CLEAR:
+        return s_priv->default_rendertarget;
+    case NGLI_LOAD_OP_LOAD:
+        return s_priv->default_rendertarget_load;
+    default:
+        ngli_assert(0);
+    }
 }
 
 static const struct rendertarget_desc *vk_get_default_rendertarget_desc(struct gpu_ctx *s)

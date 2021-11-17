@@ -24,7 +24,7 @@
 
 #include "buffer_vk.h"
 #include "log.h"
-#include "nodes.h"
+#include "internal.h"
 #include "memory.h"
 #include "gpu_ctx_vk.h"
 #include "vkcontext.h"

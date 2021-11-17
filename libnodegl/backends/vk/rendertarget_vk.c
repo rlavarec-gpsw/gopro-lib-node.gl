@@ -6,7 +6,7 @@
 #include "gpu_ctx_vk.h"
 #include "log.h"
 #include "memory.h"
-#include "nodes.h"
+#include "internal.h"
 #include "rendertarget_vk.h"
 #include "texture_vk.h"
 #include "gpu_ctx_vk.h"

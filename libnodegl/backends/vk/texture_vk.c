@@ -28,7 +28,7 @@
 #include "format_vk.h"
 #include "memory.h"
 #include "texture_vk.h"
-#include "nodes.h"
+#include "internal.h"
 #include "gpu_ctx_vk.h"
 #include "vkutils.h"
 

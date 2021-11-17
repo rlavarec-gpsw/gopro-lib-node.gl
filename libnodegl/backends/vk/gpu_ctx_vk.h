@@ -63,6 +63,7 @@ struct gpu_ctx_vk {
     struct darray resolve_textures;
     struct darray depth_textures;
     struct darray rts;
+    struct darray rts_load;
 
     struct texture *dummy_texture;
 
@@ -75,6 +76,7 @@ struct gpu_ctx_vk {
     struct darray signal_semaphores;
 
     struct rendertarget *default_rendertarget;
+    struct rendertarget *default_rendertarget_load;
     struct rendertarget_desc default_rendertarget_desc;
 
     struct rendertarget *rendertarget;

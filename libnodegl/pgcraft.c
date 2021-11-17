@@ -1255,6 +1255,7 @@ static void setup_glsl_info_vk(struct pgcraft *s)
     s->sym_vertex_index   = "gl_VertexIndex";
     s->sym_instance_index = "gl_InstanceIndex";
 
+    s->has_explicit_bindings        = 1;
     s->has_in_out_qualifiers        = 1;
     s->has_in_out_layout_qualifiers = 1;
     s->has_precision_qualifiers     = 0;
