@@ -261,7 +261,9 @@ int ngli_pipeline_ngfx_set_resources(pipeline *s, const pipeline_resource_params
 
     ngli_assert(ngli_darray_count(&s_priv->buffer_bindings) == params->nb_buffers);
     for (int i = 0; i < params->nb_buffers; i++) {
-        int ret = ngli_pipeline_ngfx_update_buffer(s, i, params->buffers[i]);
+        const struct buffer_binding *buffer_binding = ngli_darray_get(&s_priv->buffer_bindings, i);
+        const struct pipeline_buffer_desc *buffer_desc = &buffer_binding->desc;
+        int ret = ngli_pipeline_ngfx_update_buffer(s, i, params->buffers[i], buffer_desc->offset, buffer_desc->size);
         if (ret < 0)
             return ret;
     }
@@ -340,6 +342,8 @@ int ngli_pipeline_ngfx_update_buffer(pipeline *s, int index, buffer *p_buffer)
     ngli_assert(binding);
 
     binding->buffer = p_buffer;
+    buffer_binding->desc.offset = offset;
+    buffer_binding->desc.size = size;
 
     return 0;
 }

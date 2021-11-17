@@ -301,7 +301,9 @@ static int ngfx_begin_draw(struct gpu_ctx *s, double t)
     if (s_priv->enable_profiling) {
         s_priv->graphics->beginProfile(cmd_buf);
     }
+#if 0
     ngfx_begin_render_pass(s, s_priv->default_rendertarget);
+#endif
     int *vp = s_priv->viewport;
     s_priv->graphics->setViewport(cmd_buf, { vp[0], vp[1], uint32_t(vp[2]), uint32_t(vp[3]) });
     int *sr = s_priv->scissor;
@@ -418,7 +420,7 @@ static void ngfx_get_rendertarget_uvcoord_matrix(struct gpu_ctx *s, float *dst)
     memcpy(dst, matrix, sizeof(matrix));
 }
 
-static struct rendertarget *ngfx_get_default_rendertarget(struct gpu_ctx *s)
+static struct rendertarget *ngfx_get_default_rendertarget(struct gpu_ctx *s, int load_op)
 {
     struct gpu_ctx_ngfx *s_priv = (struct gpu_ctx_ngfx *)s;
     return s_priv->default_rendertarget;
