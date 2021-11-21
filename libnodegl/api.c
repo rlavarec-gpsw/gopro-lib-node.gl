@@ -361,8 +361,14 @@ static int cmd_draw(struct ngl_ctx *s, void *arg)
     return ngli_gpu_ctx_end_draw(s->gpu_ctx, t);
 }
 
-static int dispatch_cmd(struct ngl_ctx *s, cmd_func_type cmd_func, void *arg)
+#define CURRENT_THREAD   0
+#define RENDERING_THREAD 1
+
+static int dispatch_cmd(struct ngl_ctx *s, int thread, cmd_func_type cmd_func, void *arg)
 {
+    if (thread == CURRENT_THREAD)
+        return cmd_func(s, arg);
+
     pthread_mutex_lock(&s->lock);
     s->cmd_func = cmd_func;
     s->cmd_arg = arg;
@@ -421,12 +427,12 @@ static int configure_from_current_thread(struct ngl_ctx *s, struct ngl_config *c
         return ret;
     cmd_make_current(s, DONE_CURRENT);
 
-    return dispatch_cmd(s, cmd_make_current, MAKE_CURRENT);
+    return dispatch_cmd(s, RENDERING_THREAD, cmd_make_current, MAKE_CURRENT);
 }
 
 static int resize_from_current_thread(struct ngl_ctx *s, const struct resize_params *params)
 {
-    int ret = dispatch_cmd(s, cmd_make_current, DONE_CURRENT);
+    int ret = dispatch_cmd(s, RENDERING_THREAD, cmd_make_current, DONE_CURRENT);
     if (ret < 0)
         return ret;
 
@@ -436,7 +442,7 @@ static int resize_from_current_thread(struct ngl_ctx *s, const struct resize_par
         return ret;
     cmd_make_current(s, DONE_CURRENT);
 
-    return dispatch_cmd(s, cmd_make_current, MAKE_CURRENT);
+    return dispatch_cmd(s, RENDERING_THREAD, cmd_make_current, MAKE_CURRENT);
 }
 #endif
 
@@ -686,14 +692,14 @@ int ngl_configure(struct ngl_ctx *s, struct ngl_config *config)
     }
 
     if (s->configured) {
-        dispatch_cmd(s, cmd_reset, &(int[]){KEEP_SCENE});
+        dispatch_cmd(s, RENDERING_THREAD, cmd_reset, &(int[]){KEEP_SCENE});
         s->configured = 0;
     }
 
 #if defined(TARGET_IPHONE) || defined(TARGET_DARWIN)
     int ret = configure_from_current_thread(s, config);
 #else
-    int ret = dispatch_cmd(s, cmd_configure, config);
+    int ret = dispatch_cmd(s, RENDERING_THREAD, cmd_configure, config);
 #endif
     if (ret < 0)
         return ret;
@@ -723,7 +729,7 @@ int ngl_resize(struct ngl_ctx *s, int width, int height, const int *viewport)
 #if defined(TARGET_IPHONE) || defined(TARGET_DARWIN)
     return resize_from_current_thread(s, &params);
 #else
-    return dispatch_cmd(s, cmd_resize, &params);
+    return dispatch_cmd(s, RENDERING_THREAD, cmd_resize, &params);
 #endif
 }
 
@@ -740,7 +746,7 @@ int ngl_set_capture_buffer(struct ngl_ctx *s, void *capture_buffer)
         return NGL_ERROR_INVALID_USAGE;
     }
 
-    int ret = dispatch_cmd(s, cmd_set_capture_buffer, capture_buffer);
+    int ret = dispatch_cmd(s, RENDERING_THREAD, cmd_set_capture_buffer, capture_buffer);
     if (ret < 0) {
         s->configured = 0;
         return ret;
@@ -755,7 +761,7 @@ int ngl_set_scene(struct ngl_ctx *s, struct ngl_node *scene)
         return NGL_ERROR_INVALID_USAGE;
     }
 
-    return dispatch_cmd(s, cmd_set_scene, scene);
+    return dispatch_cmd(s, RENDERING_THREAD, cmd_set_scene, scene);
 }
 
 int ngli_prepare_draw(struct ngl_ctx *s, double t)
@@ -765,7 +771,7 @@ int ngli_prepare_draw(struct ngl_ctx *s, double t)
         return NGL_ERROR_INVALID_USAGE;
     }
 
-    return dispatch_cmd(s, cmd_prepare_draw, &t);
+    return dispatch_cmd(s, RENDERING_THREAD, cmd_prepare_draw, &t);
 }
 
 int ngl_draw(struct ngl_ctx *s, double t)
@@ -775,7 +781,7 @@ int ngl_draw(struct ngl_ctx *s, double t)
         return NGL_ERROR_INVALID_USAGE;
     }
 
-    return dispatch_cmd(s, cmd_draw, &t);
+    return dispatch_cmd(s, RENDERING_THREAD, cmd_draw, &t);
 }
 
 int ngl_livectls_get(struct ngl_node *scene, int *nb_livectlsp, struct ngl_livectl **livectlsp)
@@ -796,10 +802,10 @@ void ngl_freep(struct ngl_ctx **ss)
         return;
 
     if (s->configured) {
-        dispatch_cmd(s, cmd_reset, &(int[]){UNREF_SCENE});
+        dispatch_cmd(s, RENDERING_THREAD, cmd_reset, &(int[]){UNREF_SCENE});
         s->configured = 0;
     }
-    dispatch_cmd(s, cmd_stop, NULL);
+    dispatch_cmd(s, RENDERING_THREAD, cmd_stop, NULL);
     pthread_join(s->worker_tid, NULL);
     pthread_cond_destroy(&s->cond_ctl);
     pthread_cond_destroy(&s->cond_wkr);
