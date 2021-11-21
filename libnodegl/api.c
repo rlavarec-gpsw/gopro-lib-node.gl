@@ -422,10 +422,10 @@ static int cmd_make_current(struct ngl_ctx *s, void *arg)
 #define DONE_CURRENT &(int[]){0}
 static int configure_from_current_thread(struct ngl_ctx *s, struct ngl_config *config)
 {
-    int ret = cmd_configure(s, config);
+    int ret = dispatch_cmd(s, CURRENT_THREAD, cmd_configure, config);
     if (ret < 0)
         return ret;
-    cmd_make_current(s, DONE_CURRENT);
+    dispatch_cmd(s, CURRENT_THREAD, cmd_make_current, DONE_CURRENT);
 
     return dispatch_cmd(s, RENDERING_THREAD, cmd_make_current, MAKE_CURRENT);
 }
@@ -436,11 +436,11 @@ static int resize_from_current_thread(struct ngl_ctx *s, const struct resize_par
     if (ret < 0)
         return ret;
 
-    cmd_make_current(s, MAKE_CURRENT);
-    ret = cmd_resize(s, params);
+    dispatch_cmd(s, CURRENT_THREAD, cmd_make_current, MAKE_CURRENT);
+    ret = dispatch_cmd(s, CURRENT_THREAD, cmd_resize, params);
     if (ret < 0)
         return ret;
-    cmd_make_current(s, DONE_CURRENT);
+    dispatch_cmd(s, CURRENT_THREAD, cmd_make_current, DONE_CURRENT);
 
     return dispatch_cmd(s, RENDERING_THREAD, cmd_make_current, MAKE_CURRENT);
 }
