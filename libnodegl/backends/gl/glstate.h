@@ -59,8 +59,8 @@ struct glstate {
 
     /* Dynamic graphics state */
     int scissor[4];
+    int viewport[4];
 
-    /* Common state */
     GLuint program_id;
 };
 
@@ -78,5 +78,9 @@ void ngli_glstate_use_program(const struct glcontext *gl,
 void ngli_glstate_update_scissor(const struct glcontext *gl,
                                  struct glstate *glstate,
                                  const int *scissor);
+
+void ngli_glstate_update_viewport(const struct glcontext *gl,
+                                  struct glstate *glstate,
+                                  const int *viewport);
 
 #endif
