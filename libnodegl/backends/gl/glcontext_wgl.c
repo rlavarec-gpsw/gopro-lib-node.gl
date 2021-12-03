@@ -240,9 +240,38 @@ static int wgl_init(struct glcontext *ctx, uintptr_t display, uintptr_t window, 
     return 0;
 }
 
+static int wgl_init_wrapped(struct glcontext *ctx, uintptr_t display, uintptr_t window, uintptr_t other)
+{
+    struct wgl_priv *wgl = ctx->priv_data;
+
+    wgl->module = LoadLibrary("opengl32.dll");
+    if (!wgl->module) {
+        LOG(ERROR, "could not load opengl32.dll (%lu)", GetLastError());
+        return -1;
+    }
+
+    wgl->device_context = wglGetCurrentDC();
+    if (!wgl->device_context) {
+        LOG(ERROR, "could not retrieve current device context");
+        return -1;
+    }
+
+    wgl->rendering_context = wglGetCurrentContext();
+    if (!wgl->rendering_context) {
+        LOG(ERROR, "could not retrieve current rendering context");
+        return -1;
+    }
+}
+
 static void wgl_uninit(struct glcontext *ctx)
 {
     struct wgl_priv *wgl = ctx->priv_data;
+
+    if (ctx->wrapped) {
+        if (wgl->module)
+            FreeLibrary(wgl->module);
+        return;
+    }
 
     if (wgl->rendering_context)
         wglDeleteContext(wgl->rendering_context);
@@ -257,6 +286,12 @@ static void wgl_uninit(struct glcontext *ctx)
 static int wgl_resize(struct glcontext *ctx, int width, int height)
 {
     struct wgl_priv *wgl = ctx->priv_data;
+
+    if (ctx->wrapped) {
+        ctx->width = width;
+        ctx->height = height;
+        return 0;
+    }
 
     RECT rect;
     if (GetWindowRect(wgl->window, &rect) == 0)
@@ -320,6 +355,7 @@ static uintptr_t wgl_get_handle(struct glcontext *ctx)
 
 const struct glcontext_class ngli_glcontext_wgl_class = {
     .init = wgl_init,
+    .init_wrapped = wgl_init_wrapped,
     .uninit = wgl_uninit,
     .resize = wgl_resize,
     .make_current = wgl_make_current,

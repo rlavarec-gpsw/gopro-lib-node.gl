@@ -417,7 +417,8 @@ void ngli_rendertarget_gl_freep(struct rendertarget **sp)
 int ngli_default_rendertarget_gl_init(struct rendertarget *s, const struct rendertarget_params *params)
 {
     struct rendertarget_gl *s_priv = (struct rendertarget_gl *)s;
-    struct gpu_ctx_gl *gpu_ctx_gl = (struct gpu_ctx_gl *)s->gpu_ctx;
+    struct gpu_ctx *gpu_ctx = s->gpu_ctx;
+    struct gpu_ctx_gl *gpu_ctx_gl = (struct gpu_ctx_gl *)gpu_ctx;
     struct glcontext *gl = gpu_ctx_gl->glcontext;
 
     ngli_assert(params->nb_colors == 1);
@@ -427,7 +428,12 @@ int ngli_default_rendertarget_gl_init(struct rendertarget *s, const struct rende
     s->height = params->height;
 
     s_priv->wrapped = 1;
-    s_priv->id = ngli_glcontext_get_default_framebuffer(gl);
+    const struct ngl_config *config = &gpu_ctx->config;
+    if (config->wrapped) {
+        s_priv->id = config->wrapped_framebuffer;
+    } else {
+        s_priv->id = ngli_glcontext_get_default_framebuffer(gl);
+    }
 
     if (gl->features & NGLI_FEATURE_INVALIDATE_SUBDATA) {
         s_priv->invalidate = invalidate;

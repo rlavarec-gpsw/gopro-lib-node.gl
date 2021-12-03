@@ -48,10 +48,8 @@
 #include "vaapi_ctx.h"
 #endif
 
-#if defined(TARGET_DARWIN) || defined(TARGET_IPHONE)
 #if defined(BACKEND_GL)
 #include "backends/gl/gpu_ctx_gl.h"
-#endif
 #endif
 
 #if defined(TARGET_IPHONE) || defined(TARGET_ANDROID)
@@ -131,8 +129,13 @@ static int cmd_configure(struct ngl_ctx *s, void *arg)
     int reset_param = KEEP_SCENE;
     struct ngl_config *config = arg;
 
-    if (config->backend == NGL_BACKEND_AUTO)
+    if (config->backend == NGL_BACKEND_AUTO) {
+        if (config->wrapped) {
+            LOG(ERROR, "Automatic backend selection cannot be used with wrapped mode");
+            return NGL_ERROR_INVALID_USAGE;
+        }
         config->backend = DEFAULT_BACKEND;
+    }
     if (config->platform == NGL_PLATFORM_AUTO)
         config->platform = get_default_platform();
     if (config->platform < 0) {
@@ -249,6 +252,29 @@ static int cmd_set_capture_buffer(struct ngl_ctx *s, void *capture_buffer)
     return 0;
 }
 
+static int cmd_wrap_opengl_framebuffer(struct ngl_ctx *s, void *framebuffer)
+{
+#if defined(BACKEND_GL)
+    struct ngl_config *config = &s->config;
+
+    GLuint fbo = *(GLuint *)framebuffer;
+    int ret = ngli_gpu_ctx_gl_wrap_framebuffer(s->gpu_ctx, fbo);
+    if (ret < 0) {
+        if (s->scene) {
+            ngli_node_detach_ctx(s->scene, s);
+            ngl_node_unrefp(&s->scene);
+        }
+        config->wrapped_framebuffer = 0;
+        return ret;
+    }
+
+    config->wrapped_framebuffer = fbo;
+    return 0;
+#else
+    return NGL_ERROR_UNSUPPORTED;
+#endif
+}
+
 static int cmd_set_scene(struct ngl_ctx *s, void *arg)
 {
     ngli_gpu_ctx_wait_idle(s->gpu_ctx);
@@ -325,7 +351,19 @@ static int cmd_prepare_draw(struct ngl_ctx *s, void *arg)
 
 static int cmd_draw(struct ngl_ctx *s, void *arg)
 {
+    const struct ngl_config *config = &s->config;
     const double t = *(double *)arg;
+
+    if (config->wrapped) {
+#if defined(BACKEND_GL)
+        if (config->backend == NGL_BACKEND_OPENGL ||
+            config->backend == NGL_BACKEND_OPENGLES) {
+            int ret = ngli_gpu_ctx_gl_reset_state(s->gpu_ctx);
+            if (ret < 0)
+                return ret;
+        }
+#endif
+    }
 
     int ret = cmd_prepare_draw(s, arg);
     if (ret < 0)
@@ -375,6 +413,18 @@ end:;
     }
 
     int end_ret = ngli_gpu_ctx_end_draw(s->gpu_ctx, t);
+
+    if (config->wrapped) {
+#if defined(BACKEND_GL)
+        if (config->backend == NGL_BACKEND_OPENGL ||
+            config->backend == NGL_BACKEND_OPENGLES) {
+            int ret = ngli_gpu_ctx_gl_reset_state(s->gpu_ctx);
+            if (ret < 0)
+                return ret;
+        }
+#endif
+    }
+
     if (end_ret < 0)
         return end_ret;
 
@@ -442,6 +492,9 @@ static int cmd_make_current(struct ngl_ctx *s, void *arg)
 #define DONE_CURRENT &(int[]){0}
 static int configure_from_current_thread(struct ngl_ctx *s, struct ngl_config *config)
 {
+    if (config->wrapped)
+        return dispatch_cmd(s, CURRENT_THREAD, cmd_configure, config);
+
     int ret = dispatch_cmd(s, CURRENT_THREAD, cmd_configure, config);
     if (ret < 0)
         return ret;
@@ -452,6 +505,10 @@ static int configure_from_current_thread(struct ngl_ctx *s, struct ngl_config *c
 
 static int resize_from_current_thread(struct ngl_ctx *s, const struct resize_params *params)
 {
+    if (s->config.wrapped) {
+        return dispatch_cmd(s, CURRENT_THREAD, cmd_resize, params);
+    }
+
     int ret = dispatch_cmd(s, RENDERING_THREAD, cmd_make_current, DONE_CURRENT);
     if (ret < 0)
         return ret;
@@ -704,14 +761,16 @@ int ngl_configure(struct ngl_ctx *s, struct ngl_config *config)
     }
 
     if (s->configured) {
-        dispatch_cmd(s, RENDERING_THREAD, cmd_reset, &(int[]){KEEP_SCENE});
+        const int thread = s->config.wrapped ? CURRENT_THREAD : RENDERING_THREAD;
+        dispatch_cmd(s, thread, cmd_reset, &(int[]){KEEP_SCENE});
         s->configured = 0;
     }
 
 #if defined(TARGET_IPHONE) || defined(TARGET_DARWIN)
     int ret = configure_from_current_thread(s, config);
 #else
-    int ret = dispatch_cmd(s, RENDERING_THREAD, cmd_configure, config);
+    const int thread = config->wrapped ? CURRENT_THREAD : RENDERING_THREAD;
+    int ret = dispatch_cmd(s, thread, cmd_configure, config);
 #endif
     if (ret < 0)
         return ret;
@@ -741,7 +800,8 @@ int ngl_resize(struct ngl_ctx *s, int width, int height, const int *viewport)
 #if defined(TARGET_IPHONE) || defined(TARGET_DARWIN)
     return resize_from_current_thread(s, &params);
 #else
-    return dispatch_cmd(s, RENDERING_THREAD, cmd_resize, &params);
+    const int thread = s->config.wrapped ? CURRENT_THREAD : RENDERING_THREAD;
+    return dispatch_cmd(s, thread, cmd_resize, &params);
 #endif
 }
 
@@ -758,7 +818,32 @@ int ngl_set_capture_buffer(struct ngl_ctx *s, void *capture_buffer)
         return NGL_ERROR_INVALID_USAGE;
     }
 
-    int ret = dispatch_cmd(s, RENDERING_THREAD, cmd_set_capture_buffer, capture_buffer);
+    const int thread = s->config.wrapped ? CURRENT_THREAD : RENDERING_THREAD;
+    int ret = dispatch_cmd(s, thread, cmd_set_capture_buffer, capture_buffer);
+    if (ret < 0) {
+        s->configured = 0;
+        return ret;
+    }
+    return ret;
+}
+
+int ngl_gl_wrap_framebuffer(struct ngl_ctx *s, int framebuffer)
+{
+    if (!s->configured) {
+        LOG(ERROR, "context must be configured before setting a new wrapped opengl framebuffer");
+        return NGL_ERROR_INVALID_USAGE;
+    }
+
+    const struct ngl_config *config = &s->config;
+    if (!config->wrapped ||
+        (config->backend != NGL_BACKEND_OPENGL &&
+         config->backend != NGL_BACKEND_OPENGLES)) {
+        LOG(ERROR, "setting a new framebuffer is only supported with OpenGL wrapped contexts");
+        return NGL_ERROR_INVALID_USAGE;
+    }
+
+    const int thread = s->config.wrapped ? CURRENT_THREAD : RENDERING_THREAD;
+    int ret = dispatch_cmd(s, thread, cmd_wrap_opengl_framebuffer, &framebuffer);
     if (ret < 0) {
         s->configured = 0;
         return ret;
@@ -773,7 +858,8 @@ int ngl_set_scene(struct ngl_ctx *s, struct ngl_node *scene)
         return NGL_ERROR_INVALID_USAGE;
     }
 
-    return dispatch_cmd(s, RENDERING_THREAD, cmd_set_scene, scene);
+    const int thread = s->config.wrapped ? CURRENT_THREAD : RENDERING_THREAD;
+    return dispatch_cmd(s, thread, cmd_set_scene, scene);
 }
 
 int ngli_prepare_draw(struct ngl_ctx *s, double t)
@@ -783,7 +869,8 @@ int ngli_prepare_draw(struct ngl_ctx *s, double t)
         return NGL_ERROR_INVALID_USAGE;
     }
 
-    return dispatch_cmd(s, RENDERING_THREAD, cmd_prepare_draw, &t);
+    const int thread = s->config.wrapped ? CURRENT_THREAD : RENDERING_THREAD;
+    return dispatch_cmd(s, thread, cmd_prepare_draw, &t);
 }
 
 int ngl_draw(struct ngl_ctx *s, double t)
@@ -793,7 +880,8 @@ int ngl_draw(struct ngl_ctx *s, double t)
         return NGL_ERROR_INVALID_USAGE;
     }
 
-    return dispatch_cmd(s, RENDERING_THREAD, cmd_draw, &t);
+    const int thread = s->config.wrapped ? CURRENT_THREAD : RENDERING_THREAD;
+    return dispatch_cmd(s, thread, cmd_draw, &t);
 }
 
 void ngl_freep(struct ngl_ctx **ss)
@@ -804,7 +892,8 @@ void ngl_freep(struct ngl_ctx **ss)
         return;
 
     if (s->configured) {
-        dispatch_cmd(s, RENDERING_THREAD, cmd_reset, &(int[]){UNREF_SCENE});
+        const int thread = s->config.wrapped ? CURRENT_THREAD : RENDERING_THREAD;
+        dispatch_cmd(s, thread, cmd_reset, &(int[]){UNREF_SCENE});
         s->configured = 0;
     }
     dispatch_cmd(s, RENDERING_THREAD, cmd_stop, NULL);
