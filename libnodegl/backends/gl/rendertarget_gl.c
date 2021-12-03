@@ -443,7 +443,8 @@ void ngli_rendertarget_gl_freep(struct rendertarget **sp)
 int ngli_rendertarget_gl_wrap(struct rendertarget *s, const struct rendertarget_params *params, GLuint id)
 {
     struct rendertarget_gl *s_priv = (struct rendertarget_gl *)s;
-    struct gpu_ctx_gl *gpu_ctx_gl = (struct gpu_ctx_gl *)s->gpu_ctx;
+    struct gpu_ctx *gpu_ctx = s->gpu_ctx;
+    struct gpu_ctx_gl *gpu_ctx_gl = (struct gpu_ctx_gl *)gpu_ctx;
     struct glcontext *gl = gpu_ctx_gl->glcontext;
 
     ngli_assert(params->nb_colors == 1);

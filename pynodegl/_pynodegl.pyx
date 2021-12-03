@@ -119,6 +119,8 @@ cdef extern from "nodegl.h":
         uintptr_t handle
         int  swap_interval
         int  offscreen
+        int  wrapped
+        int  wrapped_framebuffer
         int  width
         int  height
         int  viewport[4]
@@ -168,6 +170,8 @@ cdef extern from "nodegl.h":
                             const double *offsets, double t, double *v)
     int ngl_easing_solve(const char *name, const double *args, int nb_args,
                          const double *offsets, double v, double *t)
+
+    int ngl_gl_wrap_framebuffer(ngl_ctx *s, int framebuffer);
 
 PLATFORM_AUTO    = NGL_PLATFORM_AUTO
 PLATFORM_XLIB    = NGL_PLATFORM_XLIB
@@ -532,6 +536,8 @@ cdef class Context:
         config.handle = kwargs.get('handle', 0)
         config.swap_interval = kwargs.get('swap_interval', -1)
         config.offscreen = kwargs.get('offscreen', 0)
+        config.wrapped = kwargs.get('wrapped', 0)
+        config.wrapped_framebuffer = kwargs.get('wrapped_framebuffer', 0)
         config.width = kwargs.get('width', 0)
         config.height = kwargs.get('height', 0)
         viewport = kwargs.get('viewport', (0, 0, 0, 0))
@@ -598,3 +604,6 @@ cdef class Context:
 
     def __dealloc__(self):
         ngl_freep(&self.ctx)
+
+    def gl_wrap_framebuffer(self, int framebuffer):
+        return ngl_gl_wrap_framebuffer(self.ctx, framebuffer)

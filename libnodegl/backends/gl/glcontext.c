@@ -439,6 +439,7 @@ struct glcontext *ngli_glcontext_new(const struct ngl_config *config)
         }
     }
 
+    glcontext->wrapped = config->wrapped;
     glcontext->platform = config->platform;
     glcontext->backend = config->backend;
     glcontext->offscreen = config->offscreen;
@@ -446,10 +447,18 @@ struct glcontext *ngli_glcontext_new(const struct ngl_config *config)
     glcontext->height = config->height;
     glcontext->samples = config->samples;
 
-    if (glcontext->cls->init) {
-        int ret = glcontext->cls->init(glcontext, config->display, config->window, config->handle);
-        if (ret < 0)
-            goto fail;
+    if (glcontext->wrapped) {
+        if (glcontext->cls->init_wrapped) {
+            int ret = glcontext->cls->init_wrapped(glcontext, config->display, config->window, config->handle);
+            if (ret < 0)
+                goto fail;
+        }
+    } else {
+        if (glcontext->cls->init) {
+            int ret = glcontext->cls->init(glcontext, config->display, config->window, config->handle);
+            if (ret < 0)
+                goto fail;
+        }
     }
 
     int ret = ngli_glcontext_make_current(glcontext, 1);
@@ -470,7 +479,7 @@ struct glcontext *ngli_glcontext_new(const struct ngl_config *config)
             goto fail;
     }
 
-    if (config->swap_interval >= 0)
+    if (!config->wrapped && config->swap_interval >= 0)
         ngli_glcontext_set_swap_interval(glcontext, config->swap_interval);
 
     return glcontext;

@@ -520,6 +520,10 @@ struct ngl_config {
 
     int offscreen; /* Whether the rendering should happen offscreen or not */
 
+    int wrapped; /* Whether the context is wrapped or not */
+
+    int wrapped_framebuffer; /* Wrapped OpenGL framebuffer identifier */
+
     int width;     /* Graphic context width, mandatory for offscreen rendering */
 
     int height;    /* Graphic context height, mandatory for offscreen rendering */
@@ -803,6 +807,25 @@ NGL_API int ngl_easing_solve(const char *name, const double *args, int nb_args,
  */
 NGL_API int ngl_easing_derivate(const char *name, const double *args, int nb_args,
                                 const double *offsets, double t, double *v);
+
+/**
+ * OpenGL
+ */
+
+/**
+ * Wrap a new external OpenGL framebuffer used for rendering
+ *
+ * Wrap a new external OpenGL framebuffer used for rendering with wrapped
+ * OpenGL contexts. The wrapped framebuffer color attachment must be composed of 4
+ * color components (R, G, B, A). The wrapped framebuffer must also have a
+ * depth and stencil buffer attached to it.
+ *
+ * @param s               pointer to a node.gl context
+ * @params framebuffer    OpenGL framebuffer identifier to wrap
+ *
+ * @return 0 on success, NGL_ERROR_* (< 0) on error
+ */
+NGL_API int ngl_gl_wrap_framebuffer(struct ngl_ctx *s, int framebuffer);
 
 /**
  * Android
