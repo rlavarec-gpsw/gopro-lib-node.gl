@@ -661,6 +661,28 @@ static int gl_set_capture_buffer(struct gpu_ctx *s, void *capture_buffer)
     return 0;
 }
 
+static int gl_begin_wrapped(struct gpu_ctx *s)
+{
+    struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
+    struct glcontext *gl = s_priv->glcontext;
+    GLuint fbo = 0;
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint *)&fbo);
+    struct rendertarget_gl *rt_gl = (struct rendertarget_gl *)s_priv->rt;
+    struct rendertarget_gl *rt_load_gl = (struct rendertarget_gl *)s_priv->rt_load;
+    rt_gl->id = fbo;
+    rt_load_gl->id = fbo;
+    ngli_glstate_reset(gl, &s_priv->glstate);
+    return 0;
+}
+
+static int gl_end_wrapped(struct gpu_ctx *s)
+{
+    struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
+    struct glcontext *gl = s_priv->glcontext;
+    ngli_glstate_reset(gl, &s_priv->glstate);
+    return 0;
+}
+
 static int gl_begin_draw(struct gpu_ctx *s, double t)
 {
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
@@ -693,7 +715,8 @@ static int gl_end_draw(struct gpu_ctx *s, double t)
     if (config->set_surface_pts)
         ngli_glcontext_set_surface_pts(gl, t);
 
-    ngli_glcontext_swap_buffers(gl);
+    if (!config->wrapped)
+        ngli_glcontext_swap_buffers(gl);
 
     return ret;
 }
@@ -891,6 +914,8 @@ const struct gpu_ctx_class ngli_gpu_ctx_gl = {
     .init         = gl_init,
     .resize       = gl_resize,
     .set_capture_buffer = gl_set_capture_buffer,
+    .begin_wrapped = gl_begin_wrapped,
+    .end_wrapped   = gl_end_wrapped,
     .begin_draw   = gl_begin_draw,
     .end_draw     = gl_end_draw,
     .query_draw_time = gl_query_draw_time,
@@ -953,6 +978,8 @@ const struct gpu_ctx_class ngli_gpu_ctx_gles = {
     .init         = gl_init,
     .resize       = gl_resize,
     .set_capture_buffer = gl_set_capture_buffer,
+    .begin_wrapped  = gl_begin_wrapped,
+    .end_wrapped    = gl_end_wrapped,
     .begin_draw   = gl_begin_draw,
     .end_draw     = gl_end_draw,
     .query_draw_time = gl_query_draw_time,

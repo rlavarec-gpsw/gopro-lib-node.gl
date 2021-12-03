@@ -118,6 +118,7 @@ cdef extern from "nodegl.h":
         uintptr_t handle
         int  swap_interval
         int  offscreen
+        int  wrapped
         int  width
         int  height
         int  viewport[4]
@@ -461,6 +462,7 @@ cdef class Context:
         config.handle = kwargs.get('handle', 0)
         config.swap_interval = kwargs.get('swap_interval', -1)
         config.offscreen = kwargs.get('offscreen', 0)
+        config.wrapped = kwargs.get('wrapped', 0)
         config.width = kwargs.get('width', 0)
         config.height = kwargs.get('height', 0)
         viewport = kwargs.get('viewport', (0, 0, 0, 0))

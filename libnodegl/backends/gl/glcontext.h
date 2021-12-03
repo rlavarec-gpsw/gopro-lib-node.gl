@@ -43,6 +43,7 @@ struct glcontext {
     int width;
     int height;
     int samples;
+    int wrapped;
 
     /* GL api */
     int version;
@@ -62,6 +63,7 @@ struct glcontext {
 
 struct glcontext_class {
     int (*init)(struct glcontext *glcontext, uintptr_t display, uintptr_t window, uintptr_t handle);
+    int (*init_wrapped)(struct glcontext *glcontext, uintptr_t display, uintptr_t window, uintptr_t handle);
     int (*resize)(struct glcontext *glcontext, int width, int height);
     int (*make_current)(struct glcontext *glcontext, int current);
     void (*swap_buffers)(struct glcontext *glcontext);
