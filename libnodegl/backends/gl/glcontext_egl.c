@@ -396,9 +396,56 @@ try_again:;
     return 0;
 }
 
+static int egl_init_wrapped(struct glcontext *ctx, uintptr_t display, uintptr_t window, uintptr_t other)
+{
+    struct egl_priv *egl = ctx->priv_data;
+
+    egl->handle = other ? (EGLContext)other : eglGetCurrentContext();
+    if (!egl->handle) {
+        LOG(ERROR, "could not retrieve EGL context");
+        return -1;
+    }
+
+    egl->display = eglGetCurrentDisplay();
+    if (!egl->display) {
+        LOG(ERROR, "could not retrieve EGL display");
+        return -1;
+    }
+
+    egl->surface = eglGetCurrentSurface(EGL_DRAW);
+
+    egl->extensions = eglQueryString(egl->display, EGL_EXTENSIONS);
+    if (!egl->extensions) {
+        LOG(ERROR, "could not retrieve EGL extensions");
+        return -1;
+    }
+
+    int ret = egl_probe_extensions(ctx);
+    if (ret < 0)
+        return ret;
+
+    EGLint client_type;
+    if (!eglQueryContext(egl->display, egl->handle, EGL_CONTEXT_CLIENT_TYPE, &client_type)) {
+        LOG(ERROR, "could not query context");
+        return -1;
+    }
+
+    if (client_type == EGL_OPENGL_API)
+        ctx->backend = NGL_BACKEND_OPENGL;
+    else if (client_type == EGL_OPENGL_ES_API)
+        ctx->backend = NGL_BACKEND_OPENGLES;
+    else
+        ngli_assert(0);
+
+    return 0;
+}
+
 static void egl_uninit(struct glcontext *ctx)
 {
     struct egl_priv *egl = ctx->priv_data;
+
+    if (ctx->wrapped)
+        return;
 
     ngli_glcontext_make_current(ctx, 0);
 
@@ -427,6 +474,12 @@ static void egl_uninit(struct glcontext *ctx)
 static int egl_resize(struct glcontext *ctx, int width, int height)
 {
     struct egl_priv *egl = ctx->priv_data;
+
+    if (ctx->wrapped) {
+        ctx->width = width;
+        ctx->height = height;
+        return 0;
+    }
 
 #if defined(TARGET_ANDROID)
     const int w_width = ANativeWindow_getWidth(egl->native_window);
@@ -524,6 +577,7 @@ static uintptr_t egl_get_handle(struct glcontext *ctx)
 
 const struct glcontext_class ngli_glcontext_egl_class = {
     .init = egl_init,
+    .init_wrapped = egl_init_wrapped,
     .uninit = egl_uninit,
     .resize = egl_resize,
     .make_current = egl_make_current,

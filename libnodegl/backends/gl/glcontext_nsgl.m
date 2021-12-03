@@ -118,9 +118,45 @@ static int nsgl_init(struct glcontext *ctx, uintptr_t display, uintptr_t window,
     return 0;
 }
 
+static int nsgl_init_wrapped(struct glcontext *ctx, uintptr_t display, uintptr_t window, uintptr_t other)
+{
+    struct nsgl_priv *nsgl = ctx->priv_data;
+
+    if (ctx->backend != NGL_BACKEND_OPENGL) {
+        LOG(ERROR, "unsupported backend: %d, only OpenGL is supported by NSGL", ctx->backend);
+        return -1;
+    }
+
+    CFBundleRef framework = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.opengl"));
+    if (!framework) {
+        LOG(ERROR, "could not retrieve OpenGL framework");
+        return -1;
+    }
+
+    nsgl->framework = (CFBundleRef)CFRetain(framework);
+    if (!nsgl->framework) {
+        LOG(ERROR, "could not retain OpenGL framework object");
+        return -1;
+    }
+
+    nsgl->handle = [NSOpenGLContext currentContext];
+    if (!nsgl->handle) {
+        LOG(ERROR, "could not retrieve NSGL context");
+        return -1;
+    }
+
+    return 0;
+}
+
 static int nsgl_resize(struct glcontext *ctx, int width, int height)
 {
     struct nsgl_priv *nsgl = ctx->priv_data;
+
+    if (ctx->wrapped) {
+        ctx->width = width;
+        ctx->height = height;
+        return 0;
+    }
 
     if (![NSThread isMainThread]) {
         LOG(ERROR, "nsgl_resize() must be called from the main thread");
@@ -189,6 +225,12 @@ static void nsgl_uninit(struct glcontext *ctx)
 {
     struct nsgl_priv *nsgl = ctx->priv_data;
 
+    if (ctx->wrapped) {
+        if (nsgl->framework)
+            CFRelease(nsgl->framework);
+        return;
+    }
+
     if (nsgl->framework)
         CFRelease(nsgl->framework);
 
@@ -203,6 +245,7 @@ static void nsgl_uninit(struct glcontext *ctx)
 
 const struct glcontext_class ngli_glcontext_nsgl_class = {
     .init = nsgl_init,
+    .init_wrapped = nsgl_init_wrapped,
     .uninit = nsgl_uninit,
     .resize = nsgl_resize,
     .make_current = nsgl_make_current,

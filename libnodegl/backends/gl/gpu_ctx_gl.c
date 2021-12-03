@@ -532,13 +532,16 @@ static int gl_resize(struct gpu_ctx *s, int width, int height, const int *viewpo
     s_priv->rt_load->width = gl->width;
     s_priv->rt_load->height = gl->height;
 
-    /*
-     * The default framebuffer id can change after a resize operation on EAGL,
-     * thus we need to update the rendertargets wrapping the default framebuffer
-     */
-    struct rendertarget_gl *rt_gl = (struct rendertarget_gl *)s_priv->rt;
-    struct rendertarget_gl *rt_load_gl = (struct rendertarget_gl *)s_priv->rt_load;
-    rt_gl->id = rt_load_gl->id = ngli_glcontext_get_default_framebuffer(gl);
+    const struct ngl_config *config = &s->config;
+    if (!config->wrapped) {
+        /*
+        * The default framebuffer id can change after a resize operation on EAGL,
+        * thus we need to update the rendertargets wrapping the default framebuffer
+        */
+        struct rendertarget_gl *rt_gl = (struct rendertarget_gl *)s_priv->rt;
+        struct rendertarget_gl *rt_load_gl = (struct rendertarget_gl *)s_priv->rt_load;
+        rt_gl->id = rt_load_gl->id = ngli_glcontext_get_default_framebuffer(gl);
+    }
 
     if (viewport && viewport[2] > 0 && viewport[3] > 0) {
         gl_set_viewport(s, viewport);
@@ -683,6 +686,27 @@ static int gl_set_capture_buffer(struct gpu_ctx *s, void *capture_buffer)
     return 0;
 }
 
+int ngli_gpu_ctx_gl_wrap_framebuffer(struct gpu_ctx *s, GLuint fbo)
+{
+    struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
+
+    s->config.wrapped_framebuffer = fbo;
+    struct rendertarget_gl *rt_gl = (struct rendertarget_gl *)s_priv->rt;
+    struct rendertarget_gl *rt_load_gl = (struct rendertarget_gl *)s_priv->rt_load;
+    rt_gl->id = rt_load_gl->id = fbo;
+
+    return 0;
+}
+
+int ngli_gpu_ctx_gl_reset_state(struct gpu_ctx *s)
+{
+    struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
+    struct glcontext *gl = s_priv->glcontext;
+    ngli_glstate_reset(gl, &s_priv->glstate);
+
+    return 0;
+}
+
 static int gl_begin_draw(struct gpu_ctx *s, double t)
 {
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
@@ -713,7 +737,8 @@ static int gl_end_draw(struct gpu_ctx *s, double t)
     if (config->set_surface_pts)
         ngli_glcontext_set_surface_pts(gl, t);
 
-    ngli_glcontext_swap_buffers(gl);
+    if (!config->wrapped)
+        ngli_glcontext_swap_buffers(gl);
 
     return ret;
 }
