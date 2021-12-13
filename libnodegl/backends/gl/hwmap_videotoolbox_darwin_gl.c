@@ -56,12 +56,16 @@ static int vt_get_format_desc(OSType format, struct format_desc *desc)
         desc->planes[0].format = NGLI_FORMAT_B8G8R8A8_UNORM;
         break;
     case kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange:
+    case kCVPixelFormatType_422YpCbCr8BiPlanarVideoRange:
+    case kCVPixelFormatType_444YpCbCr8BiPlanarVideoRange:
         desc->layout = NGLI_IMAGE_LAYOUT_NV12_RECTANGLE;
         desc->nb_planes = 2;
         desc->planes[0].format = NGLI_FORMAT_R8_UNORM;
         desc->planes[1].format = NGLI_FORMAT_R8G8_UNORM;
         break;
     case kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange:
+    case kCVPixelFormatType_422YpCbCr10BiPlanarVideoRange:
+    case kCVPixelFormatType_444YpCbCr10BiPlanarVideoRange:
         desc->layout = NGLI_IMAGE_LAYOUT_NV12_RECTANGLE;
         desc->nb_planes = 2;
         desc->planes[0].format = NGLI_FORMAT_R16_UNORM;
@@ -150,7 +154,11 @@ static int support_direct_rendering(struct hwmap *hwmap, struct sxplayer_frame *
         direct_rendering = params->image_layouts & (1 << NGLI_IMAGE_LAYOUT_RECTANGLE);
         break;
     case kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange:
+    case kCVPixelFormatType_422YpCbCr8BiPlanarVideoRange:
+    case kCVPixelFormatType_444YpCbCr8BiPlanarVideoRange:
     case kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange:
+    case kCVPixelFormatType_422YpCbCr10BiPlanarVideoRange:
+    case kCVPixelFormatType_444YpCbCr10BiPlanarVideoRange:
         direct_rendering = params->image_layouts & (1 << NGLI_IMAGE_LAYOUT_NV12_RECTANGLE);
         break;
     default:
