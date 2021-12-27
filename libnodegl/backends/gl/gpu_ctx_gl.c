@@ -689,6 +689,52 @@ static int gl_set_capture_buffer(struct gpu_ctx *s, void *capture_buffer)
 int ngli_gpu_ctx_gl_wrap_framebuffer(struct gpu_ctx *s, GLuint fbo)
 {
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
+    struct glcontext *gl = s_priv->glcontext;
+
+    if (gl->features & NGLI_FEATURE_FRAMEBUFFER_OBJECT) {
+        GLuint prev_fbo = 0;
+        ngli_glGetIntegerv(gl, GL_DRAW_FRAMEBUFFER_BINDING, (GLint *)&prev_fbo);
+
+        const GLenum target = GL_DRAW_FRAMEBUFFER;
+        ngli_glBindFramebuffer(gl, target, fbo);
+
+        const GLenum color_attachment = fbo ? GL_COLOR_ATTACHMENT0 : GL_FRONT_LEFT;
+        const GLenum depth_attachment = fbo ? GL_DEPTH_ATTACHMENT : GL_DEPTH;
+        const GLenum stencil_attachment = fbo ? GL_STENCIL_ATTACHMENT : GL_STENCIL;
+        struct {
+            const char *name;
+            GLenum attachment;
+            GLenum property;
+        } const components[] = {
+            {"red",     color_attachment, GL_FRAMEBUFFER_ATTACHMENT_RED_SIZE},
+            {"green",   color_attachment, GL_FRAMEBUFFER_ATTACHMENT_GREEN_SIZE},
+            {"blue",    color_attachment, GL_FRAMEBUFFER_ATTACHMENT_BLUE_SIZE},
+            {"alpha",   color_attachment, GL_FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE},
+            {"depth",   depth_attachment, GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE},
+            {"stencil", stencil_attachment, GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE},
+        };
+        for (int i = 0; i < NGLI_ARRAY_NB(components); i++) {
+            GLint size;
+            ngli_glGetFramebufferAttachmentParameteriv(gl, GL_DRAW_FRAMEBUFFER,
+                color_attachment, components[i].property, &size);
+            if (!size)
+                LOG(WARNING, "wrapped framebuffer have no %s component", components[i].name);
+        }
+
+        GLint type = GL_NONE;
+        ngli_glGetFramebufferAttachmentParameteriv(gl, GL_DRAW_FRAMEBUFFER,
+            depth_attachment, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, &type);
+        if (!type)
+            LOG(WARNING, "wrapped framebuffer have no depth buffer attached to it");
+
+        ngli_glGetFramebufferAttachmentParameteriv(gl, GL_DRAW_FRAMEBUFFER,
+            stencil_attachment, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, &type);
+        if (!type)
+            LOG(WARNING, "wrapped framebuffer have no stencil buffer attached to it");
+
+        ngli_glBindFramebuffer(gl, target, prev_fbo);
+    } else {
+    }
 
     s->config.wrapped_framebuffer = fbo;
     struct rendertarget_gl *rt_gl = (struct rendertarget_gl *)s_priv->rt;

@@ -104,6 +104,7 @@ class SquircleRenderer(QOpenGLFunctions):
             self._context = ngl.Context()
             GL.glGetError()
             self._context.configure(wrapped=1, backend=ngl.BACKEND_OPENGL)
+            self._context.gl_wrap_framebuffer(0)
             assert self._context.set_scene(fibo().get('scene')) == 0
 
 
@@ -134,7 +135,7 @@ def get_surface_format(backend='gl', version=None):
     else:
         raise Exception('Unknown rendering backend' % backend)
 
-    surface_format.setDepthBufferSize(24)
+    surface_format.setDepthBufferSize(16)
     surface_format.setStencilBufferSize(8)
     surface_format.setAlphaBufferSize(8)
     return surface_format
