@@ -12,11 +12,15 @@ from PySide6 import QtCore
 from PySide6.QtQml import qmlRegisterType
 
 from pynodegl_utils.examples.misc import fibo, cube
+from pynodegl_utils.module import load_script
 
 import pynodegl as ngl
 
 import OpenGL.GL as GL
 
+
+x = load_script("/home/mateo/src/devel/node.gl/tests/depth_stencil.py")
+fibo = x.depth_stencil_depth
 
 class Squircle(QQuickItem):
 
@@ -103,7 +107,8 @@ class SquircleRenderer(QOpenGLFunctions):
             assert rif.graphicsApi() == QSGRendererInterface.OpenGL or rif.graphicsApi() == QSGRendererInterface.OpenGLRhi
             self._context = ngl.Context()
             GL.glGetError()
-            self._context.configure(wrapped=1, backend=ngl.BACKEND_OPENGL)
+            self._context.configure(wrapped=1, wrapped_framebuffer=0, backend=ngl.BACKEND_OPENGL)
+            #self._context.gl_wrap_framebuffer(0)
             assert self._context.set_scene(fibo().get('scene')) == 0
 
 
