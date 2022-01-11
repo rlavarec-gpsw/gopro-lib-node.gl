@@ -497,9 +497,14 @@ static int gl_resize(struct gpu_ctx *s, int width, int height, const int *viewpo
     struct glcontext *gl = s_priv->glcontext;
     struct ngl_config *config = &s->config;
 
-    int ret = ngli_glcontext_resize(gl, width, height);
-    if (ret < 0)
-        return ret;
+    if (!config->wrapped) {
+        if (config->offscreen)
+            return NGL_ERROR_INVALID_USAGE;
+
+        int ret = ngli_glcontext_resize(gl, width, height);
+        if (ret < 0)
+            return ret;
+    }
 
     config->width = gl->width;
     config->height = gl->height;
