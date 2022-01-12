@@ -418,6 +418,15 @@ RenderGradient4:
     - [geometry, node, ""]
     - [filters, node_list, ""]
 
+RenderGrid:
+    - [color, vec3, "LN"]
+    - [opacity, f32, "LN"]
+    - [thickness, i32, ""]
+    - [dimensions, vec2, ""]
+    - [blending, select, ""]
+    - [geometry, node, ""]
+    - [filters, node_list, ""]
+
 RenderTexture:
     - [texture, node, "M"]
     - [blending, select, ""]
