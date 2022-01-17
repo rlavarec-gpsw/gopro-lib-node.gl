@@ -31,6 +31,7 @@
 #include "nodegl.h"
 #include "internal.h"
 #include "utils.h"
+#include "internal.h"
 
 struct renderpass_info {
     int nb_interruptions;
@@ -412,6 +413,19 @@ static int rtt_prefetch(struct ngl_node *node)
     return 0;
 }
 
+static int invalidate(struct ngl_node *node)
+{
+    struct rtt_priv *s = node->priv_data;
+
+    for (int i = 0; i < s->nb_color_textures; i++)
+        ngli_node_invalidate(s->color_textures[i]);
+
+    if (s->depth_texture)
+        ngli_node_invalidate(s->depth_texture);
+
+    return 0;
+}
+
 static void rtt_draw(struct ngl_node *node)
 {
     struct ngl_ctx *ctx = node->ctx;
@@ -491,6 +505,7 @@ const struct node_class ngli_rtt_class = {
     .init      = rtt_init,
     .prepare   = rtt_prepare,
     .prefetch  = rtt_prefetch,
+    .invalidate= rtt_invalidate,
     .update    = ngli_node_update_children,
     .draw      = rtt_draw,
     .release   = rtt_release,
