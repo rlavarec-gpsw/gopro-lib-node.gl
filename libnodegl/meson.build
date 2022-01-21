@@ -383,11 +383,19 @@ gbackends_cfg = {
         'deps': ['vulkan', 'glslang'],
       },
       'darwin': {
+        'src': files('backends/vk/hwmap_videotoolbox_darwin_vk.m'),
+        'deps': ['glslang'],
+        'libs': ['MoltenVK'],
+        'frameworks': ['Metal'],
       },
       'android': {
         'deps': ['vulkan', 'glslang'],
       },
       'iphone': {
+        'src': files('backends/vk/hwmap_videotoolbox_darwin_vk.m'),
+        'deps': ['glslang'],
+        'libs': ['MoltenVK'],
+        'frameworks': ['Metal'],
       },
       'windows': {
         'deps': ['vulkan', 'glslang'],
