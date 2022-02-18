@@ -21,11 +21,11 @@
 
 #include <glslang/build_info.h>
 #include <glslang/Include/glslang_c_interface.h>
-#include <nodegl.h>
 
 #include "glslang_utils.h"
 #include "log.h"
 #include "memory.h"
+#include "nodegl.h"
 #include "program.h"
 #include "pthread_compat.h"
 
@@ -112,7 +112,6 @@ int ngli_glslang_compile(int stage, const char *src, void **datap, size_t *sizep
         glslang_shader_delete(shader);
         return NGL_ERROR_MEMORY;
     }
-
     glslang_program_add_shader(program, shader);
 
     ret = glslang_program_link(program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT);
@@ -130,8 +129,7 @@ int ngli_glslang_compile(int stage, const char *src, void **datap, size_t *sizep
     if (messages)
         LOG(WARNING, "%s", messages);
 
-    size_t size = glslang_program_SPIRV_get_size(program) * sizeof(unsigned int);
-
+    const size_t size = glslang_program_SPIRV_get_size(program) * sizeof(unsigned int);
     unsigned int *data = ngli_malloc(size);
     if (!data) {
         glslang_program_delete(program);

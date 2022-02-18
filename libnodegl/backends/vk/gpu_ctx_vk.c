@@ -374,11 +374,10 @@ static VkResult create_transient_resources(struct gpu_ctx *s)
     if (res != VK_SUCCESS)
         return res;
 
-
     const VkFenceCreateInfo fence_create_info = {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .pNext = NULL,
-        .flags = 0,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
     res = vkCreateFence(vk->device, &fence_create_info, NULL, &s_priv->transient_cmd_fence);
     if (res != VK_SUCCESS)
@@ -419,6 +418,7 @@ static VkResult create_semaphores(struct gpu_ctx *s)
 
     const VkFenceCreateInfo fence_create_info = {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
 
     VkResult res;
@@ -858,7 +858,7 @@ static int vk_init(struct gpu_ctx *s)
     s->limits.max_compute_shared_memory_size     = limits->maxComputeSharedMemorySize;
     s->limits.max_draw_buffers                   = limits->maxColorAttachments;
     s->limits.max_samples                        = get_max_supported_samples(limits);
-    /* max_texture_image_units is specific to the OpenGL backend and has not
+    /* max_texture_image_units is specific to the OpenGL backend and has no
      * direct Vulkan equivalent so use a sane default value */
     s->limits.max_texture_image_units            = 32;
     s->limits.max_uniform_block_size             = limits->maxUniformBufferRange;
@@ -963,17 +963,9 @@ static int vk_begin_update(struct gpu_ctx *s, double t)
     struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
     struct vkcontext *vk = s_priv->vkcontext;
 
-    if (s_priv->wait_fence) {
-    VkResult res = vkWaitForFences(vk->device, 1, &s_priv->wait_fence, VK_TRUE, UINT64_MAX);
+    VkResult res = vkWaitForFences(vk->device, 1, &s_priv->fences[s_priv->frame_index], VK_TRUE, UINT64_MAX);
     if (res != VK_SUCCESS)
         return ngli_vk_res2ret(res);
-
-    res = vkResetFences(vk->device, 1, &s_priv->wait_fence);
-    if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
-
-    s_priv->wait_fence = VK_NULL_HANDLE;
-    }
 
     s_priv->frame_index = (s_priv->frame_index + 1) % s_priv->nb_in_flight_frames;
 
@@ -983,7 +975,7 @@ static int vk_begin_update(struct gpu_ctx *s, double t)
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
     };
-    VkResult res = vkBeginCommandBuffer(s_priv->cur_cmd_buf, &cmd_buf_begin_info);
+    res = vkBeginCommandBuffer(s_priv->cur_cmd_buf, &cmd_buf_begin_info);
     if (res != VK_SUCCESS)
         return ngli_vk_res2ret(res);
     s_priv->cur_cmd_buf_started = 1;
@@ -1055,6 +1047,10 @@ static int vk_query_draw_time(struct gpu_ctx *s, int64_t *time)
         return ngli_vk_res2ret(res);
     s_priv->cur_cmd_buf_started = 0;
 
+    res = vkResetFences(vk->device, 1, &s_priv->fences[s_priv->frame_index]);
+    if (res != VK_SUCCESS)
+        return ngli_vk_res2ret(res);
+
     const VkSubmitInfo submit_info = {
         .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .waitSemaphoreCount   = ngli_darray_count(&s_priv->wait_sems),
@@ -1073,10 +1069,6 @@ static int vk_query_draw_time(struct gpu_ctx *s, int64_t *time)
     ngli_darray_clear(&s_priv->wait_stages);
 
     res = vkWaitForFences(vk->device, 1, &s_priv->fences[s_priv->frame_index], VK_TRUE, UINT64_MAX);
-    if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
-
-    res = vkResetFences(vk->device, 1, &s_priv->fences[s_priv->frame_index]);
     if (res != VK_SUCCESS)
         return ngli_vk_res2ret(res);
 
@@ -1110,6 +1102,10 @@ static VkResult vk_submit_cmd_buf(struct gpu_ctx *s)
     if (res != VK_SUCCESS)
         return res;
     s_priv->cur_cmd_buf_started = 0;
+
+    res = vkResetFences(vk->device, 1, &s_priv->fences[s_priv->frame_index]);
+    if (res != VK_SUCCESS)
+        return ngli_vk_res2ret(res);
 
     const VkSubmitInfo submit_info = {
         .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -1168,8 +1164,6 @@ static int vk_end_draw(struct gpu_ctx *s, double t)
         if (res != VK_SUCCESS)
             return ngli_vk_res2ret(res);
     }
-
-    s_priv->wait_fence = s_priv->fences[s_priv->frame_index];
 
     return 0;
 }

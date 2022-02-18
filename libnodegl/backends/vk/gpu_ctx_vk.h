@@ -72,7 +72,6 @@ struct gpu_ctx_vk {
     VkSemaphore *img_avail_sems;
     VkSemaphore *render_finished_sems;
     VkFence *fences;
-    VkFence wait_fence;
 
     struct darray wait_sems;
     struct darray wait_stages;

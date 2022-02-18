@@ -256,23 +256,23 @@ def _nodegl_setup(cfg):
         nodegl_opts += [f'-Drenderdoc_dir={renderdoc_dir}']
 
     extra_library_dirs = []
+    extra_include_dirs = []
     if _SYSTEM == 'Windows':
-        extra_library_dirs += [
-            op.join(cfg.prefix, 'Lib')
-        ]
+        extra_library_dirs += [op.join(cfg.prefix, 'Lib')]
+        extra_include_dirs += [op.join(cfg.prefix, 'Include')]
     elif _SYSTEM == 'Darwin':
         prefix = _get_brew_prefix()
         if prefix:
-            extra_library_dirs += [
-                op.join(prefix, 'lib')
-            ]
-    extra_library_dirs += [
-        op.join('/tmp/b', 'lib')
-    ]
+            extra_library_dirs += [op.join(prefix, 'lib')]
+            extra_include_dirs += [op.join(prefix, 'include')]
 
     if extra_library_dirs:
         opts = ','.join(extra_library_dirs)
         nodegl_opts += [f'-Dextra_library_dirs={opts}']
+
+    if extra_include_dirs:
+        opts = ','.join(extra_include_dirs)
+        nodegl_opts += [f'-Dextra_include_dirs={opts}']
 
     return ['$(MESON_SETUP) -Drpath=true ' + _cmd_join(*nodegl_opts, 'libnodegl', op.join('builddir', 'libnodegl'))]
 
