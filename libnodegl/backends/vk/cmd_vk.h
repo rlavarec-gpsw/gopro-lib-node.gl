@@ -26,6 +26,9 @@
 
 #include "darray.h"
 
+#define NGLI_CMD_VK_TYPE_GRAPHICS  0
+#define NGLI_CMD_VK_TYPE_TRANSIENT 1
+
 struct cmd_vk {
     struct gpu_ctx *gpu_ctx;
     int type;

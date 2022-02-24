@@ -54,9 +54,17 @@ VkResult ngli_cmd_vk_init(struct cmd_vk *s, int type)
     struct gpu_ctx_vk *gpu_ctx_vk = (struct gpu_ctx_vk *)s->gpu_ctx;
     struct vkcontext *vk = gpu_ctx_vk->vkcontext;
 
+    s->type = type;
+    switch (s->type) {
+    case NGLI_CMD_VK_TYPE_GRAPHICS:  s->pool = gpu_ctx_vk->cmd_pool;           break;
+    case NGLI_CMD_VK_TYPE_TRANSIENT: s->pool = gpu_ctx_vk->transient_cmd_pool; break;
+    default:
+        ngli_assert(0);
+    }
+
     const VkCommandBufferAllocateInfo allocate_info = {
         .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool        = gpu_ctx_vk->cmd_pool,
+        .commandPool        = s->pool,
         .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1,
     };
