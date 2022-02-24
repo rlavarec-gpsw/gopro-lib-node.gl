@@ -414,8 +414,8 @@ static VkResult create_semaphores(struct gpu_ctx *s)
     struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
     struct vkcontext *vk = s_priv->vkcontext;
 
-    s_priv->img_avail_sems = ngli_calloc(s_priv->nb_in_flight_frames, sizeof(VkSemaphore));
-    if (!s_priv->img_avail_sems)
+    s_priv->image_avail_sems = ngli_calloc(s_priv->nb_in_flight_frames, sizeof(VkSemaphore));
+    if (!s_priv->image_avail_sems)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     s_priv->update_finished_sems = ngli_calloc(s_priv->nb_in_flight_frames, sizeof(VkSemaphore));
@@ -442,7 +442,7 @@ static VkResult create_semaphores(struct gpu_ctx *s)
     VkResult res;
     for (int i = 0; i < s_priv->nb_in_flight_frames; i++) {
         if ((res = vkCreateSemaphore(vk->device, &sem_create_info, NULL,
-                                     &s_priv->img_avail_sems[i])) != VK_SUCCESS ||
+                                     &s_priv->image_avail_sems[i])) != VK_SUCCESS ||
             (res = vkCreateSemaphore(vk->device, &sem_create_info, NULL,
                                      &s_priv->update_finished_sems[i])) != VK_SUCCESS ||
             (res = vkCreateSemaphore(vk->device, &sem_create_info, NULL,
@@ -473,10 +473,10 @@ static void destroy_semaphores(struct gpu_ctx *s)
         ngli_freep(&s_priv->render_finished_sems);
     }
 
-    if (s_priv->img_avail_sems) {
+    if (s_priv->image_avail_sems) {
         for (uint32_t i = 0; i < s_priv->nb_in_flight_frames; i++)
-            vkDestroySemaphore(vk->device, s_priv->img_avail_sems[i], NULL);
-        ngli_freep(&s_priv->img_avail_sems);
+            vkDestroySemaphore(vk->device, s_priv->image_avail_sems[i], NULL);
+        ngli_freep(&s_priv->image_avail_sems);
     }
 
     if (s_priv->fences) {
@@ -712,7 +712,7 @@ static VkResult swapchain_acquire_image(struct gpu_ctx *s, uint32_t *image_index
         s_priv->recreate_swapchain = 0;
     }
 
-    VkSemaphore sem = s_priv->img_avail_sems[s_priv->cur_frame_index];
+    VkSemaphore sem = s_priv->image_avail_sems[s_priv->cur_frame_index];
     VkResult res = vkAcquireNextImageKHR(vk->device, s_priv->swapchain,
                                          UINT64_MAX, sem, VK_NULL_HANDLE, image_index);
     switch (res) {
