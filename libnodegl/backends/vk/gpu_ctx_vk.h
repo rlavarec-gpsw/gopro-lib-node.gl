@@ -35,7 +35,6 @@ struct gpu_ctx_vk {
     VkCommandPool cmd_pool;
     VkCommandBuffer *cmd_bufs;
     VkCommandBuffer cur_cmd_buf;
-    int cur_cmd_buf_started;
 
     VkQueryPool query_pool;
 
@@ -82,9 +81,6 @@ struct gpu_ctx_vk {
     int scissor[4];
     float clear_color[4];
 };
-
-VkResult ngli_gpu_ctx_vk_begin_command(struct gpu_ctx *s, VkCommandBuffer *cmd_buf);
-VkResult ngli_gpu_ctx_vk_end_command(struct gpu_ctx *s, VkCommandBuffer *cmd_buf);
 
 VkResult ngli_gpu_ctx_vk_begin_transient_command(struct gpu_ctx *s, VkCommandBuffer *cmd_buf);
 VkResult ngli_gpu_ctx_vk_execute_transient_command(struct gpu_ctx *s, VkCommandBuffer cmd_buf);

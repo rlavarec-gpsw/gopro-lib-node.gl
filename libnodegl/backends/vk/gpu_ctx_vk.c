@@ -924,18 +924,6 @@ static int vk_init(struct gpu_ctx *s)
 
     set_viewport_and_scissor(s, config->width, config->height, config->viewport);
 
-#if 0
-    s_priv->cur_cmd_buf = s_priv->cmd_bufs[s_priv->frame_index];
-    const VkCommandBufferBeginInfo cmd_buf_begin_info = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
-    };
-    res = vkBeginCommandBuffer(s_priv->cur_cmd_buf, &cmd_buf_begin_info);
-    if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
-    s_priv->cur_cmd_buf_started = 1;
-#endif
-
     return 0;
 }
 
@@ -978,7 +966,6 @@ static int vk_begin_update(struct gpu_ctx *s, double t)
     res = vkBeginCommandBuffer(s_priv->cur_cmd_buf, &cmd_buf_begin_info);
     if (res != VK_SUCCESS)
         return ngli_vk_res2ret(res);
-    s_priv->cur_cmd_buf_started = 1;
 
     return 0;
 }
@@ -1045,7 +1032,6 @@ static int vk_query_draw_time(struct gpu_ctx *s, int64_t *time)
     VkResult res = vkEndCommandBuffer(cmd_buf);
     if (res != VK_SUCCESS)
         return ngli_vk_res2ret(res);
-    s_priv->cur_cmd_buf_started = 0;
 
     res = vkResetFences(vk->device, 1, &s_priv->fences[s_priv->frame_index]);
     if (res != VK_SUCCESS)
@@ -1087,7 +1073,6 @@ static int vk_query_draw_time(struct gpu_ctx *s, int64_t *time)
     res = vkBeginCommandBuffer(s_priv->cur_cmd_buf, &cmd_buf_begin_info);
     if (res != VK_SUCCESS)
         return ngli_vk_res2ret(res);
-    s_priv->cur_cmd_buf_started = 1;
 
     return 0;
 }
@@ -1101,7 +1086,6 @@ static VkResult vk_submit_cmd_buf(struct gpu_ctx *s)
     VkResult res = vkEndCommandBuffer(cmd_buf);
     if (res != VK_SUCCESS)
         return res;
-    s_priv->cur_cmd_buf_started = 0;
 
     res = vkResetFences(vk->device, 1, &s_priv->fences[s_priv->frame_index]);
     if (res != VK_SUCCESS)
