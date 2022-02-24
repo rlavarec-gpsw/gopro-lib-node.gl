@@ -782,12 +782,7 @@ void ngli_pipeline_vk_draw(struct pipeline *s, int nb_vertices, int nb_instances
     if (ret < 0)
         return;
 
-    VkCommandBuffer cmd_buf = gpu_ctx_vk->cur_cmd_buf;
-    if (!cmd_buf) {
-        VkResult res = ngli_gpu_ctx_vk_begin_transient_command(s->gpu_ctx, &cmd_buf);
-        if (res != VK_SUCCESS)
-            return;
-    }
+    VkCommandBuffer cmd_buf = gpu_ctx_vk->cur_cmd->cmd_buf;
 
     vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, s_priv->pipeline);
 
@@ -828,9 +823,6 @@ void ngli_pipeline_vk_draw(struct pipeline *s, int nb_vertices, int nb_instances
     vkCmdBindVertexBuffers(cmd_buf, 0, nb_vertex_buffers, vertex_buffers, vertex_offsets);
 
     vkCmdDraw(cmd_buf, nb_vertices, nb_instances, 0, 0);
-
-    if (!gpu_ctx_vk->cur_cmd_buf)
-        ngli_gpu_ctx_vk_execute_transient_command(s->gpu_ctx, cmd_buf);
 }
 
 void ngli_pipeline_vk_draw_indexed(struct pipeline *s, const struct buffer *indices, int indices_format, int nb_indices, int nb_instances)
@@ -842,12 +834,7 @@ void ngli_pipeline_vk_draw_indexed(struct pipeline *s, const struct buffer *indi
     if (ret < 0)
         return;
 
-    VkCommandBuffer cmd_buf = gpu_ctx_vk->cur_cmd_buf;
-    if (!cmd_buf) {
-        VkResult res = ngli_gpu_ctx_vk_begin_transient_command(s->gpu_ctx, &cmd_buf);
-        if (res != VK_SUCCESS)
-            return;
-    }
+    VkCommandBuffer cmd_buf = gpu_ctx_vk->cur_cmd->cmd_buf;
 
     vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, s_priv->pipeline);
 
@@ -892,9 +879,6 @@ void ngli_pipeline_vk_draw_indexed(struct pipeline *s, const struct buffer *indi
     vkCmdBindIndexBuffer(cmd_buf, indices_vk->buffer, 0, indices_type);
 
     vkCmdDrawIndexed(cmd_buf, nb_indices, nb_instances, 0, 0, 0);
-
-    if (!gpu_ctx_vk->cur_cmd_buf)
-        ngli_gpu_ctx_vk_execute_transient_command(s->gpu_ctx, cmd_buf);
 }
 
 void ngli_pipeline_vk_dispatch(struct pipeline *s, int nb_group_x, int nb_group_y, int nb_group_z)
@@ -906,12 +890,19 @@ void ngli_pipeline_vk_dispatch(struct pipeline *s, int nb_group_x, int nb_group_
     if (ret < 0)
         return;
 
-    VkCommandBuffer cmd_buf = gpu_ctx_vk->cur_cmd_buf;
-    if (!cmd_buf) {
-        VkResult res = ngli_gpu_ctx_vk_begin_transient_command(s->gpu_ctx, &cmd_buf);
+    struct cmd_vk *cmd_vk = gpu_ctx_vk->cur_cmd;
+    if (!cmd_vk) {
+        cmd_vk = ngli_cmd_vk_create(s->gpu_ctx);
+        if (!cmd_vk)
+            return;
+        VkResult res = ngli_cmd_vk_init(cmd_vk, NGLI_CMD_VK_TYPE_TRANSIENT);
+        if (res != VK_SUCCESS)
+            return;
+        res = ngli_cmd_vk_begin(cmd_vk);
         if (res != VK_SUCCESS)
             return;
     }
+    VkCommandBuffer cmd_buf = cmd_vk->cmd_buf;
 
     vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, s_priv->pipeline);
 
@@ -941,8 +932,11 @@ void ngli_pipeline_vk_dispatch(struct pipeline *s, int nb_group_x, int nb_group_
     const VkPipelineStageFlags dst_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     vkCmdPipelineBarrier(cmd_buf, src_stage, dst_stage, 0, 1, &barrier, 0, NULL, 0, NULL);
 
-    if (!gpu_ctx_vk->cur_cmd_buf)
-        ngli_gpu_ctx_vk_execute_transient_command(s->gpu_ctx, cmd_buf);
+    if (!gpu_ctx_vk->cur_cmd) {
+        ngli_cmd_vk_submit(cmd_vk);
+        ngli_cmd_vk_wait(cmd_vk);
+        ngli_cmd_vk_freep(&cmd_vk);
+    }
 }
 
 void ngli_pipeline_vk_freep(struct pipeline **sp)

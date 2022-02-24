@@ -331,26 +331,28 @@ static VkResult create_command_pool_and_buffers(struct gpu_ctx *s)
     if (res != VK_SUCCESS)
         return res;
 
-    s_priv->cmd_bufs = ngli_calloc(s_priv->nb_in_flight_frames, sizeof(VkCommandBuffer));
-    if (!s_priv->cmd_bufs)
+    s_priv->cmds = ngli_calloc(s_priv->nb_in_flight_frames, sizeof(struct cmd_vk *));
+    s_priv->update_cmds = ngli_calloc(s_priv->nb_in_flight_frames, sizeof(struct cmd_vk *));
+    if (!s_priv->cmds || !s_priv->update_cmds)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    s_priv->update_cmd_bufs = ngli_calloc(s_priv->nb_in_flight_frames, sizeof(VkCommandBuffer));
-    if (!s_priv->update_cmd_bufs)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    for (int i = 0; i < s_priv->nb_in_flight_frames; i++) {
+        s_priv->cmds[i] = ngli_cmd_vk_create(s);
+        if (!s_priv->cmds[i])
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        res = ngli_cmd_vk_init(s_priv->cmds[i], 0);
+        if (res != VK_SUCCESS)
+            return res;
 
-    const VkCommandBufferAllocateInfo cmd_buf_allocate_info = {
-        .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool        = s_priv->cmd_pool,
-        .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = s_priv->nb_in_flight_frames,
-    };
+        s_priv->update_cmds[i] = ngli_cmd_vk_create(s);
+        if (!s_priv->update_cmds[i])
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        res = ngli_cmd_vk_init(s_priv->update_cmds[i], 0);
+        if (res != VK_SUCCESS)
+            return res;
+    }
 
-    res = vkAllocateCommandBuffers(vk->device, &cmd_buf_allocate_info, s_priv->update_cmd_bufs);
-    if (res != VK_SUCCESS)
-        return res;
-
-    return vkAllocateCommandBuffers(vk->device, &cmd_buf_allocate_info, s_priv->cmd_bufs);
+    return VK_SUCCESS;
 }
 
 static void destroy_command_pool_and_buffers(struct gpu_ctx *s)
@@ -358,16 +360,14 @@ static void destroy_command_pool_and_buffers(struct gpu_ctx *s)
     struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
     struct vkcontext *vk = s_priv->vkcontext;
 
-    if (s_priv->update_cmd_bufs) {
-        vkFreeCommandBuffers(vk->device, s_priv->cmd_pool,
-                             s_priv->nb_in_flight_frames, s_priv->update_cmd_bufs);
-        ngli_freep(&s_priv->update_cmd_bufs);
+    if (s_priv->cmds) {
+        for (int i = 0; i < s_priv->nb_in_flight_frames; i++)
+            ngli_cmd_vk_freep(&s_priv->cmds[i]);
     }
 
-    if (s_priv->cmd_bufs) {
-        vkFreeCommandBuffers(vk->device, s_priv->cmd_pool,
-                             s_priv->nb_in_flight_frames, s_priv->cmd_bufs);
-        ngli_freep(&s_priv->cmd_bufs);
+    if (s_priv->update_cmds) {
+        for (int i = 0; i < s_priv->nb_in_flight_frames; i++)
+            ngli_cmd_vk_freep(&s_priv->update_cmds[i]);
     }
 
     vkDestroyCommandPool(vk->device, s_priv->cmd_pool, NULL);
@@ -397,6 +397,14 @@ static VkResult create_transient_resources(struct gpu_ctx *s)
     if (res != VK_SUCCESS)
         return res;
 
+    s_priv->transient_cmd = ngli_cmd_vk_create(s);
+    if (!s_priv->transient_cmd)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    res = ngli_cmd_vk_init(s_priv->transient_cmd, NGLI_CMD_VK_TYPE_TRANSIENT);
+    if (res != VK_SUCCESS)
+        return res;
+
     return VK_SUCCESS;
 }
 
@@ -404,6 +412,8 @@ static void destroy_transient_resources(struct gpu_ctx *s)
 {
     struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
     struct vkcontext *vk = s_priv->vkcontext;
+
+    ngli_cmd_vk_freep(&s_priv->transient_cmd);
 
     vkDestroyCommandPool(vk->device, s_priv->transient_cmd_pool, NULL);
     vkDestroyFence(vk->device, s_priv->transient_cmd_fence, NULL);
@@ -426,17 +436,8 @@ static VkResult create_semaphores(struct gpu_ctx *s)
     if (!s_priv->render_finished_sems)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    s_priv->fences = ngli_calloc(s_priv->nb_in_flight_frames, sizeof(VkFence));
-    if (!s_priv->fences)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
     const VkSemaphoreCreateInfo sem_create_info = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
-
-    const VkFenceCreateInfo fence_create_info = {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
 
     VkResult res;
@@ -446,9 +447,7 @@ static VkResult create_semaphores(struct gpu_ctx *s)
             (res = vkCreateSemaphore(vk->device, &sem_create_info, NULL,
                                      &s_priv->update_finished_sems[i])) != VK_SUCCESS ||
             (res = vkCreateSemaphore(vk->device, &sem_create_info, NULL,
-                                     &s_priv->render_finished_sems[i])) != VK_SUCCESS ||
-            (res = vkCreateFence(vk->device, &fence_create_info, NULL,
-                                 &s_priv->fences[i])) != VK_SUCCESS) {
+                                     &s_priv->render_finished_sems[i])) != VK_SUCCESS) {
             return res;
         }
     }
@@ -477,12 +476,6 @@ static void destroy_semaphores(struct gpu_ctx *s)
         for (uint32_t i = 0; i < s_priv->nb_in_flight_frames; i++)
             vkDestroySemaphore(vk->device, s_priv->image_avail_sems[i], NULL);
         ngli_freep(&s_priv->image_avail_sems);
-    }
-
-    if (s_priv->fences) {
-        for (uint32_t i = 0; i < s_priv->nb_in_flight_frames; i++)
-            vkDestroyFence(vk->device, s_priv->fences[i], NULL);
-        ngli_freep(&s_priv->fences);
     }
 }
 
@@ -734,12 +727,13 @@ static VkResult swapchain_acquire_image(struct gpu_ctx *s, uint32_t *image_index
         return res;
     }
 
-    if (!ngli_darray_push(&s_priv->wait_sems, &sem))
-        return NGL_ERROR_MEMORY;
+    res = ngli_cmd_add_wait_sem(s_priv->cur_cmd, &sem, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    if (res != VK_SUCCESS)
+        return res;
 
-    const VkPipelineStageFlagBits wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    if (!ngli_darray_push(&s_priv->wait_stages, &wait_stage))
-        return NGL_ERROR_MEMORY;
+    res = ngli_cmd_add_signal_sem(s_priv->cur_cmd, &s_priv->render_finished_sems[s_priv->cur_frame_index]);
+    if (res != VK_SUCCESS)
+        return res;
 
     return VK_SUCCESS;
 }
@@ -749,16 +743,17 @@ static VkResult swapchain_present_buffer(struct gpu_ctx *s)
     struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
     struct vkcontext *vk = s_priv->vkcontext;
 
+    VkSemaphore sem = s_priv->render_finished_sems[s_priv->cur_frame_index];
+
     const VkPresentInfoKHR present_info = {
         .sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-        .waitSemaphoreCount = ngli_darray_count(&s_priv->signal_sems),
-        .pWaitSemaphores    = ngli_darray_data(&s_priv->signal_sems),
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores    = &sem,
         .swapchainCount     = 1,
         .pSwapchains        = &s_priv->swapchain,
         .pImageIndices      = &s_priv->cur_image_index,
     };
     VkResult res = vkQueuePresentKHR(vk->present_queue, &present_info);
-    ngli_darray_clear(&s_priv->signal_sems);
     switch (res) {
     case VK_SUCCESS:
     case VK_SUBOPTIMAL_KHR:
@@ -833,10 +828,6 @@ static int vk_init(struct gpu_ctx *s)
     ngli_darray_init(&s_priv->depth_stencils, sizeof(struct texture *), 0);
     ngli_darray_init(&s_priv->rts, sizeof(struct rendertarget *), 0);
     ngli_darray_init(&s_priv->rts_load, sizeof(struct rendertarget *), 0);
-
-    ngli_darray_init(&s_priv->wait_sems, sizeof(VkSemaphore), 0);
-    ngli_darray_init(&s_priv->wait_stages, sizeof(VkPipelineStageFlagBits), 0);
-    ngli_darray_init(&s_priv->signal_sems, sizeof(VkSemaphore), 0);
 
     s_priv->vkcontext = ngli_vkcontext_create();
     if (!s_priv->vkcontext)
@@ -979,23 +970,18 @@ static int vk_set_capture_buffer(struct gpu_ctx *s, void *capture_buffer)
 static int vk_begin_update(struct gpu_ctx *s, double t)
 {
     struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
-    struct vkcontext *vk = s_priv->vkcontext;
 
-    VkResult res = vkWaitForFences(vk->device, 1, &s_priv->fences[s_priv->cur_frame_index], VK_TRUE, UINT64_MAX);
+    struct cmd_vk *cmd_vk = s_priv->cmds[s_priv->cur_frame_index];
+    VkResult res = ngli_cmd_vk_wait(cmd_vk);
     if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
+        return res;
 
     s_priv->cur_frame_index = (s_priv->cur_frame_index + 1) % s_priv->nb_in_flight_frames;
 
-    /* FIXME: rework command buffer cycle */
-    s_priv->cur_cmd_buf = s_priv->update_cmd_bufs[s_priv->cur_frame_index];
-    const VkCommandBufferBeginInfo cmd_buf_begin_info = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
-    };
-    res = vkBeginCommandBuffer(s_priv->cur_cmd_buf, &cmd_buf_begin_info);
+    s_priv->cur_cmd = s_priv->update_cmds[s_priv->cur_frame_index];
+    res = ngli_cmd_vk_begin(s_priv->cur_cmd);
     if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
+        return res;
 
     return 0;
 }
@@ -1003,35 +989,17 @@ static int vk_begin_update(struct gpu_ctx *s, double t)
 static int vk_end_update(struct gpu_ctx *s, double t)
 {
     struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
-    struct vkcontext *vk = s_priv->vkcontext;
 
-    VkCommandBuffer cmd_buf = s_priv->cur_cmd_buf;
-    VkResult res = vkEndCommandBuffer(cmd_buf);
+    VkSemaphore update_finished_sem = s_priv->update_finished_sems[s_priv->cur_frame_index];
+    VkResult res = ngli_cmd_add_signal_sem(s_priv->cur_cmd, &update_finished_sem);
     if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
+        return res;
 
-    if (!ngli_darray_push(&s_priv->signal_sems, &s_priv->update_finished_sems[s_priv->cur_frame_index]))
-        return NGL_ERROR_MEMORY;
-
-    const VkSubmitInfo submit_info = {
-        .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount   = ngli_darray_count(&s_priv->wait_sems),
-        .pWaitSemaphores      = ngli_darray_data(&s_priv->wait_sems),
-        .pWaitDstStageMask    = ngli_darray_data(&s_priv->wait_stages),
-        .commandBufferCount   = 1,
-        .pCommandBuffers      = &cmd_buf,
-        .signalSemaphoreCount = ngli_darray_count(&s_priv->signal_sems),
-        .pSignalSemaphores    = ngli_darray_data(&s_priv->signal_sems),
-    };
-
-    res = vkQueueSubmit(vk->graphic_queue, 1, &submit_info, VK_NULL_HANDLE);
+    res = ngli_cmd_vk_submit(s_priv->cur_cmd);
     if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
+        return res;
 
-    s_priv->cur_cmd_buf = VK_NULL_HANDLE;
-    ngli_darray_clear(&s_priv->wait_sems);
-    ngli_darray_clear(&s_priv->wait_stages);
-    ngli_darray_clear(&s_priv->signal_sems);
+    s_priv->cur_cmd = NULL;
 
     return 0;
 }
@@ -1040,6 +1008,16 @@ static int vk_begin_draw(struct gpu_ctx *s, double t)
 {
     struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
     const struct ngl_config *config = &s->config;
+
+    s_priv->cur_cmd = s_priv->cmds[s_priv->cur_frame_index];
+    VkResult res = ngli_cmd_vk_begin(s_priv->cur_cmd);
+    if (res != VK_SUCCESS)
+        return res;
+
+    VkSemaphore update_finished_sem = s_priv->update_finished_sems[s_priv->cur_frame_index];
+    res = ngli_cmd_add_wait_sem(s_priv->cur_cmd, &update_finished_sem, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    if (res != VK_SUCCESS)
+        return res;
 
     if (config->offscreen) {
         struct rendertarget **rts = ngli_darray_data(&s_priv->rts);
@@ -1052,9 +1030,6 @@ static int vk_begin_draw(struct gpu_ctx *s, double t)
         if (res != VK_SUCCESS)
             return ngli_vk_res2ret(res);
 
-        if (!ngli_darray_push(&s_priv->signal_sems, &s_priv->render_finished_sems[s_priv->cur_frame_index]))
-            return NGL_ERROR_MEMORY;
-
         struct rendertarget **rts = ngli_darray_data(&s_priv->rts);
         s_priv->default_rt = rts[s_priv->cur_image_index];
         s_priv->default_rt->width = s_priv->width;
@@ -1065,26 +1040,10 @@ static int vk_begin_draw(struct gpu_ctx *s, double t)
         s_priv->default_rt_load->width = s_priv->width;
         s_priv->default_rt_load->height = s_priv->height;
     }
-    s_priv->cur_cmd_buf = s_priv->cmd_bufs[s_priv->cur_frame_index];
-    const VkCommandBufferBeginInfo cmd_buf_begin_info = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
-    };
-
-    if (!ngli_darray_push(&s_priv->wait_sems, &s_priv->update_finished_sems[s_priv->cur_frame_index]))
-        return NGL_ERROR_MEMORY;
-
-    const VkPipelineStageFlagBits wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    if (!ngli_darray_push(&s_priv->wait_stages, &wait_stage))
-        return NGL_ERROR_MEMORY;
-
-    VkResult res = vkBeginCommandBuffer(s_priv->cur_cmd_buf, &cmd_buf_begin_info);
-    if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
 
     if (config->hud) {
-        vkCmdResetQueryPool(s_priv->cur_cmd_buf, s_priv->query_pool, 0, 2);
-        vkCmdWriteTimestamp(s_priv->cur_cmd_buf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, s_priv->query_pool, 0);
+        vkCmdResetQueryPool(s_priv->cur_cmd->cmd_buf, s_priv->query_pool, 0, 2);
+        vkCmdWriteTimestamp(s_priv->cur_cmd->cmd_buf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, s_priv->query_pool, 0);
     }
 
     return 0;
@@ -1099,37 +1058,17 @@ static int vk_query_draw_time(struct gpu_ctx *s, int64_t *time)
     if (!config->hud)
         return NGL_ERROR_INVALID_USAGE;
 
-    ngli_assert(s_priv->cur_cmd_buf);
-    VkCommandBuffer cmd_buf = s_priv->cur_cmd_buf;
+    ngli_assert(s_priv->cur_cmd->cmd_buf);
+    VkCommandBuffer cmd_buf = s_priv->cur_cmd->cmd_buf;
     vkCmdWriteTimestamp(cmd_buf, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, s_priv->query_pool, 1);
-    VkResult res = vkEndCommandBuffer(cmd_buf);
-    if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
 
-    res = vkResetFences(vk->device, 1, &s_priv->fences[s_priv->cur_frame_index]);
+    VkResult res = ngli_cmd_vk_submit(s_priv->cur_cmd);
     if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
+        return res;
 
-    const VkSubmitInfo submit_info = {
-        .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount   = ngli_darray_count(&s_priv->wait_sems),
-        .pWaitSemaphores      = ngli_darray_data(&s_priv->wait_sems),
-        .pWaitDstStageMask    = ngli_darray_data(&s_priv->wait_stages),
-        .commandBufferCount   = 1,
-        .pCommandBuffers      = &cmd_buf,
-        .signalSemaphoreCount = 0,
-        .pSignalSemaphores    = NULL,
-    };
-    res = vkQueueSubmit(vk->graphic_queue, 1, &submit_info, s_priv->fences[s_priv->cur_frame_index]);
+    res = ngli_cmd_vk_wait(s_priv->cur_cmd);
     if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
-
-    ngli_darray_clear(&s_priv->wait_sems);
-    ngli_darray_clear(&s_priv->wait_stages);
-
-    res = vkWaitForFences(vk->device, 1, &s_priv->fences[s_priv->cur_frame_index], VK_TRUE, UINT64_MAX);
-    if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
+        return res;
 
     uint64_t results[2];
     vkGetQueryPoolResults(vk->device,
@@ -1139,56 +1078,17 @@ static int vk_query_draw_time(struct gpu_ctx *s, int64_t *time)
 
     *time = results[1] - results[0];
 
-    const VkCommandBufferBeginInfo cmd_buf_begin_info = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
-    };
-    res = vkBeginCommandBuffer(s_priv->cur_cmd_buf, &cmd_buf_begin_info);
+    res = ngli_cmd_vk_begin(s_priv->cur_cmd);
     if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
+        return res; // FIXME RET
 
     return 0;
-}
-
-static VkResult vk_submit_cmd_buf(struct gpu_ctx *s)
-{
-    struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
-    struct vkcontext *vk = s_priv->vkcontext;
-
-    VkCommandBuffer cmd_buf = s_priv->cur_cmd_buf;
-    VkResult res = vkEndCommandBuffer(cmd_buf);
-    if (res != VK_SUCCESS)
-        return res;
-
-    res = vkResetFences(vk->device, 1, &s_priv->fences[s_priv->cur_frame_index]);
-    if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
-
-    const VkSubmitInfo submit_info = {
-        .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount   = ngli_darray_count(&s_priv->wait_sems),
-        .pWaitSemaphores      = ngli_darray_data(&s_priv->wait_sems),
-        .pWaitDstStageMask    = ngli_darray_data(&s_priv->wait_stages),
-        .commandBufferCount   = 1,
-        .pCommandBuffers      = &cmd_buf,
-        .signalSemaphoreCount = ngli_darray_count(&s_priv->signal_sems),
-        .pSignalSemaphores    = ngli_darray_data(&s_priv->signal_sems),
-    };
-
-    res = vkQueueSubmit(vk->graphic_queue, 1, &submit_info, s_priv->fences[s_priv->cur_frame_index]);
-
-    s_priv->cur_cmd_buf = VK_NULL_HANDLE;
-    ngli_darray_clear(&s_priv->wait_sems);
-    ngli_darray_clear(&s_priv->wait_stages);
-
-    return res;
 }
 
 static int vk_end_draw(struct gpu_ctx *s, double t)
 {
     const struct ngl_config *config = &s->config;
     struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
-    struct vkcontext *vk = s_priv->vkcontext;
 
     if (config->offscreen) {
         if (config->capture_buffer) {
@@ -1196,31 +1096,29 @@ static int vk_end_draw(struct gpu_ctx *s, double t)
             struct texture *color = colors[s_priv->cur_frame_index];
             ngli_texture_vk_copy_to_buffer(color, s_priv->capture_buffer);
 
-            VkResult res = vk_submit_cmd_buf(s);
+            VkResult res = ngli_cmd_vk_submit(s_priv->cur_cmd);
             if (res != VK_SUCCESS)
-                return ngli_vk_res2ret(res);
+                return res;
 
-            res = vkWaitForFences(vk->device, 1, &s_priv->fences[s_priv->cur_frame_index], VK_TRUE, UINT64_MAX);
+            res = ngli_cmd_vk_wait(s_priv->cur_cmd);
             if (res != VK_SUCCESS)
                 return res;
 
             memcpy(config->capture_buffer, s_priv->mapped_data, s_priv->staging_buffer_size);
-        } else {
-            VkResult res = vk_submit_cmd_buf(s);
-            if (res != VK_SUCCESS)
-                return ngli_vk_res2ret(res);
         }
     } else {
         struct texture **colors = ngli_darray_data(&s_priv->colors);
         ngli_texture_vk_transition_layout(colors[s_priv->cur_image_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-        VkResult res = vk_submit_cmd_buf(s);
+        VkResult res = ngli_cmd_vk_submit(s_priv->cur_cmd);
         if (res != VK_SUCCESS)
-            return ngli_vk_res2ret(res);
+            return res;
 
         res = swapchain_present_buffer(s);
         if (res != VK_SUCCESS)
             return ngli_vk_res2ret(res);
     }
+
+    s_priv->cur_cmd = NULL;
 
     return 0;
 }
@@ -1254,10 +1152,6 @@ static void vk_destroy(struct gpu_ctx *s)
     destroy_query_pool(s);
 
     ngli_glslang_uninit();
-
-    ngli_darray_reset(&s_priv->wait_sems);
-    ngli_darray_reset(&s_priv->wait_stages);
-    ngli_darray_reset(&s_priv->signal_sems);
 
     ngli_vkcontext_freep(&s_priv->vkcontext);
 }
@@ -1343,7 +1237,7 @@ static void vk_begin_render_pass(struct gpu_ctx *s, struct rendertarget *rt)
         }
     }
 
-    VkCommandBuffer cmd_buf = s_priv->cur_cmd_buf;
+    VkCommandBuffer cmd_buf = s_priv->cur_cmd->cmd_buf;
     const VkRenderPassBeginInfo render_pass_begin_info = {
         .sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass  = rt_vk->render_pass,
@@ -1366,7 +1260,7 @@ static void vk_end_render_pass(struct gpu_ctx *s)
 
     ngli_assert(s_priv->current_rt);
 
-    VkCommandBuffer cmd_buf = s_priv->cur_cmd_buf;
+    VkCommandBuffer cmd_buf = s_priv->cur_cmd->cmd_buf;
     vkCmdEndRenderPass(cmd_buf);
 
     const struct rendertarget *rt = s_priv->current_rt;

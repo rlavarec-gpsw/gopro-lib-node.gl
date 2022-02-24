@@ -24,18 +24,21 @@
 
 #include "gpu_ctx.h"
 #include "vkcontext.h"
+#include "cmd_vk.h"
 
 struct gpu_ctx_vk {
     struct gpu_ctx parent;
     struct vkcontext *vkcontext;
 
+
+    VkCommandPool cmd_pool;
     VkCommandPool transient_cmd_pool;
     VkFence transient_cmd_fence;
 
-    VkCommandPool cmd_pool;
-    VkCommandBuffer *cmd_bufs;
-    VkCommandBuffer *update_cmd_bufs;
-    VkCommandBuffer cur_cmd_buf;
+    struct cmd_vk **cmds;
+    struct cmd_vk **update_cmds;
+    struct cmd_vk *transient_cmd;
+    struct cmd_vk *cur_cmd;
 
     VkQueryPool query_pool;
 
@@ -72,11 +75,6 @@ struct gpu_ctx_vk {
     VkSemaphore *image_avail_sems;
     VkSemaphore *update_finished_sems;
     VkSemaphore *render_finished_sems;
-    VkFence *fences;
-
-    struct darray wait_sems;
-    struct darray wait_stages;
-    struct darray signal_sems;
 
     struct rendertarget *current_rt;
     int viewport[4];

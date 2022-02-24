@@ -366,6 +366,7 @@ gbackends_cfg = {
   'vk': {
     'src': files(
       'backends/vk/buffer_vk.c',
+      'backends/vk/cmd_vk.c',
       'backends/vk/format_vk.c',
       'backends/vk/gpu_ctx_vk.c',
       'backends/vk/hwmap_vk.c',
