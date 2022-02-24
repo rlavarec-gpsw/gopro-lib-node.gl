@@ -1105,6 +1105,10 @@ static int vk_end_draw(struct gpu_ctx *s, double t)
                 return res;
 
             memcpy(config->capture_buffer, s_priv->mapped_data, s_priv->staging_buffer_size);
+        } else {
+            VkResult res = ngli_cmd_vk_submit(s_priv->cur_cmd);
+            if (res != VK_SUCCESS)
+                return res;
         }
     } else {
         struct texture **colors = ngli_darray_data(&s_priv->colors);

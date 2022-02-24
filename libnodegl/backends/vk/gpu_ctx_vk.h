@@ -30,7 +30,6 @@ struct gpu_ctx_vk {
     struct gpu_ctx parent;
     struct vkcontext *vkcontext;
 
-
     VkCommandPool cmd_pool;
     VkCommandPool transient_cmd_pool;
     VkFence transient_cmd_fence;
