@@ -715,7 +715,7 @@ static int update_descriptor_set(struct pipeline *s)
     struct pipeline_vk *s_priv = (struct pipeline_vk *)s;
     struct gpu_ctx_vk *gpu_ctx_vk = (struct gpu_ctx_vk *)s->gpu_ctx;
     struct vkcontext *vk = gpu_ctx_vk->vkcontext;
-    const uint32_t update_desc_flags = (1 << gpu_ctx_vk->frame_index);
+    const uint32_t update_desc_flags = (1 << gpu_ctx_vk->cur_frame_index);
     const uint32_t update_desc_mask = ~update_desc_flags;
 
     struct texture_binding *texture_bindings = ngli_darray_data(&s_priv->texture_bindings);
@@ -731,7 +731,7 @@ static int update_descriptor_set(struct pipeline *s)
             const struct pipeline_texture_desc *desc = &binding->desc;
             const VkWriteDescriptorSet write_descriptor_set = {
                 .sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet           = s_priv->desc_sets[gpu_ctx_vk->frame_index],
+                .dstSet           = s_priv->desc_sets[gpu_ctx_vk->cur_frame_index],
                 .dstBinding       = desc->binding,
                 .dstArrayElement  = 0,
                 .descriptorType   = get_vk_descriptor_type(desc->type),
@@ -756,7 +756,7 @@ static int update_descriptor_set(struct pipeline *s)
             };
             const VkWriteDescriptorSet write_descriptor_set = {
                 .sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet           = s_priv->desc_sets[gpu_ctx_vk->frame_index],
+                .dstSet           = s_priv->desc_sets[gpu_ctx_vk->cur_frame_index],
                 .dstBinding       = desc->binding,
                 .dstArrayElement  = 0,
                 .descriptorType   = get_vk_descriptor_type(desc->type),
@@ -793,7 +793,7 @@ void ngli_pipeline_vk_draw(struct pipeline *s, int nb_vertices, int nb_instances
 
     if (s_priv->desc_sets)
         vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, s_priv->pipeline_layout,
-                                0, 1, &s_priv->desc_sets[gpu_ctx_vk->frame_index], 0, NULL);
+                                0, 1, &s_priv->desc_sets[gpu_ctx_vk->cur_frame_index], 0, NULL);
 
     const VkViewport viewport = {
         .x        = gpu_ctx_vk->viewport[0],
@@ -853,7 +853,7 @@ void ngli_pipeline_vk_draw_indexed(struct pipeline *s, const struct buffer *indi
 
     if (s_priv->desc_sets)
         vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, s_priv->pipeline_layout,
-                                0, 1, &s_priv->desc_sets[gpu_ctx_vk->frame_index], 0, NULL);
+                                0, 1, &s_priv->desc_sets[gpu_ctx_vk->cur_frame_index], 0, NULL);
 
     const VkViewport viewport = {
         .x        = gpu_ctx_vk->viewport[0],
@@ -917,7 +917,7 @@ void ngli_pipeline_vk_dispatch(struct pipeline *s, int nb_group_x, int nb_group_
 
     if (s_priv->desc_sets)
         vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, s_priv->pipeline_layout,
-                                0, 1, &s_priv->desc_sets[gpu_ctx_vk->frame_index], 0, NULL);
+                                0, 1, &s_priv->desc_sets[gpu_ctx_vk->cur_frame_index], 0, NULL);
 
     // FIXME: missing barriers
 

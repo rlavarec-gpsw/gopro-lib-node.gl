@@ -686,7 +686,7 @@ static VkResult swapchain_acquire_image(struct gpu_ctx *s, uint32_t *image_index
         s_priv->recreate_swapchain = 0;
     }
 
-    VkSemaphore sem = s_priv->img_avail_sems[s_priv->frame_index];
+    VkSemaphore sem = s_priv->img_avail_sems[s_priv->cur_frame_index];
     VkResult res = vkAcquireNextImageKHR(vk->device, s_priv->swapchain,
                                          UINT64_MAX, sem, VK_NULL_HANDLE, image_index);
     switch (res) {
@@ -725,7 +725,7 @@ static VkResult swapchain_present_buffer(struct gpu_ctx *s)
         .pWaitSemaphores    = ngli_darray_data(&s_priv->signal_sems),
         .swapchainCount     = 1,
         .pSwapchains        = &s_priv->swapchain,
-        .pImageIndices      = &s_priv->image_index,
+        .pImageIndices      = &s_priv->cur_image_index,
     };
     VkResult res = vkQueuePresentKHR(vk->present_queue, &present_info);
     ngli_darray_clear(&s_priv->signal_sems);
@@ -951,14 +951,14 @@ static int vk_begin_update(struct gpu_ctx *s, double t)
     struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
     struct vkcontext *vk = s_priv->vkcontext;
 
-    VkResult res = vkWaitForFences(vk->device, 1, &s_priv->fences[s_priv->frame_index], VK_TRUE, UINT64_MAX);
+    VkResult res = vkWaitForFences(vk->device, 1, &s_priv->fences[s_priv->cur_frame_index], VK_TRUE, UINT64_MAX);
     if (res != VK_SUCCESS)
         return ngli_vk_res2ret(res);
 
-    s_priv->frame_index = (s_priv->frame_index + 1) % s_priv->nb_in_flight_frames;
+    s_priv->cur_frame_index = (s_priv->cur_frame_index + 1) % s_priv->nb_in_flight_frames;
 
     /* FIXME: rework command buffer cycle */
-    s_priv->cur_cmd_buf = s_priv->cmd_bufs[s_priv->frame_index];
+    s_priv->cur_cmd_buf = s_priv->cmd_bufs[s_priv->cur_frame_index];
     const VkCommandBufferBeginInfo cmd_buf_begin_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
@@ -982,12 +982,12 @@ static int vk_begin_draw(struct gpu_ctx *s, double t)
 
     if (config->offscreen) {
         struct rendertarget **rts = ngli_darray_data(&s_priv->rts);
-        s_priv->default_rt = rts[s_priv->frame_index];
+        s_priv->default_rt = rts[s_priv->cur_frame_index];
 
         struct rendertarget **rts_load = ngli_darray_data(&s_priv->rts_load);
-        s_priv->default_rt_load = rts_load[s_priv->frame_index];
+        s_priv->default_rt_load = rts_load[s_priv->cur_frame_index];
     } else {
-        VkResult res = swapchain_acquire_image(s, &s_priv->image_index);
+        VkResult res = swapchain_acquire_image(s, &s_priv->cur_image_index);
         if (res != VK_SUCCESS)
             return ngli_vk_res2ret(res);
 
@@ -995,16 +995,16 @@ static int vk_begin_draw(struct gpu_ctx *s, double t)
         if (!ngli_darray_push(&s_priv->wait_stages, &wait_stage))
             return NGL_ERROR_MEMORY;
 
-        if (!ngli_darray_push(&s_priv->signal_sems, &s_priv->render_finished_sems[s_priv->frame_index]))
+        if (!ngli_darray_push(&s_priv->signal_sems, &s_priv->render_finished_sems[s_priv->cur_frame_index]))
             return NGL_ERROR_MEMORY;
 
         struct rendertarget **rts = ngli_darray_data(&s_priv->rts);
-        s_priv->default_rt = rts[s_priv->image_index];
+        s_priv->default_rt = rts[s_priv->cur_image_index];
         s_priv->default_rt->width = s_priv->width;
         s_priv->default_rt->height = s_priv->height;
 
         struct rendertarget **rts_load = ngli_darray_data(&s_priv->rts_load);
-        s_priv->default_rt_load = rts_load[s_priv->image_index];
+        s_priv->default_rt_load = rts_load[s_priv->cur_image_index];
         s_priv->default_rt_load->width = s_priv->width;
         s_priv->default_rt_load->height = s_priv->height;
     }
@@ -1033,7 +1033,7 @@ static int vk_query_draw_time(struct gpu_ctx *s, int64_t *time)
     if (res != VK_SUCCESS)
         return ngli_vk_res2ret(res);
 
-    res = vkResetFences(vk->device, 1, &s_priv->fences[s_priv->frame_index]);
+    res = vkResetFences(vk->device, 1, &s_priv->fences[s_priv->cur_frame_index]);
     if (res != VK_SUCCESS)
         return ngli_vk_res2ret(res);
 
@@ -1047,14 +1047,14 @@ static int vk_query_draw_time(struct gpu_ctx *s, int64_t *time)
         .signalSemaphoreCount = 0,
         .pSignalSemaphores    = NULL,
     };
-    res = vkQueueSubmit(vk->graphic_queue, 1, &submit_info, s_priv->fences[s_priv->frame_index]);
+    res = vkQueueSubmit(vk->graphic_queue, 1, &submit_info, s_priv->fences[s_priv->cur_frame_index]);
     if (res != VK_SUCCESS)
         return ngli_vk_res2ret(res);
 
     ngli_darray_clear(&s_priv->wait_sems);
     ngli_darray_clear(&s_priv->wait_stages);
 
-    res = vkWaitForFences(vk->device, 1, &s_priv->fences[s_priv->frame_index], VK_TRUE, UINT64_MAX);
+    res = vkWaitForFences(vk->device, 1, &s_priv->fences[s_priv->cur_frame_index], VK_TRUE, UINT64_MAX);
     if (res != VK_SUCCESS)
         return ngli_vk_res2ret(res);
 
@@ -1087,7 +1087,7 @@ static VkResult vk_submit_cmd_buf(struct gpu_ctx *s)
     if (res != VK_SUCCESS)
         return res;
 
-    res = vkResetFences(vk->device, 1, &s_priv->fences[s_priv->frame_index]);
+    res = vkResetFences(vk->device, 1, &s_priv->fences[s_priv->cur_frame_index]);
     if (res != VK_SUCCESS)
         return ngli_vk_res2ret(res);
 
@@ -1102,7 +1102,7 @@ static VkResult vk_submit_cmd_buf(struct gpu_ctx *s)
         .pSignalSemaphores    = ngli_darray_data(&s_priv->signal_sems),
     };
 
-    res = vkQueueSubmit(vk->graphic_queue, 1, &submit_info, s_priv->fences[s_priv->frame_index]);
+    res = vkQueueSubmit(vk->graphic_queue, 1, &submit_info, s_priv->fences[s_priv->cur_frame_index]);
 
     s_priv->cur_cmd_buf = VK_NULL_HANDLE;
     ngli_darray_clear(&s_priv->wait_sems);
@@ -1120,14 +1120,14 @@ static int vk_end_draw(struct gpu_ctx *s, double t)
     if (config->offscreen) {
         if (config->capture_buffer) {
             struct texture **colors = ngli_darray_data(&s_priv->colors);
-            struct texture *color = colors[s_priv->frame_index];
+            struct texture *color = colors[s_priv->cur_frame_index];
             ngli_texture_vk_copy_to_buffer(color, s_priv->capture_buffer);
 
             VkResult res = vk_submit_cmd_buf(s);
             if (res != VK_SUCCESS)
                 return ngli_vk_res2ret(res);
 
-            res = vkWaitForFences(vk->device, 1, &s_priv->fences[s_priv->frame_index], VK_TRUE, UINT64_MAX);
+            res = vkWaitForFences(vk->device, 1, &s_priv->fences[s_priv->cur_frame_index], VK_TRUE, UINT64_MAX);
             if (res != VK_SUCCESS)
                 return res;
 
@@ -1139,7 +1139,7 @@ static int vk_end_draw(struct gpu_ctx *s, double t)
         }
     } else {
         struct texture **colors = ngli_darray_data(&s_priv->colors);
-        ngli_texture_vk_transition_layout(colors[s_priv->image_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        ngli_texture_vk_transition_layout(colors[s_priv->cur_image_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         VkResult res = vk_submit_cmd_buf(s);
         if (res != VK_SUCCESS)
             return ngli_vk_res2ret(res);

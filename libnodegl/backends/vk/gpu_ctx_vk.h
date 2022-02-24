@@ -45,13 +45,13 @@ struct gpu_ctx_vk {
     int recreate_swapchain;
     VkImage *images;
     uint32_t nb_images;
-    uint32_t image_index; // rename
+    uint32_t cur_image_index;
 
     int width;
     int height;
 
     int nb_in_flight_frames;
-    int frame_index;
+    int cur_frame_index;
 
     struct darray colors;
     struct darray ms_colors;
