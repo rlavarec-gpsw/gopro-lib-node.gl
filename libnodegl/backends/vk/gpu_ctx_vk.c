@@ -404,6 +404,10 @@ static VkResult create_semaphores(struct gpu_ctx *s)
     if (!s_priv->img_avail_sems)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
+    s_priv->update_finished_sems = ngli_calloc(s_priv->nb_in_flight_frames, sizeof(VkSemaphore));
+    if (!s_priv->update_finished_sems)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
     s_priv->render_finished_sems = ngli_calloc(s_priv->nb_in_flight_frames, sizeof(VkSemaphore));
     if (!s_priv->render_finished_sems)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -426,6 +430,8 @@ static VkResult create_semaphores(struct gpu_ctx *s)
         if ((res = vkCreateSemaphore(vk->device, &sem_create_info, NULL,
                                      &s_priv->img_avail_sems[i])) != VK_SUCCESS ||
             (res = vkCreateSemaphore(vk->device, &sem_create_info, NULL,
+                                     &s_priv->update_finished_sems[i])) != VK_SUCCESS ||
+            (res = vkCreateSemaphore(vk->device, &sem_create_info, NULL,
                                      &s_priv->render_finished_sems[i])) != VK_SUCCESS ||
             (res = vkCreateFence(vk->device, &fence_create_info, NULL,
                                  &s_priv->fences[i])) != VK_SUCCESS) {
@@ -440,6 +446,12 @@ static void destroy_semaphores(struct gpu_ctx *s)
 {
     struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
     struct vkcontext *vk = s_priv->vkcontext;
+
+    if (s_priv->update_finished_sems) {
+        for (uint32_t i = 0; i < s_priv->nb_in_flight_frames; i++)
+            vkDestroySemaphore(vk->device, s_priv->update_finished_sems[i], NULL);
+        ngli_freep(&s_priv->update_finished_sems);
+    }
 
     if (s_priv->render_finished_sems) {
         for (uint32_t i = 0; i < s_priv->nb_in_flight_frames; i++)
