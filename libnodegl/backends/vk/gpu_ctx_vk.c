@@ -388,15 +388,6 @@ static VkResult create_transient_resources(struct gpu_ctx *s)
     if (res != VK_SUCCESS)
         return res;
 
-    const VkFenceCreateInfo fence_create_info = {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .pNext = NULL,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
-    };
-    res = vkCreateFence(vk->device, &fence_create_info, NULL, &s_priv->transient_cmd_fence);
-    if (res != VK_SUCCESS)
-        return res;
-
     s_priv->transient_cmd = ngli_cmd_vk_create(s);
     if (!s_priv->transient_cmd)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -416,7 +407,6 @@ static void destroy_transient_resources(struct gpu_ctx *s)
     ngli_cmd_vk_freep(&s_priv->transient_cmd);
 
     vkDestroyCommandPool(vk->device, s_priv->transient_cmd_pool, NULL);
-    vkDestroyFence(vk->device, s_priv->transient_cmd_fence, NULL);
 }
 
 static VkResult create_semaphores(struct gpu_ctx *s)

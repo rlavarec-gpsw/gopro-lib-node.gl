@@ -32,7 +32,6 @@ struct gpu_ctx_vk {
 
     VkCommandPool cmd_pool;
     VkCommandPool transient_cmd_pool;
-    VkFence transient_cmd_fence;
 
     struct cmd_vk **cmds;
     struct cmd_vk **update_cmds;
