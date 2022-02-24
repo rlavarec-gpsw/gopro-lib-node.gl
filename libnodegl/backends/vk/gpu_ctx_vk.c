@@ -1329,64 +1329,6 @@ static int vk_get_preferred_depth_stencil_format(struct gpu_ctx *s)
     return vk->preferred_depth_stencil_format;
 }
 
-VkResult ngli_gpu_ctx_vk_begin_transient_command(struct gpu_ctx *s, VkCommandBuffer *cmd_buf)
-{
-    struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
-    struct vkcontext *vk = s_priv->vkcontext;
-
-    const VkCommandBufferAllocateInfo alloc_info = {
-        .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandPool        = s_priv->transient_cmd_pool,
-        .commandBufferCount = 1,
-    };
-
-    VkResult res = vkAllocateCommandBuffers(vk->device, &alloc_info, cmd_buf);
-    if (res != VK_SUCCESS)
-        return res;
-
-    const VkCommandBufferBeginInfo beginInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-    };
-
-    res = vkBeginCommandBuffer(*cmd_buf, &beginInfo);
-    if (res != VK_SUCCESS) {
-        vkFreeCommandBuffers(vk->device, s_priv->transient_cmd_pool, 1, cmd_buf);
-        return res;
-    }
-
-    return VK_SUCCESS;
-}
-
-VkResult ngli_gpu_ctx_vk_execute_transient_command(struct gpu_ctx *s, VkCommandBuffer cmd_buf)
-{
-    struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
-    struct vkcontext *vk = s_priv->vkcontext;
-
-    vkEndCommandBuffer(cmd_buf);
-
-    const VkSubmitInfo submit_info = {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &cmd_buf,
-    };
-
-    VkResult res = vkResetFences(vk->device, 1, &s_priv->transient_cmd_fence);
-    if (res != VK_SUCCESS)
-        goto done;
-
-    res = vkQueueSubmit(vk->graphic_queue, 1, &submit_info, s_priv->transient_cmd_fence);
-    if (res != VK_SUCCESS)
-        goto done;
-
-    res = vkWaitForFences(vk->device, 1, &s_priv->transient_cmd_fence, 1, UINT64_MAX);
-
-done:
-    vkFreeCommandBuffers(vk->device, s_priv->transient_cmd_pool, 1, &cmd_buf);
-    return res;
-}
-
 static int vk_buffer_init(struct buffer *s, int size, int usage)
 {
     VkResult res = ngli_buffer_vk_init(s, size, usage);
