@@ -34,6 +34,7 @@ struct gpu_ctx_vk {
 
     VkCommandPool cmd_pool;
     VkCommandBuffer *cmd_bufs;
+    VkCommandBuffer *update_cmd_bufs;
     VkCommandBuffer cur_cmd_buf;
 
     VkQueryPool query_pool;
@@ -69,6 +70,7 @@ struct gpu_ctx_vk {
     struct texture *dummy_texture;
 
     VkSemaphore *img_avail_sems;
+    VkSemaphore *update_finished_sems;
     VkSemaphore *render_finished_sems;
     VkFence *fences;
 
