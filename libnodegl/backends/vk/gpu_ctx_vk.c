@@ -352,6 +352,8 @@ static VkResult create_command_pool_and_buffers(struct gpu_ctx *s)
             return res;
     }
 
+    ngli_darray_init(&s_priv->pending_cmds, sizeof(struct vmd_vk *), 0);
+
     return VK_SUCCESS;
 }
 
@@ -371,6 +373,8 @@ static void destroy_command_pool_and_buffers(struct gpu_ctx *s)
     }
 
     vkDestroyCommandPool(vk->device, s_priv->cmd_pool, NULL);
+
+    ngli_darray_reset(&s_priv->pending_cmds);
 }
 
 static VkResult create_semaphores(struct gpu_ctx *s)

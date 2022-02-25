@@ -34,7 +34,7 @@ struct gpu_ctx_vk {
 
     struct cmd_vk **cmds;
     struct cmd_vk **update_cmds;
-    struct cmd_vk *transient_cmd;
+    struct darray pending_cmds;
     struct cmd_vk *cur_cmd;
 
     VkQueryPool query_pool;
