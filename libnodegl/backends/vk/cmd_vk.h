@@ -48,4 +48,7 @@ VkResult ngli_cmd_vk_begin(struct cmd_vk *s);
 VkResult ngli_cmd_vk_submit(struct cmd_vk *s);
 VkResult ngli_cmd_vk_wait(struct cmd_vk *s);
 
+VkResult ngli_cmd_vk_begin_transient(struct gpu_ctx *gpu_ctx, int type, struct cmd_vk **sp);
+VkResult ngli_cmd_vk_execute_transient(struct cmd_vk **sp);
+
 #endif

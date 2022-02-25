@@ -165,17 +165,8 @@ VkResult ngli_buffer_vk_upload(struct buffer *s, const void *data, int size, int
         memcpy(mapped_data + offset, data, size);
         vkUnmapMemory(vk->device, s_priv->staging_memory);
 
-        struct cmd_vk *cmd_vk = ngli_cmd_vk_create(s->gpu_ctx);
-        if (!cmd_vk)
-            return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-        res = ngli_cmd_vk_init(cmd_vk, NGLI_CMD_VK_TYPE_GRAPHICS);
-        if (res != VK_SUCCESS) {
-            ngli_cmd_vk_freep(&cmd_vk);
-            return res;
-        }
-
-        res = ngli_cmd_vk_begin(cmd_vk);
+        struct cmd_vk *cmd_vk;
+        res = ngli_cmd_vk_begin_transient(s->gpu_ctx, 0, &cmd_vk);
         if (res != VK_SUCCESS)
             return res;
 
@@ -186,13 +177,9 @@ VkResult ngli_buffer_vk_upload(struct buffer *s, const void *data, int size, int
         };
         vkCmdCopyBuffer(cmd_vk->cmd_buf, s_priv->staging_buffer, s_priv->buffer, 1, &region);
 
-        res = ngli_cmd_vk_submit(cmd_vk);
+        res = ngli_cmd_vk_execute_transient(&cmd_vk);
         if (res != VK_SUCCESS)
             return res;
-        res = ngli_cmd_vk_wait(cmd_vk);
-        if (res != VK_SUCCESS)
-            return res;
-        ngli_cmd_vk_freep(&cmd_vk);
 
         vkDestroyBuffer(vk->device, s_priv->staging_buffer, NULL);
         s_priv->staging_buffer = VK_NULL_HANDLE;

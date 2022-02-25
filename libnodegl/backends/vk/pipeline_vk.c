@@ -892,13 +892,7 @@ void ngli_pipeline_vk_dispatch(struct pipeline *s, int nb_group_x, int nb_group_
 
     struct cmd_vk *cmd_vk = gpu_ctx_vk->cur_cmd;
     if (!cmd_vk) {
-        cmd_vk = ngli_cmd_vk_create(s->gpu_ctx);
-        if (!cmd_vk)
-            return;
-        VkResult res = ngli_cmd_vk_init(cmd_vk, NGLI_CMD_VK_TYPE_GRAPHICS);
-        if (res != VK_SUCCESS)
-            return;
-        res = ngli_cmd_vk_begin(cmd_vk);
+        VkResult res = ngli_cmd_vk_begin_transient(s->gpu_ctx, 0, &cmd_vk);
         if (res != VK_SUCCESS)
             return;
     }
@@ -933,9 +927,7 @@ void ngli_pipeline_vk_dispatch(struct pipeline *s, int nb_group_x, int nb_group_
     vkCmdPipelineBarrier(cmd_buf, src_stage, dst_stage, 0, 1, &barrier, 0, NULL, 0, NULL);
 
     if (!gpu_ctx_vk->cur_cmd) {
-        ngli_cmd_vk_submit(cmd_vk);
-        ngli_cmd_vk_wait(cmd_vk);
-        ngli_cmd_vk_freep(&cmd_vk);
+        ngli_cmd_vk_execute_transient(&cmd_vk);
     }
 }
 

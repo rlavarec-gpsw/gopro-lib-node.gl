@@ -161,3 +161,42 @@ VkResult ngli_cmd_vk_wait(struct cmd_vk *s)
 
     return VK_SUCCESS;
 }
+
+VkResult ngli_cmd_vk_begin_transient(struct gpu_ctx *gpu_ctx, int type, struct cmd_vk **sp)
+{
+    struct cmd_vk *s = ngli_cmd_vk_create(gpu_ctx);
+    if (!s)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    VkResult res = ngli_cmd_vk_init(s, type);
+    if (res != VK_SUCCESS)
+        goto error;
+
+    res = ngli_cmd_vk_begin(s);
+    if (res != VK_SUCCESS)
+        return res;
+
+    *sp = s;
+    return VK_SUCCESS;
+
+error:
+    ngli_cmd_vk_freep(&s);
+    return res;
+}
+
+VkResult ngli_cmd_vk_execute_transient(struct cmd_vk **sp)
+{
+    struct cmd_vk *s = *sp;
+    if (!s)
+        return VK_SUCCESS;
+
+    VkResult res = ngli_cmd_vk_submit(s);
+    if (res != VK_SUCCESS)
+        goto done;
+
+    res = ngli_cmd_vk_wait(s);
+
+done:
+    ngli_cmd_vk_freep(sp);
+    return res;
+}
