@@ -925,6 +925,14 @@ static int vk_begin_update(struct gpu_ctx *s, double t)
 {
     struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
 
+    struct cmd_vk **cmds = ngli_darray_data(&s_priv->pending_cmds);
+    for (int i = 0; i < ngli_darray_count(&s_priv->pending_cmds); i++) {
+        VkResult res = ngli_cmd_vk_wait(cmds[i]);
+        if (res != VK_SUCCESS)
+            return res;
+    }
+    ngli_darray_clear(&s_priv->pending_cmds);
+
     struct cmd_vk *cmd_vk = s_priv->cmds[s_priv->cur_frame_index];
     VkResult res = ngli_cmd_vk_wait(cmd_vk);
     if (res != VK_SUCCESS)

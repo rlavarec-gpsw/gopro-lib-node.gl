@@ -143,6 +143,9 @@ VkResult ngli_cmd_vk_submit(struct cmd_vk *s)
     if (res != VK_SUCCESS)
         return res;
 
+    if (!ngli_darray_push(&gpu_ctx_vk->pending_cmds, &s))
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
     ngli_darray_clear(&s->wait_sems);
     ngli_darray_clear(&s->wait_stages);
     ngli_darray_clear(&s->signal_sems);
@@ -158,6 +161,16 @@ VkResult ngli_cmd_vk_wait(struct cmd_vk *s)
     VkResult res = vkWaitForFences(vk->device, 1, &s->fence, VK_TRUE, UINT64_MAX);
     if (res != VK_SUCCESS)
         return res;
+
+    int i = 0;
+    while (i < ngli_darray_count(&gpu_ctx_vk->pending_cmds)) {
+        struct cmd_vk **cmds = ngli_darray_data(&gpu_ctx_vk->pending_cmds);
+        if (cmds[i] == s) {
+            ngli_darray_remove(&gpu_ctx_vk->pending_cmds, i);
+            continue;
+        }
+        i++;
+    }
 
     return VK_SUCCESS;
 }
