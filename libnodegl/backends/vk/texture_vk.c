@@ -341,7 +341,7 @@ VkResult ngli_texture_vk_init(struct texture *s, const struct texture_params *pa
     if (!cmd_vk)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    res = ngli_cmd_vk_init(cmd_vk, NGLI_CMD_VK_TYPE_TRANSIENT);
+    res = ngli_cmd_vk_init(cmd_vk, NGLI_CMD_VK_TYPE_GRAPHICS);
     if (res != VK_SUCCESS) {
         ngli_cmd_vk_freep(&cmd_vk);
         return res;
@@ -586,7 +586,7 @@ VkResult ngli_texture_vk_upload(struct texture *s, const uint8_t *data, int line
         cmd_vk = ngli_cmd_vk_create(s->gpu_ctx);
         if (!cmd_vk)
             return VK_ERROR_OUT_OF_HOST_MEMORY;
-        VkResult res = ngli_cmd_vk_init(cmd_vk, NGLI_CMD_VK_TYPE_TRANSIENT);
+        VkResult res = ngli_cmd_vk_init(cmd_vk, NGLI_CMD_VK_TYPE_GRAPHICS);
         if (res != VK_SUCCESS)
             return res;
         res = ngli_cmd_vk_begin(cmd_vk);
@@ -682,7 +682,7 @@ VkResult ngli_texture_vk_generate_mipmap(struct texture *s)
         cmd_vk = ngli_cmd_vk_create(s->gpu_ctx);
         if (!cmd_vk)
             return VK_ERROR_OUT_OF_HOST_MEMORY;
-        VkResult res = ngli_cmd_vk_init(cmd_vk, NGLI_CMD_VK_TYPE_TRANSIENT);
+        VkResult res = ngli_cmd_vk_init(cmd_vk, NGLI_CMD_VK_TYPE_GRAPHICS);
         if (res != VK_SUCCESS)
             return res;
         res = ngli_cmd_vk_begin(cmd_vk);

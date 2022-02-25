@@ -895,7 +895,7 @@ void ngli_pipeline_vk_dispatch(struct pipeline *s, int nb_group_x, int nb_group_
         cmd_vk = ngli_cmd_vk_create(s->gpu_ctx);
         if (!cmd_vk)
             return;
-        VkResult res = ngli_cmd_vk_init(cmd_vk, NGLI_CMD_VK_TYPE_TRANSIENT);
+        VkResult res = ngli_cmd_vk_init(cmd_vk, NGLI_CMD_VK_TYPE_GRAPHICS);
         if (res != VK_SUCCESS)
             return;
         res = ngli_cmd_vk_begin(cmd_vk);

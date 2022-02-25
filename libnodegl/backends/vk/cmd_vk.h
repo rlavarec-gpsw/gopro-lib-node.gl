@@ -27,7 +27,6 @@
 #include "darray.h"
 
 #define NGLI_CMD_VK_TYPE_GRAPHICS  0
-#define NGLI_CMD_VK_TYPE_TRANSIENT 1
 
 struct cmd_vk {
     struct gpu_ctx *gpu_ctx;
@@ -43,8 +42,8 @@ struct cmd_vk {
 struct cmd_vk *ngli_cmd_vk_create(struct gpu_ctx *gpu_ctx);
 void ngli_cmd_vk_freep(struct cmd_vk **sp);
 VkResult ngli_cmd_vk_init(struct cmd_vk *s, int type);
-VkResult ngli_cmd_add_wait_sem(struct cmd_vk *s, VkSemaphore *sem, VkPipelineStageFlags stage);
-VkResult ngli_cmd_add_signal_sem(struct cmd_vk *s, VkSemaphore *sem);
+VkResult ngli_cmd_vk_add_wait_sem(struct cmd_vk *s, VkSemaphore *sem, VkPipelineStageFlags stage);
+VkResult ngli_cmd_vk_add_signal_sem(struct cmd_vk *s, VkSemaphore *sem);
 VkResult ngli_cmd_vk_begin(struct cmd_vk *s);
 VkResult ngli_cmd_vk_submit(struct cmd_vk *s);
 VkResult ngli_cmd_vk_wait(struct cmd_vk *s);

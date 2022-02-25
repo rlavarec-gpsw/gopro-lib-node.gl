@@ -295,13 +295,13 @@ static VkResult create_query_pool(struct gpu_ctx *s)
     struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
     struct vkcontext *vk = s_priv->vkcontext;
 
-    const VkQueryPoolCreateInfo query_pool_create_info = {
+    const VkQueryPoolCreateInfo create_info = {
         .sType      = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
         .queryType  = VK_QUERY_TYPE_TIMESTAMP,
         .queryCount = 2,
     };
 
-    VkResult res = vkCreateQueryPool(vk->device, &query_pool_create_info, NULL, &s_priv->query_pool);
+    VkResult res = vkCreateQueryPool(vk->device, &create_info, NULL, &s_priv->query_pool);
     if (res != VK_SUCCESS)
         return res;
 
@@ -371,42 +371,6 @@ static void destroy_command_pool_and_buffers(struct gpu_ctx *s)
     }
 
     vkDestroyCommandPool(vk->device, s_priv->cmd_pool, NULL);
-}
-
-static VkResult create_transient_resources(struct gpu_ctx *s)
-{
-    struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
-    struct vkcontext *vk = s_priv->vkcontext;
-
-    const VkCommandPoolCreateInfo command_pool_create_info = {
-        .sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .queueFamilyIndex = vk->graphics_queue_index,
-        .flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-    };
-
-    VkResult res = vkCreateCommandPool(vk->device, &command_pool_create_info, NULL, &s_priv->transient_cmd_pool);
-    if (res != VK_SUCCESS)
-        return res;
-
-    s_priv->transient_cmd = ngli_cmd_vk_create(s);
-    if (!s_priv->transient_cmd)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    res = ngli_cmd_vk_init(s_priv->transient_cmd, NGLI_CMD_VK_TYPE_TRANSIENT);
-    if (res != VK_SUCCESS)
-        return res;
-
-    return VK_SUCCESS;
-}
-
-static void destroy_transient_resources(struct gpu_ctx *s)
-{
-    struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
-    struct vkcontext *vk = s_priv->vkcontext;
-
-    ngli_cmd_vk_freep(&s_priv->transient_cmd);
-
-    vkDestroyCommandPool(vk->device, s_priv->transient_cmd_pool, NULL);
 }
 
 static VkResult create_semaphores(struct gpu_ctx *s)
@@ -717,11 +681,11 @@ static VkResult swapchain_acquire_image(struct gpu_ctx *s, uint32_t *image_index
         return res;
     }
 
-    res = ngli_cmd_add_wait_sem(s_priv->cur_cmd, &sem, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    res = ngli_cmd_vk_add_wait_sem(s_priv->cur_cmd, &sem, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     if (res != VK_SUCCESS)
         return res;
 
-    res = ngli_cmd_add_signal_sem(s_priv->cur_cmd, &s_priv->render_finished_sems[s_priv->cur_frame_index]);
+    res = ngli_cmd_vk_add_signal_sem(s_priv->cur_cmd, &s_priv->render_finished_sems[s_priv->cur_frame_index]);
     if (res != VK_SUCCESS)
         return res;
 
@@ -890,10 +854,6 @@ static int vk_init(struct gpu_ctx *s)
     if (res != VK_SUCCESS)
         return ngli_vk_res2ret(res);
 
-    res = create_transient_resources(s);
-    if (res != VK_SUCCESS)
-        return ngli_vk_res2ret(res);
-
     res = create_command_pool_and_buffers(s);
     if (res != VK_SUCCESS)
         return ngli_vk_res2ret(res);
@@ -981,7 +941,7 @@ static int vk_end_update(struct gpu_ctx *s, double t)
     struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
 
     VkSemaphore update_finished_sem = s_priv->update_finished_sems[s_priv->cur_frame_index];
-    VkResult res = ngli_cmd_add_signal_sem(s_priv->cur_cmd, &update_finished_sem);
+    VkResult res = ngli_cmd_vk_add_signal_sem(s_priv->cur_cmd, &update_finished_sem);
     if (res != VK_SUCCESS)
         return res;
 
@@ -1005,7 +965,7 @@ static int vk_begin_draw(struct gpu_ctx *s, double t)
         return res;
 
     VkSemaphore update_finished_sem = s_priv->update_finished_sems[s_priv->cur_frame_index];
-    res = ngli_cmd_add_wait_sem(s_priv->cur_cmd, &update_finished_sem, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    res = ngli_cmd_vk_add_wait_sem(s_priv->cur_cmd, &update_finished_sem, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     if (res != VK_SUCCESS)
         return res;
 
@@ -1142,7 +1102,6 @@ static void vk_destroy(struct gpu_ctx *s)
     destroy_dummy_texture(s);
     destroy_render_resources(s);
     destroy_swapchain(s);
-    destroy_transient_resources(s);
     destroy_query_pool(s);
 
     ngli_glslang_uninit();

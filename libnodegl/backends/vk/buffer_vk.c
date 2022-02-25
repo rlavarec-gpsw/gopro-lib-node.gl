@@ -169,7 +169,7 @@ VkResult ngli_buffer_vk_upload(struct buffer *s, const void *data, int size, int
         if (!cmd_vk)
             return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-        res = ngli_cmd_vk_init(cmd_vk, NGLI_CMD_VK_TYPE_TRANSIENT);
+        res = ngli_cmd_vk_init(cmd_vk, NGLI_CMD_VK_TYPE_GRAPHICS);
         if (res != VK_SUCCESS) {
             ngli_cmd_vk_freep(&cmd_vk);
             return res;

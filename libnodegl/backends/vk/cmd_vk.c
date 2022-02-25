@@ -55,12 +55,7 @@ VkResult ngli_cmd_vk_init(struct cmd_vk *s, int type)
     struct vkcontext *vk = gpu_ctx_vk->vkcontext;
 
     s->type = type;
-    switch (s->type) {
-    case NGLI_CMD_VK_TYPE_GRAPHICS:  s->pool = gpu_ctx_vk->cmd_pool;           break;
-    case NGLI_CMD_VK_TYPE_TRANSIENT: s->pool = gpu_ctx_vk->transient_cmd_pool; break;
-    default:
-        ngli_assert(0);
-    }
+    s->pool = gpu_ctx_vk->cmd_pool;
 
     const VkCommandBufferAllocateInfo allocate_info = {
         .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -88,7 +83,7 @@ VkResult ngli_cmd_vk_init(struct cmd_vk *s, int type)
     return VK_SUCCESS;
 }
 
-VkResult ngli_cmd_add_wait_sem(struct cmd_vk *s, VkSemaphore *sem, VkPipelineStageFlags stage)
+VkResult ngli_cmd_vk_add_wait_sem(struct cmd_vk *s, VkSemaphore *sem, VkPipelineStageFlags stage)
 {
     if (!ngli_darray_push(&s->wait_sems, sem))
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -99,7 +94,7 @@ VkResult ngli_cmd_add_wait_sem(struct cmd_vk *s, VkSemaphore *sem, VkPipelineSta
     return VK_SUCCESS;
 }
 
-VkResult ngli_cmd_add_signal_sem(struct cmd_vk *s, VkSemaphore *sem)
+VkResult ngli_cmd_vk_add_signal_sem(struct cmd_vk *s, VkSemaphore *sem)
 {
     if (!ngli_darray_push(&s->signal_sems, sem))
         return VK_ERROR_OUT_OF_HOST_MEMORY;
