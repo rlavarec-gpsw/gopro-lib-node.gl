@@ -61,6 +61,7 @@ jobs:
         run: |
           .\scripts\msvc-env.ps1
           $env:VULKAN_SDK='C:\VulkanSDK\${{env.VULKAN_SDK_VERSION}}'
+
           python.exe .\configure.py --buildtype debug --debug-opts gl gpu_capture --build-backend ${{matrix.build_backend}} --enable-ngfx-backend
           nmake
 
