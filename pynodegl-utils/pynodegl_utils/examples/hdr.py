@@ -11,7 +11,7 @@ _DESAT_METHODS = ('method1', 'method2')
     tonemap=scene.List(choices=_TONEMAP_OPERATORS),
     desat=scene.List(choices=_DESAT_METHODS)
 )
-def hdr_to_sdr(cfg, rotate=True, debug_logavg=True, honor_logavg=True, tonemap='bt2390', desat=_DESAT_METHODS[0]):
+def hdr_to_sdr(cfg, rotate=True, debug_logavg=False, honor_logavg=False, tonemap='bt2446', desat=_DESAT_METHODS[0]):
     logavg_tex = ngl.Texture2D(format="r32g32b32a32_sfloat", width=1024, height=1024, min_filter="linear", mipmap_filter="linear")
     m0 = cfg.medias[0]
     cfg.duration = m0.duration

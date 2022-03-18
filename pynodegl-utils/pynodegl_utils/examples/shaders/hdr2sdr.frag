@@ -52,8 +52,27 @@ vec3 tonemap_bt2390(vec3 x, float peak)
 
 vec3 tonemap_bt2446_a(vec3 x)
 {
-    // TODO
-    return x;
+    const float l_hdr = 1000.0;
+    const float l_sdr = 100.0;
+    const float p_hdr = 1.0 + 32.0 * pow(l_hdr / 10000.0, 1.0 / 2.4);
+    const float p_sdr = 1.0 + 32.0 * pow(l_sdr / 10000.0, 1.0 / 2.4);
+
+    //float luma = dot(luma_coeff, pow(x, vec3(1.0 / 2.4)));
+    //x = pow(x, vec3(1.0 / 2.4));
+
+    vec3 yp = log(1.0 + (p_hdr - 1.0) * x) / log(p_hdr);
+
+    vec3 yc = mix(
+        mix(
+            0.5 * yp + 0.5,
+            (-1.1510 * yp + 2.7811) * yp - 0.6302,
+            lessThan(yp, vec3(0.9909))
+        ),
+        1.077 * yp,
+        lessThan(yp, vec3(0.7399))
+    );
+
+    return (pow(vec3(p_sdr), yc) - 1.0) / (vec3(p_sdr) - 1.0);
 }
 
 vec3 tonemap_reinhard(vec3 x)
