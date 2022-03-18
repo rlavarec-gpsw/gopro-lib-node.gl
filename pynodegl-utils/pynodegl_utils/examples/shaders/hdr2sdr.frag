@@ -5,6 +5,8 @@ const float PQ_C2 = 18.8515625;
 const float PQ_C3 = 18.6875;
 const float PQ_C  = 10000.0;
 
+const vec3 luma_coeff = vec3(0.2627, 0.6780, 0.0593); // luma_coeff for BT.2020
+
 vec4 pq_eotf_inverse(vec4 signal)
 {
     const vec4 Y = signal / (10000.0 / 203.0);
@@ -12,9 +14,9 @@ vec4 pq_eotf_inverse(vec4 signal)
     return pow((PQ_C1 + PQ_C2 * Ym) / (1.0 + PQ_C3 * Ym), vec4(PQ_M2));
 }
 
-vec4 pq_eotf(vec4 signal)
+vec3 pq_eotf(vec3 x)
 {
-    return (10000.0 / 203.0) * pow(max(pow(signal, vec4(1.0 / PQ_M2)) - vec4(PQ_C1), vec4(0.0)) / (vec4(PQ_C2) - vec4(PQ_C3) * pow(signal, vec4(1.0 / PQ_M2))), vec4(1.0 / PQ_M1));
+    return (10000.0 / 203.0) * pow(max(pow(x, vec3(1.0 / PQ_M2)) - PQ_C1, 0.0) / (PQ_C2 - PQ_C3 * pow(x, vec3(1.0 / PQ_M2))), vec3(1.0 / PQ_M1));
 }
 
 vec3 bt2390_eetf(vec3 v, float maxLum)
@@ -27,47 +29,51 @@ vec3 bt2390_eetf(vec3 v, float maxLum)
     return mix(p, v, lessThan(v, vec3(ks)));
 }
 
-vec4 tonemap_bt2390(vec4 signal)
+vec3 tonemap_bt2390(vec3 x, float peak)
 {
     // tone map ITU-R BT.2390
     // convert linear light to PQ space
-    vec4 sig_pq = signal;
+    vec4 sig_pq = vec4(x, peak);
     sig_pq = pq_eotf_inverse(sig_pq);
 
     // normalize pq signal against signal peak
     float scale = 1.0 / sig_pq.a;
-    sig_pq.rgb *= vec3(scale);
 
     // solve EETF ITU-R BT.2390
-    float maxLum = 0.580690 * scale;
-    vec3 sig = bt2390_eetf(sig_pq.rgb, maxLum);
+    float maxLum = 0.580690;
+    vec3 sig = bt2390_eetf(sig_pq.rgb * scale, maxLum * scale);
 
     // invert normalization
-    sig *= vec3(sig_pq.a);
+    sig /= scale;
 
     // convert signal from PQ space to linear light
-    return pq_eotf(vec4(sig, 1.0));
+    return pq_eotf(sig);
 }
 
-vec4 tonemap_reinhard(vec4 signal)
+vec3 tonemap_bt2446_a(vec3 x)
 {
-    return (signal / (signal + 1.0));
+    // TODO
+    return x;
 }
 
-vec4 tonemap_reinhard_extended(vec4 signal)
+vec3 tonemap_reinhard(vec3 x)
 {
-    signal.a = 1000.0 / 203.0;
-    vec3 numerator = signal.rgb * (1.0 + (signal.rgb / vec3(signal.a * signal.a)));
-    return vec4(numerator / (1.0 + signal.rgb), 1.0);
+    return x / (x + 1.0);
 }
 
-vec4 tonemap_reinhard_jodie(vec4 signal, float luma)
+vec3 tonemap_reinhard_extended(vec3 x, float peak)
 {
-    vec4 tv = signal / (1.0 + signal);
-    return mix(signal / (1.0 + luma), tv, tv);
+    return x * (1.0 + (x / (peak * peak))) / (1.0 + x);
 }
 
-float aces(float x)
+vec3 tonemap_reinhard_jodie(vec3 x)
+{
+    float luma = dot(luma_coeff, x);
+    vec3 tv = x / (1.0 + x);
+    return mix(x / (1.0 + luma), tv, tv);
+}
+
+vec3 tonemap_aces(vec3 x)
 {
     // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
     const float a = 2.51;
@@ -78,9 +84,22 @@ float aces(float x)
     return (x * (a * x + b)) / (x * (c * x + d) + e);
 }
 
-vec3 tonemap_aces(vec3 signal)
+/* HLG EOTF (linearize), non-normalized output range of [0, 12] (ITU-R BT.2100) */
+vec3 hlg_eotf(vec3 x)
 {
-    return vec3(aces(signal.r), aces(signal.g), aces(signal.b));
+    const float a = 0.17883277;
+    const float b = 0.28466892;
+    const float c = 0.55991073;
+    return mix(4.0 * x * x, exp((x - c) / a) + b, lessThan(vec3(0.5), x));
+}
+
+/*
+ * HLG input signal to OOTF: maps scene linear light to display linear light
+ * (ITU-R BT.2100)
+ */
+vec3 hlg_ootf(vec3 x)
+{
+    return x * pow(dot(luma_coeff, x), 0.2); // 0.2 is 1-gamma with gamma=1.2
 }
 
 void main()
@@ -88,36 +107,25 @@ void main()
     // BT.2020 HLG
     vec4 color = ngl_texvideo(tex0, var_tex0_coord);
 
-    // hlg eotf (linearize), output range [0, 12] (ITU-R BT.2100)
     color.rgb = clamp(color.rgb, 0.0, 1.0);
-    color.rgb = mix(vec3(4.0) * color.rgb * color.rgb,
-                    exp((color.rgb - vec3(0.559911)) * vec3(1.0/0.178833)) + vec3(0.284669),
-                    lessThan(vec3(0.5), color.rgb));
+    color.rgb = hlg_eotf(color.rgb);
 
     // scale hlg eotf output range from [0, 12] against the hlg reference white
-    // point (hlg_eotf(0.75)) = 3.179550717 recommended by ITU-R BT.2408 which
-    // gives an output range of [0, 3.774118128023557]
-    color.rgb /= 3.179550717;
+    // point (hlg_eotf(0.75)) = 3.179550717436802 recommended by ITU-R BT.2408 which
+    // gives an output range of [0, 3.774118127505075]
+    color.rgb /= 3.179550717436802;
 
-    // hlg ootf (scene light -> display light) (ITU-R BT.2100) and scale it
-    // from [0, (3.774118128023557)**1.2] to [0, 1000/203] which a scale factor of 1.0007494843358407
-    const vec3 luma_coeff = vec3(0.2627, 0.6780, 0.0593); // luma_coeff fot BT.2020
-    color.rgb *= vec3(1.0007494843358407 * pow(dot(luma_coeff, color.rgb), 0.2));
+    color.rgb = hlg_ootf(color.rgb);
+
+    // from [0, 3.774118127505075**1.2] to [0, 1000/203] which a scale factor of 1.0007494843358407
+    color.rgb *= 1.0007494845008182;
+
 
     float signal_peak = 1000.0 / 203.0;
-    vec3 signal = min(color.rgb, vec3(signal_peak));
-    vec3 sig = signal;
-
-    /*
-     * TODO
-     * - max: `N=max(r,g,b)`
-     * - luminance Y: `N=rR+gG+bB` (luma weights)
-     * - power norm: `N=(r³+g³+b³)/(r²+g²+b²)`
-     * → `tonemap(color) * vec3(r,g,b)/N`
-     */
+    vec3 sig = min(color.rgb, vec3(signal_peak));
 
     vec3 sig_orig = sig;
-    float l = dot(luma_coeff, signal);
+    float l = dot(luma_coeff, sig);
     if (desat == 0)
         sig = vec3(l);
 
@@ -132,20 +140,23 @@ void main()
         signal_peak *= 0.25/luma_avg;
     }
 
-    if (tonemap == 0) {
-        sig = tonemap_bt2390(vec4(sig.rgb, signal_peak)).rgb;
-    } else if (tonemap == 1) {
-        sig = tonemap_reinhard(vec4(sig.rgb, signal_peak)).rgb;
+    if (tonemap == 1) {
+        sig = tonemap_bt2390(sig, signal_peak);
     } else if (tonemap == 2) {
-        sig = tonemap_reinhard_extended(vec4(sig.rgb, signal_peak)).rgb;
+        sig = tonemap_reinhard(sig);
     } else if (tonemap == 3) {
-        sig = tonemap_reinhard_jodie(vec4(sig.rgb, signal_peak), l).rgb;
+        sig = tonemap_reinhard_extended(sig, signal_peak);
     } else if (tonemap == 4) {
-        sig = tonemap_aces(sig.rgb);
+        sig = tonemap_reinhard_jodie(sig);
+    } else if (tonemap == 5) {
+        sig = tonemap_aces(sig);
+    } else if (tonemap == 6) {
+        sig = tonemap_bt2446_a(sig);
     }
 
     if (desat == 0)
-        color.rgb *= sig.r / l;
+        //color.rgb *= max(sig.r, max(sig.g, sig.b)) / l;
+        color.rgb *= sig / l;
     else if (desat == 1)
         color.rgb = color.rgb * (sig / sig_orig);
 
