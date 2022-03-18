@@ -121,27 +121,21 @@ vec3 hlg_ootf(vec3 x)
     return x * pow(dot(luma_coeff, x), 0.2); // 0.2 is 1-gamma with gamma=1.2
 }
 
-void main()
+vec3 tonemap_trf(vec3 x, float peak)
 {
-    // BT.2020 HLG
-    vec4 color = ngl_texvideo(tex0, var_tex0_coord);
+    if (tonemap == 1) return tonemap_bt2390(x, peak);
+    if (tonemap == 2) return tonemap_reinhard(x);
+    if (tonemap == 3) return tonemap_reinhard_extended(x, peak);
+    if (tonemap == 4) return tonemap_reinhard_jodie(x);
+    if (tonemap == 5) return tonemap_aces(x);
+    if (tonemap == 6) return tonemap_bt2446_a(x);
+    return x;
+}
 
-    color.rgb = clamp(color.rgb, 0.0, 1.0);
-    color.rgb = hlg_eotf(color.rgb);
-
-    // scale hlg eotf output range from [0, 12] against the hlg reference white
-    // point (hlg_eotf(0.75)) = 3.179550717436802 recommended by ITU-R BT.2408 which
-    // gives an output range of [0, 3.774118127505075]
-    color.rgb /= 3.179550717436802;
-
-    color.rgb = hlg_ootf(color.rgb);
-
-    // from [0, 3.774118127505075**1.2] to [0, 1000/203] which a scale factor of 1.0007494843358407
-    color.rgb *= 1.0007494845008182;
-
-
-    float signal_peak = 1000.0 / 203.0;
-    vec3 sig = min(color.rgb, vec3(signal_peak));
+vec3 apply_tonemap(vec3 x)
+{
+    float peak = 1000.0 / 203.0;
+    vec3 sig = min(x, vec3(peak));
 
     vec3 sig_orig = sig;
     float l = dot(luma_coeff, sig);
@@ -150,45 +144,52 @@ void main()
 
     if (honor_logavg) {
         vec4 log_avg = textureLod(logavg_tex, vec2(0.0), 20.0);
-        float luma_avg = exp(log_avg).r;
-        //if (a.r < 0.48)
-        //    discard;
-        //a.r=0.56;
-
-        sig *= 0.25/luma_avg;
-        signal_peak *= 0.25/luma_avg;
+        float luma_avg = 4.0 * exp(log_avg).r;
+        sig /= luma_avg;
+        peak /= luma_avg;
     }
 
-    if (tonemap == 1) {
-        sig = tonemap_bt2390(sig, signal_peak);
-    } else if (tonemap == 2) {
-        sig = tonemap_reinhard(sig);
-    } else if (tonemap == 3) {
-        sig = tonemap_reinhard_extended(sig, signal_peak);
-    } else if (tonemap == 4) {
-        sig = tonemap_reinhard_jodie(sig);
-    } else if (tonemap == 5) {
-        sig = tonemap_aces(sig);
-    } else if (tonemap == 6) {
-        sig = tonemap_bt2446_a(sig);
-    }
+    sig = tonemap_trf(sig, peak);
 
     if (desat == 0)
-        //color.rgb *= max(sig.r, max(sig.g, sig.b)) / l;
-        color.rgb *= sig / l;
+        x *= sig.r / l;
     else if (desat == 1)
-        color.rgb = color.rgb * (sig / sig_orig);
+        x *= sig / sig_orig;
+
+    return x;
+}
+
+void main()
+{
+    // BT.2020 HLG
+    vec4 color = ngl_texvideo(tex0, var_tex0_coord);
+
+    vec3 x = color.rgb;
+    x = clamp(x, 0.0, 1.0);
+    x = hlg_eotf(x);
+
+    // scale hlg eotf output range from [0, 12] against the hlg reference white
+    // point (hlg_eotf(0.75)) = 3.179550717436802 recommended by ITU-R BT.2408 which
+    // gives an output range of [0, 3.774118127505075]
+    x /= 3.179550717436802;
+
+    x = hlg_ootf(x);
+
+    // from [0, 3.774118127505075**1.2] to [0, 1000/203] which a scale factor of 1.0007494843358407
+    x *= 1.0007494845008182;
+
+    x = apply_tonemap(x);
 
     // convert colors from BT.2020 to BT.709
     const mat3 bt2020_to_bt709 = mat3(
         1.660491,    -0.12455047, -0.01815076,
         -0.58764114,  1.1328999,  -0.1005789,
         -0.07284986, -0.00834942,  1.11872966);
-    color.rgb = bt2020_to_bt709 * color.rgb;
+    x = bt2020_to_bt709 * x;
 
     // delinearize (gamma 2.2)
-    color.rgb = clamp(color.rgb, 0.0, 1.0);
-    color.rgb = pow(color.rgb, vec3(1.0/2.2));
+    x = clamp(x, 0.0, 1.0);
+    x = pow(x, vec3(1.0 / 2.2));
 
-    ngl_out_color = color;
+    ngl_out_color = vec4(x, color.a);
 }
