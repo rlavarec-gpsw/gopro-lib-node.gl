@@ -2,16 +2,16 @@ import pynodegl as ngl
 from pynodegl_utils.misc import scene
 
 _TONEMAP_OPERATORS = ('none', 'bt2390', 'reinhard', 'reinhard_extended', 'reinhard_jodie', 'aces', 'bt2446')
-_DESAT_METHODS = ('method1', 'method2')
+_TONEMAP_NORM = ('luma', 'max', 'magic')
 
 @scene(
     rotate=scene.Bool(),
     debug_logavg=scene.Bool(),
     honor_logavg=scene.Bool(),
     tonemap=scene.List(choices=_TONEMAP_OPERATORS),
-    desat=scene.List(choices=_DESAT_METHODS)
+    norm=scene.List(choices=_TONEMAP_NORM),
 )
-def hdr_to_sdr(cfg, rotate=True, debug_logavg=False, honor_logavg=False, tonemap='bt2446', desat=_DESAT_METHODS[0]):
+def hdr_to_sdr(cfg, rotate=True, debug_logavg=False, honor_logavg=False, tonemap='bt2446', norm='luma'):
     logavg_tex = ngl.Texture2D(format="r32g32b32a32_sfloat", width=1024, height=1024, min_filter="linear", mipmap_filter="linear")
     m0 = cfg.medias[0]
     cfg.duration = m0.duration
@@ -27,8 +27,8 @@ def hdr_to_sdr(cfg, rotate=True, debug_logavg=False, honor_logavg=False, tonemap
         tex0=t,
         logavg_tex=logavg_tex,
         tonemap=ngl.UniformInt(_TONEMAP_OPERATORS.index(tonemap)),
-        desat=ngl.UniformInt(_DESAT_METHODS.index(desat)),
         honor_logavg=ngl.UniformBool(honor_logavg),
+        norm_method=ngl.UniformInt(_TONEMAP_NORM.index(norm)),
     )
     if rotate:
         media_render = ngl.Rotate(media_render, angle=180)

@@ -50,31 +50,6 @@ vec3 tonemap_bt2390(vec3 x, float peak)
     return pq_eotf(sig);
 }
 
-vec3 tonemap_bt2446_a(vec3 x)
-{
-    const float l_hdr = 1000.0;
-    const float l_sdr = 100.0;
-    const float p_hdr = 1.0 + 32.0 * pow(l_hdr / 10000.0, 1.0 / 2.4);
-    const float p_sdr = 1.0 + 32.0 * pow(l_sdr / 10000.0, 1.0 / 2.4);
-
-    //float luma = dot(luma_coeff, pow(x, vec3(1.0 / 2.4)));
-    //x = pow(x, vec3(1.0 / 2.4));
-
-    vec3 yp = log(1.0 + (p_hdr - 1.0) * x) / log(p_hdr);
-
-    vec3 yc = mix(
-        mix(
-            0.5 * yp + 0.5,
-            (-1.1510 * yp + 2.7811) * yp - 0.6302,
-            lessThan(yp, vec3(0.9909))
-        ),
-        1.077 * yp,
-        lessThan(yp, vec3(0.7399))
-    );
-
-    return (pow(vec3(p_sdr), yc) - 1.0) / (vec3(p_sdr) - 1.0);
-}
-
 vec3 tonemap_reinhard(vec3 x)
 {
     return x / (x + 1.0);
@@ -103,6 +78,31 @@ vec3 tonemap_aces(vec3 x)
     return (x * (a * x + b)) / (x * (c * x + d) + e);
 }
 
+vec3 tonemap_bt2446_a(vec3 x)
+{
+    const float l_hdr = 1000.0;
+    const float l_sdr = 100.0;
+    const float p_hdr = 1.0 + 32.0 * pow(l_hdr / 10000.0, 1.0 / 2.4);
+    const float p_sdr = 1.0 + 32.0 * pow(l_sdr / 10000.0, 1.0 / 2.4);
+
+    //float luma = dot(luma_coeff, pow(x, vec3(1.0 / 2.4)));
+    //x = pow(x, vec3(1.0 / 2.4));
+
+    vec3 yp = log(1.0 + (p_hdr - 1.0) * x) / log(p_hdr);
+
+    vec3 yc = mix(
+        mix(
+            0.5 * yp + 0.5,
+            (-1.1510 * yp + 2.7811) * yp - 0.6302,
+            lessThan(yp, vec3(0.9909))
+        ),
+        1.077 * yp,
+        lessThan(yp, vec3(0.7399))
+    );
+
+    return (pow(vec3(p_sdr), yc) - 1.0) / (vec3(p_sdr) - 1.0);
+}
+
 /* HLG EOTF (linearize), non-normalized output range of [0, 12] (ITU-R BT.2100) */
 vec3 hlg_eotf(vec3 x)
 {
@@ -116,9 +116,9 @@ vec3 hlg_eotf(vec3 x)
  * HLG input signal to OOTF: maps scene linear light to display linear light
  * (ITU-R BT.2100)
  */
-vec3 hlg_ootf(vec3 x)
+vec3 hlg_ootf(vec3 x, float gain)
 {
-    return x * pow(dot(luma_coeff, x), 0.2); // 0.2 is 1-gamma with gamma=1.2
+    return gain * x * pow(dot(luma_coeff, x), 0.2); // 0.2 is 1-gamma with gamma=1.2
 }
 
 vec3 tonemap_trf(vec3 x, float peak)
@@ -132,15 +132,22 @@ vec3 tonemap_trf(vec3 x, float peak)
     return x;
 }
 
+float get_norm(vec3 x)
+{
+    if (norm_method == 1)
+        return max(x.r, max(x.g, x.b));
+    if (norm_method == 2)
+        return (x.r*x.r*x.r + x.g*x.g*x.g + x.b*x.b*x.b) / (x.r*x.r + x.g*x.g + x.b*x.b);
+    return dot(luma_coeff, x);
+}
+
 vec3 apply_tonemap(vec3 x)
 {
     float peak = 1000.0 / 203.0;
     vec3 sig = min(x, vec3(peak));
 
-    vec3 sig_orig = sig;
-    float l = dot(luma_coeff, sig);
-    if (desat == 0)
-        sig = vec3(l);
+    float norm = get_norm(sig);
+    sig = vec3(norm);
 
     if (honor_logavg) {
         vec4 log_avg = textureLod(logavg_tex, vec2(0.0), 20.0);
@@ -151,12 +158,18 @@ vec3 apply_tonemap(vec3 x)
 
     sig = tonemap_trf(sig, peak);
 
-    if (desat == 0)
-        x *= sig.r / l;
-    else if (desat == 1)
-        x *= sig / sig_orig;
+    x *= sig.r / norm;
 
     return x;
+}
+
+vec3 bt2020_to_bt709(vec3 x)
+{
+    const mat3 bt2020_to_bt709 = mat3(
+        1.660491,    -0.12455047, -0.01815076,
+        -0.58764114,  1.1328999,  -0.1005789,
+        -0.07284986, -0.00834942,  1.11872966);
+    return bt2020_to_bt709 * x;
 }
 
 void main()
@@ -172,20 +185,15 @@ void main()
     // point (hlg_eotf(0.75)) = 3.179550717436802 recommended by ITU-R BT.2408 which
     // gives an output range of [0, 3.774118127505075]
     x /= 3.179550717436802;
+    //x /= 12.0;
 
-    x = hlg_ootf(x);
-
-    // from [0, 3.774118127505075**1.2] to [0, 1000/203] which a scale factor of 1.0007494843358407
-    x *= 1.0007494845008182;
+    // from [0, 3.774118127505075**1.2] to [0, 1000/203]
+    x = hlg_ootf(x, 1.0007494845008182);
+    //x = hlg_ootf(x, 1.0);
 
     x = apply_tonemap(x);
 
-    // convert colors from BT.2020 to BT.709
-    const mat3 bt2020_to_bt709 = mat3(
-        1.660491,    -0.12455047, -0.01815076,
-        -0.58764114,  1.1328999,  -0.1005789,
-        -0.07284986, -0.00834942,  1.11872966);
-    x = bt2020_to_bt709 * x;
+    x = bt2020_to_bt709(x);
 
     // delinearize (gamma 2.2)
     x = clamp(x, 0.0, 1.0);
