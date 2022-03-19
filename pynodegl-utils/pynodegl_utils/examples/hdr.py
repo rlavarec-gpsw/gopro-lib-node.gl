@@ -20,7 +20,7 @@ def hdr_to_sdr(cfg, rotate=True, debug_logavg=False, honor_logavg=False, tonemap
     q = ngl.Quad((-1, -1, 0), (2, 0, 0), (0, 2, 0))
     m = ngl.Media(m0.filename)
     t = ngl.Texture2D(data_src=m)
-    p = ngl.Program(vertex=cfg.get_vert('texture'), fragment=cfg.get_frag('hdr2sdr'))
+    p = ngl.Program(vertex=cfg.get_vert('texture'), fragment=cfg.get_frag('hdr2sdr-old'))
     p.update_vert_out_vars(var_tex0_coord=ngl.IOVec2(), var_uvcoord=ngl.IOVec2())
     media_render = ngl.Render(q, p, label='Media Render')
     media_render.update_frag_resources(
@@ -52,3 +52,21 @@ def hdr_to_sdr(cfg, rotate=True, debug_logavg=False, honor_logavg=False, tonemap
         grp.add_children(hdrlogavg_dbg)
 
     return grp
+
+
+@scene(rotate=scene.Bool())
+def hdr_to_sdr2(cfg, rotate=True):
+    m0 = cfg.medias[0]
+    cfg.duration = m0.duration
+    cfg.aspect_ratio = (m0.width, m0.height)
+
+    q = ngl.Quad((-1, -1, 0), (2, 0, 0), (0, 2, 0))
+    m = ngl.Media(m0.filename)
+    t = ngl.Texture2D(data_src=m)
+    p = ngl.Program(vertex=cfg.get_vert('texture'), fragment=cfg.get_frag('hdr2sdr'))
+    p.update_vert_out_vars(var_tex0_coord=ngl.IOVec2(), var_uvcoord=ngl.IOVec2())
+    media_render = ngl.Render(q, p, label='Media Render')
+    media_render.update_frag_resources(tex0=t)
+    if rotate:
+        media_render = ngl.Rotate(media_render, angle=180)
+    return media_render
