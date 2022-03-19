@@ -1,60 +1,47 @@
-const vec3 luma_coeff = vec3(0.2627, 0.6780, 0.0593); // luma_coeff for BT.2020
+const vec3 luma_coeff = vec3(0.2627, 0.6780, 0.0593); // luma weights for BT.2020
+const float l_hdr = 1000.0;
+const float l_sdr = 100.0;
+const float p_hdr = 1.0 + 32.0 * pow(l_hdr / 10000.0, 1.0 / 2.4);
+const float p_sdr = 1.0 + 32.0 * pow(l_sdr / 10000.0, 1.0 / 2.4);
+const float gcr = luma_coeff.r / luma_coeff.g;
+const float gcb = luma_coeff.b / luma_coeff.g;
 
-vec3 tonemap_bt2446(vec3 x)
+/* BT.2446 */
+vec3 tonemap(vec3 x)
 {
-    const float l_hdr = 1000.0;
-    const float l_sdr = 100.0;
-    const float p_hdr = 1.0 + 32.0 * pow(l_hdr / 10000.0, 1.0 / 2.4);
-    const float p_sdr = 1.0 + 32.0 * pow(l_sdr / 10000.0, 1.0 / 2.4);
+    vec3 xp = pow(x, vec3(1.0 / 2.4));
+    float y_hdr = dot(luma_coeff, xp);
 
-    float luma = dot(luma_coeff, pow(x, vec3(1.0 / 2.4)));
+    /* Step 1: convert signal to perceptually linear space */
+    float yp = log(1.0 + (p_hdr - 1.0) * y_hdr) / log(p_hdr);
 
-    x = vec3(luma); // XXX
-
-    vec3 yp = log(1.0 + (p_hdr - 1.0) * x) / log(p_hdr);
-
-    vec3 yc = mix(
-        mix(
-            0.5 * yp + 0.5,
-            (-1.1510 * yp + 2.7811) * yp - 0.6302,
-            lessThan(yp, vec3(0.9909))
-        ),
+    /* Step 2: apply knee function in perceptual domain */
+    float yc = mix(
         1.077 * yp,
-        lessThan(yp, vec3(0.7399))
-    );
+        mix((-1.1510 * yp + 2.7811) * yp - 0.6302, 0.5 * yp + 0.5, yp > 0.9909),
+        yp > 0.7399);
 
-    return (pow(vec3(p_sdr), yc) - 1.0) / (vec3(p_sdr) - 1.0);
+    /* Step 3: convert back to gamma domain */
+    float y_sdr = (pow(p_sdr, yc) - 1.0) / (p_sdr - 1.0);
+
+    /* Colour correction */
+    float scale = y_sdr / (1.1 * y_hdr); // XXX is 1.1 for video range bs?
+    float cb_tmo = scale * (xp.b - y_hdr);
+    float cr_tmo = scale * (xp.r - y_hdr);
+    float y_tmo = y_sdr - max(0.1 * cr_tmo, 0.0);
+
+    /* Convert from Y'Cb'Cr' to R'G'B' (still in BT.2020) */
+    float cg_tmo = -(gcr * cr_tmo + gcb * cb_tmo);
+    return y_tmo + vec3(cr_tmo, cg_tmo, cb_tmo);
 }
 
-/* HLG EOTF (linearize), non-normalized output range of [0, 12] (ITU-R BT.2100) */
+/* HLG Reference EOTF (linearize: R'G'B' HDR → RGB HDR), normalized, ITU-R BT.2100 */
 vec3 hlg_eotf(vec3 x)
 {
     const float a = 0.17883277;
     const float b = 0.28466892;
     const float c = 0.55991073;
-    return mix(4.0 * x * x, exp((x - c) / a) + b, lessThan(vec3(0.5), x));
-}
-
-/*
- * HLG input signal to OOTF: maps scene linear light to display linear light
- * (ITU-R BT.2100)
- */
-vec3 hlg_ootf(vec3 x, float gain)
-{
-    return gain * x * pow(dot(luma_coeff, x), 0.2); // 0.2 is 1-gamma with gamma=1.2
-}
-
-vec3 apply_tonemap(vec3 x)
-{
-    //float peak = 1000.0 / 203.0;
-    //vec3 sig = min(x, vec3(peak));
-
-    float luma = dot(luma_coeff, pow(x, vec3(1.0 / 2.4)));
-    vec3 sig = tonemap_bt2446(x);
-
-    x *= sig.r / luma;
-
-    return x;
+    return mix(x * x / 3.0, (exp((x - c) / a) + b) / 12.0, lessThan(vec3(0.5), x));
 }
 
 vec3 bt2020_to_bt709(vec3 x)
@@ -68,21 +55,7 @@ vec3 bt2020_to_bt709(vec3 x)
 
 void main()
 {
-    // BT.2020 HLG
-    vec4 color = ngl_texvideo(tex0, var_tex0_coord);
-
-    vec3 x = color.rgb;
-    x = hlg_eotf(x) / 12.0;
-
-    x = hlg_ootf(x, 1.0);
-
-    x = apply_tonemap(x);
-
-    x = bt2020_to_bt709(x);
-
-    // delinearize (gamma 2.2)
-    x = clamp(x, 0.0, 1.0);
-    x = pow(x, vec3(1.0 / 2.2));
-
-    ngl_out_color = vec4(x, color.a);
+    vec4 hdr = ngl_texvideo(tex0, var_tex0_coord); // BT.2020 HLG
+    vec3 sdr = bt2020_to_bt709(tonemap(hlg_eotf(hdr.rgb)));
+    ngl_out_color = vec4(sdr, hdr.a);
 }
