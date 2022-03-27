@@ -275,9 +275,8 @@ static int cmd_set_scene(struct ngl_ctx *s, void *arg)
     return 0;
 }
 
-static int cmd_prepare_draw(struct ngl_ctx *s, void *arg)
+static int prepare_draw(struct ngl_ctx *s, double t)
 {
-    const double t = *(double *)arg;
     const int64_t start_time = s->hud ? ngli_gettime_relative() : 0;
 
     int ret = ngli_gpu_ctx_begin_update(s->gpu_ctx, t);
@@ -308,11 +307,21 @@ static int cmd_prepare_draw(struct ngl_ctx *s, void *arg)
     return 0;
 }
 
+static int cmd_prepare_draw(struct ngl_ctx *s, void *arg)
+{
+    const double t = *(double *)arg;
+    int ret = prepare_draw(s, t);
+    if (ret < 0)
+        return ret;
+
+    return 0;
+}
+
 static int cmd_draw(struct ngl_ctx *s, void *arg)
 {
     const double t = *(double *)arg;
 
-    int ret = cmd_prepare_draw(s, arg);
+    int ret = prepare_draw(s, t);
     if (ret < 0)
         return ret;
 
