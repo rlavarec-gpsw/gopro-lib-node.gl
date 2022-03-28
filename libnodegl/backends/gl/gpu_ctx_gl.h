@@ -74,4 +74,6 @@ struct gpu_ctx_gl {
     void (*glGetQueryObjectui64v)(const struct glcontext *gl, GLuint id, GLenum pname, GLuint64 *params);
 };
 
+void ngli_gpu_ctx_gl_reset_state(struct gpu_ctx *s);
+
 #endif
