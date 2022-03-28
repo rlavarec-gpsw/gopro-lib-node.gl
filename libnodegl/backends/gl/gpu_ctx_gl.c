@@ -637,6 +637,14 @@ static int gl_set_capture_buffer(struct gpu_ctx *s, void *capture_buffer)
     return 0;
 }
 
+
+static void gl_reset_state(struct gpu_ctx *s)
+{
+    struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
+    struct glcontext *gl = s_priv->glcontext;
+    ngli_glstate_reset(gl, &s_priv->glstate);
+}
+
 static int gl_begin_update(struct gpu_ctx *s, double t)
 {
     return 0;
@@ -834,6 +842,7 @@ const struct gpu_ctx_class ngli_gpu_ctx_##cls_suffix = {                        
     .end_draw                           = gl_end_draw,                           \
     .query_draw_time                    = gl_query_draw_time,                    \
     .wait_idle                          = gl_wait_idle,                          \
+    .reset_state                        = gl_reset_state,                        \
     .destroy                            = gl_destroy,                            \
                                                                                  \
     .transform_cull_mode                = gl_transform_cull_mode,                \

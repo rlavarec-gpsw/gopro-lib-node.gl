@@ -60,6 +60,7 @@ struct gpu_ctx_class {
     int (*end_draw)(struct gpu_ctx *s, double t);
     int (*query_draw_time)(struct gpu_ctx *s, int64_t *time);
     void (*wait_idle)(struct gpu_ctx *s);
+    void (*reset_state)(struct gpu_ctx *s);
     void (*destroy)(struct gpu_ctx *s);
 
     int (*transform_cull_mode)(struct gpu_ctx *s, int cull_mode);
@@ -137,6 +138,7 @@ int ngli_gpu_ctx_begin_draw(struct gpu_ctx *s, double t);
 int ngli_gpu_ctx_query_draw_time(struct gpu_ctx *s, int64_t *time);
 int ngli_gpu_ctx_end_draw(struct gpu_ctx *s, double t);
 void ngli_gpu_ctx_wait_idle(struct gpu_ctx *s);
+void ngli_gpu_ctx_reset_state(struct gpu_ctx *s);
 void ngli_gpu_ctx_freep(struct gpu_ctx **sp);
 
 int ngli_gpu_ctx_transform_cull_mode(struct gpu_ctx *s, int cull_mode);

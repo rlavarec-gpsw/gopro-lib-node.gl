@@ -132,6 +132,12 @@ void ngli_gpu_ctx_wait_idle(struct gpu_ctx *s)
     s->cls->wait_idle(s);
 }
 
+void ngli_gpu_ctx_reset_state(struct gpu_ctx *s)
+{
+    if (s->cls->reset_state)
+        s->cls->reset_state(s);
+}
+
 void ngli_gpu_ctx_freep(struct gpu_ctx **sp)
 {
     if (!*sp)
