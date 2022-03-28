@@ -85,6 +85,17 @@ static int get_default_platform(void)
 #endif
 }
 
+#define DECLARE_CMD_WRAPPED(cmd_name)                       \
+static int cmd_name##_wrapped(struct ngl_ctx *s, void *arg) \
+{                                                           \
+    if (s->gpu_ctx)                                         \
+        ngli_gpu_ctx_reset_state(s->gpu_ctx);               \
+    int ret = cmd_name(s, arg);                             \
+    if (s->gpu_ctx)                                         \
+        ngli_gpu_ctx_reset_state(s->gpu_ctx);               \
+    return ret;                                             \
+}                                                           \
+
 static int cmd_stop(struct ngl_ctx *s, void *arg)
 {
     return 0;
