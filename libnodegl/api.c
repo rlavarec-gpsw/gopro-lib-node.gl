@@ -85,13 +85,13 @@ static int get_default_platform(void)
 #endif
 }
 
-#define KEEP_SCENE  0
-#define UNREF_SCENE 1
-
 static int cmd_stop(struct ngl_ctx *s, void *arg)
 {
     return 0;
 }
+
+#define KEEP_SCENE  0
+#define UNREF_SCENE 1
 
 static void scene_reset(struct ngl_ctx *s, int action)
 {
