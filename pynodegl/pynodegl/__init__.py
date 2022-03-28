@@ -41,6 +41,7 @@ from _pynodegl import (
     get_livectls,
     log_set_min_level,
     probe_backends,
+    WrappedConfigGL,
 )
 
 from .specs import SPECS

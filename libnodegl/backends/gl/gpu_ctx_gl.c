@@ -202,6 +202,7 @@ static int create_rendertarget(struct gpu_ctx *s,
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
     struct glcontext *gl = s_priv->glcontext;
     const struct ngl_config *config = &s->config;
+    const struct ngl_wrapped_config_gl *wrapped_config = config->wrapped_config;
 
     struct rendertarget *rendertarget = ngli_rendertarget_create(s);
     if (!rendertarget)
@@ -232,7 +233,8 @@ static int create_rendertarget(struct gpu_ctx *s,
     if (color) {
         ret = ngli_rendertarget_init(rendertarget, &params);
     } else {
-        const GLuint fbo_id = ngli_glcontext_get_default_framebuffer(gl);
+        const GLuint fbo_id = config->wrapped ? wrapped_config->framebuffer
+                                              : ngli_glcontext_get_default_framebuffer(gl);
         ret = ngli_rendertarget_gl_wrap(rendertarget, &params, fbo_id);
     }
     if (ret < 0) {
@@ -449,6 +451,7 @@ static int gl_init(struct gpu_ctx *s)
 {
     int ret;
     struct ngl_config *config = &s->config;
+    const struct ngl_wrapped_config_gl *wrapped_config = config->wrapped_config;
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
 
 #if DEBUG_GPU_CAPTURE
@@ -475,6 +478,7 @@ static int gl_init(struct gpu_ctx *s)
         .display       = config->display,
         .window        = config->window,
         .swap_interval = config->swap_interval,
+        .wrapped       = config->wrapped,
         .offscreen     = config->offscreen,
         .width         = config->width,
         .height        = config->height,
@@ -499,7 +503,9 @@ static int gl_init(struct gpu_ctx *s)
         ngli_gpu_capture_begin(s->gpu_capture_ctx);
 #endif
 
-    if (config->offscreen) {
+    if (gl->wrapped) {
+        ret = ngli_gpu_ctx_gl_wrap_framebuffer(s, wrapped_config->framebuffer);
+    } else if (gl->offscreen) {
         ret = offscreen_rendertarget_init(s);
     } else {
         /* Sync context config dimensions with glcontext (swapchain) dimensions */
@@ -545,25 +551,31 @@ static int gl_resize(struct gpu_ctx *s, int width, int height, const int *viewpo
     struct glcontext *gl = s_priv->glcontext;
     struct ngl_config *config = &s->config;
 
-    int ret = ngli_glcontext_resize(gl, width, height);
-    if (ret < 0)
-        return ret;
-
-    config->width = gl->width;
-    config->height = gl->height;
+    if (config->wrapped) {
+        config->width = width;
+        config->height = height;
+    } else {
+        int ret = ngli_glcontext_resize(gl, width, height);
+        if (ret < 0)
+            return ret;
+        config->width = gl->width;
+        config->height = gl->height;
+    }
 
     s_priv->default_rt->width = config->width;
     s_priv->default_rt->height = config->height;
     s_priv->default_rt_load->width = config->width;
     s_priv->default_rt_load->height = config->height;
 
-    /*
-     * The default framebuffer id can change after a resize operation on EAGL,
-     * thus we need to update the rendertargets wrapping the default framebuffer
-     */
-    struct rendertarget_gl *rt_gl = (struct rendertarget_gl *)s_priv->default_rt;
-    struct rendertarget_gl *rt_load_gl = (struct rendertarget_gl *)s_priv->default_rt_load;
-    rt_gl->id = rt_load_gl->id = ngli_glcontext_get_default_framebuffer(gl);
+    if (!config->wrapped) {
+        /*
+        * The default framebuffer id can change after a resize operation on EAGL,
+        * thus we need to update the rendertargets wrapping the default framebuffer
+        */
+        struct rendertarget_gl *rt_gl = (struct rendertarget_gl *)s_priv->default_rt;
+        struct rendertarget_gl *rt_load_gl = (struct rendertarget_gl *)s_priv->default_rt_load;
+        rt_gl->id = rt_load_gl->id = ngli_glcontext_get_default_framebuffer(gl);
+    }
 
     if (viewport && viewport[2] > 0 && viewport[3] > 0) {
         gl_set_viewport(s, viewport);
@@ -637,6 +649,82 @@ static int gl_set_capture_buffer(struct gpu_ctx *s, void *capture_buffer)
     return 0;
 }
 
+int ngli_gpu_ctx_gl_wrap_framebuffer(struct gpu_ctx *s, GLuint fbo)
+{
+    struct ngl_config *config = &s->config;
+    struct ngl_wrapped_config_gl *wrapped_config = config->wrapped_config;
+    struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
+    struct glcontext *gl = s_priv->glcontext;
+
+    /*
+     * NOTE: OpenGLES 2.0 cannot query the default framebuffer using
+     * glGetFramebufferAttachmentParameteriv() and thus would require a
+     * specific code path to perform the relevant sanity checks. For now, we
+     * simply disable those checks on OpenGLES 2.0 (through the
+     * NGLI_FEATURE_GL_FRAMEBUFFER_OBJECT requirement).
+     */
+    if (gl->features & NGLI_FEATURE_GL_FRAMEBUFFER_OBJECT) {
+        GLuint prev_fbo = 0;
+        ngli_glGetIntegerv(gl, GL_DRAW_FRAMEBUFFER_BINDING, (GLint *)&prev_fbo);
+
+        const GLenum target = GL_DRAW_FRAMEBUFFER;
+        ngli_glBindFramebuffer(gl, target, fbo);
+
+        const int es = config->backend == NGL_BACKEND_OPENGLES;
+        const GLenum default_color_attachment = es ? GL_BACK : GL_FRONT_LEFT;
+        const GLenum color_attachment   = fbo ? GL_COLOR_ATTACHMENT0  : default_color_attachment;
+        const GLenum depth_attachment   = fbo ? GL_DEPTH_ATTACHMENT   : GL_DEPTH;
+        const GLenum stencil_attachment = fbo ? GL_STENCIL_ATTACHMENT : GL_STENCIL;
+        struct {
+            const char *buffer_name;
+            const char *component_name;
+            GLenum attachment;
+            const GLenum property;
+        } const components[] = {
+            {"color",   "red",     color_attachment,   GL_FRAMEBUFFER_ATTACHMENT_RED_SIZE},
+            {"color",   "green",   color_attachment,   GL_FRAMEBUFFER_ATTACHMENT_GREEN_SIZE},
+            {"color",   "blue",    color_attachment,   GL_FRAMEBUFFER_ATTACHMENT_BLUE_SIZE},
+            {"color",   "alpha",   color_attachment,   GL_FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE},
+            {"depth",   "depth",   depth_attachment,   GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE},
+            {"stencil", "stencil", stencil_attachment, GL_FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE},
+        };
+        for (int i = 0; i < NGLI_ARRAY_NB(components); i++) {
+            GLint type = GL_NONE;
+            ngli_glGetFramebufferAttachmentParameteriv(gl, target,
+                components[i].attachment, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, &type);
+            if (!type) {
+                LOG(ERROR, "wrapped framebuffer have no %s buffer attached to it", components[i].buffer_name);
+                ngli_glBindFramebuffer(gl, target, prev_fbo);
+                return NGL_ERROR_GRAPHICS_UNSUPPORTED;
+            }
+
+            GLint size;
+            ngli_glGetFramebufferAttachmentParameteriv(gl, target,
+                components[i].attachment, components[i].property, &size);
+            if (!size) {
+                LOG(ERROR, "wrapped framebuffer have no %s component", components[i].component_name);
+                ngli_glBindFramebuffer(gl, target, prev_fbo);
+                return NGL_ERROR_GRAPHICS_UNSUPPORTED;
+            }
+        }
+
+        ngli_glBindFramebuffer(gl, target, prev_fbo);
+    }
+
+    ngli_rendertarget_freep(&s_priv->default_rt);
+    ngli_rendertarget_freep(&s_priv->default_rt_load);
+
+    int ret;
+    if ((ret = create_rendertarget(s, NULL, NULL, NULL,
+                                   NGLI_LOAD_OP_CLEAR, &s_priv->default_rt)) < 0 ||
+        (ret = create_rendertarget(s, NULL, NULL, NULL,
+                                   NGLI_LOAD_OP_LOAD, &s_priv->default_rt_load)) < 0)
+        return ret;
+
+    wrapped_config->framebuffer = fbo;
+
+    return 0;
+}
 
 static void gl_reset_state(struct gpu_ctx *s)
 {
@@ -689,7 +777,7 @@ static int gl_end_draw(struct gpu_ctx *s, double t)
 
     int ret = ngli_glcontext_check_gl_error(gl, __func__);
 
-    if (!config->offscreen) {
+    if (!config->wrapped && !config->offscreen) {
         if (config->set_surface_pts)
             ngli_glcontext_set_surface_pts(gl, t);
 
