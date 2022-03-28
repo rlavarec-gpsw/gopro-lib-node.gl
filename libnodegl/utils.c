@@ -256,6 +256,23 @@ int ngli_config_copy(struct ngl_config *dst, const struct ngl_config *src)
             return NGL_ERROR_MEMORY;
     }
 
+    if (src->backend_config) {
+        if (src->backend == NGL_BACKEND_OPENGL ||
+            src->backend == NGL_BACKEND_OPENGLES) {
+            const size_t size = sizeof(struct ngl_config_gl);
+            tmp.backend_config = ngli_calloc(1, size);
+            if (!tmp.backend_config) {
+                ngli_freep(&tmp.hud_export_filename);
+                return NGL_ERROR_MEMORY;
+            }
+            memcpy(tmp.backend_config, src->backend_config, size);
+        } else {
+            LOG(ERROR, "wrapped configuration is not supported by the backend");
+            ngli_freep(&tmp.hud_export_filename);
+            return NGL_ERROR_UNSUPPORTED;
+        }
+    }
+
     *dst = tmp;
 
     return 0;
@@ -263,6 +280,7 @@ int ngli_config_copy(struct ngl_config *dst, const struct ngl_config *src)
 
 void ngli_config_reset(struct ngl_config *config)
 {
+    ngli_freep(&config->backend_config);
     ngli_freep(&config->hud_export_filename);
     memset(config, 0, sizeof(*config));
 }

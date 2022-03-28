@@ -54,32 +54,51 @@ enum {
 
 #ifdef HAVE_GLPLATFORM_EGL
 extern const struct glcontext_class ngli_glcontext_egl_class;
+extern const struct glcontext_class ngli_glcontext_egl_wrapped_class;
 #endif
 
 #ifdef HAVE_GLPLATFORM_NSGL
 extern const struct glcontext_class ngli_glcontext_nsgl_class;
+extern const struct glcontext_class ngli_glcontext_nsgl_wrapped_class;
 #endif
 
 #ifdef HAVE_GLPLATFORM_EAGL
 extern const struct glcontext_class ngli_glcontext_eagl_class;
+extern const struct glcontext_class ngli_glcontext_eagl_wrapped_class;
 #endif
 
 #ifdef HAVE_GLPLATFORM_WGL
 extern const struct glcontext_class ngli_glcontext_wgl_class;
+extern const struct glcontext_class ngli_glcontext_wgl_wrapped_class;
 #endif
 
-static const struct glcontext_class *glcontext_class_map[] = {
+static const struct {
+    const struct glcontext_class *cls;
+    const struct glcontext_class *wrapped_cls;
+} glcontext_class_map[] = {
 #ifdef HAVE_GLPLATFORM_EGL
-    [GLPLATFORM_EGL] = &ngli_glcontext_egl_class,
+    [GLPLATFORM_EGL] = {
+        .cls = &ngli_glcontext_egl_class,
+        .wrapped_cls = &ngli_glcontext_egl_wrapped_class,
+    },
 #endif
 #ifdef HAVE_GLPLATFORM_NSGL
-    [GLPLATFORM_NSGL] = &ngli_glcontext_nsgl_class,
+    [GLPLATFORM_NSGL] = {
+        .cls = &ngli_glcontext_nsgl_class,
+        .wrapped_cls = &ngli_glcontext_nsgl_wrapped_class,
+    },
 #endif
 #ifdef HAVE_GLPLATFORM_EAGL
-    [GLPLATFORM_EAGL] = &ngli_glcontext_eagl_class,
+    [GLPLATFORM_EAGL] = {
+        .cls = &ngli_glcontext_eagl_class,
+        .wrapped_cls = &ngli_glcontext_eagl_wrapped_class,
+    },
 #endif
 #ifdef HAVE_GLPLATFORM_WGL
-    [GLPLATFORM_WGL] = &ngli_glcontext_wgl_class,
+    [GLPLATFORM_WGL] = {
+        .cls = &ngli_glcontext_wgl_class,
+        .wrapped_cls = &ngli_glcontext_wgl_wrapped_class,
+    },
 #endif
 };
 
@@ -429,7 +448,11 @@ struct glcontext *ngli_glcontext_new(const struct glcontext_params *params)
     struct glcontext *glcontext = ngli_calloc(1, sizeof(*glcontext));
     if (!glcontext)
         return NULL;
-    glcontext->cls = glcontext_class_map[glplatform];
+    if (params->wrapped) {
+        glcontext->cls = glcontext_class_map[glplatform].wrapped_cls;
+    } else {
+        glcontext->cls = glcontext_class_map[glplatform].cls;
+    }
 
     if (glcontext->cls->priv_size) {
         glcontext->priv_data = ngli_calloc(1, glcontext->cls->priv_size);
@@ -441,6 +464,7 @@ struct glcontext *ngli_glcontext_new(const struct glcontext_params *params)
 
     glcontext->platform = params->platform;
     glcontext->backend = params->backend;
+    glcontext->wrapped = params->wrapped;
     glcontext->offscreen = params->offscreen;
     glcontext->width = params->width;
     glcontext->height = params->height;
@@ -464,13 +488,13 @@ struct glcontext *ngli_glcontext_new(const struct glcontext_params *params)
         (glcontext->features & NGLI_FEATURE_GL_TEXTURE_CUBE_MAP))
         ngli_glEnable(glcontext, GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
-    if (!glcontext->offscreen) {
+    if (!glcontext->wrapped && !glcontext->offscreen) {
         int ret = ngli_glcontext_resize(glcontext, glcontext->width, glcontext->height);
         if (ret < 0)
             goto fail;
     }
 
-    if (params->swap_interval >= 0)
+    if (!params->wrapped && params->swap_interval >= 0)
         ngli_glcontext_set_swap_interval(glcontext, params->swap_interval);
 
     return glcontext;
@@ -511,6 +535,11 @@ int ngli_glcontext_resize(struct glcontext *glcontext, int width, int height)
 {
     if (glcontext->offscreen) {
         LOG(ERROR, "offscreen rendering does not support resize operation");
+        return NGL_ERROR_INVALID_USAGE;
+    }
+
+    if (glcontext->wrapped) {
+        LOG(ERROR, "wrapped context does not support resize operation");
         return NGL_ERROR_INVALID_USAGE;
     }
 
