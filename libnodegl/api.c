@@ -241,7 +241,7 @@ static int cmd_set_capture_buffer(struct ngl_ctx *s, void *capture_buffer)
     return 0;
 }
 
-static int cmd_set_scene(struct ngl_ctx *s, void *arg)
+static int set_scene(struct ngl_ctx *s, struct ngl_node *scene)
 {
     ngli_gpu_ctx_wait_idle(s->gpu_ctx);
     scene_reset(s, UNREF_SCENE);
@@ -251,7 +251,6 @@ static int cmd_set_scene(struct ngl_ctx *s, void *arg)
     s->rnode_pos->graphicstate = NGLI_GRAPHICSTATE_DEFAULTS;
     s->rnode_pos->rendertarget_desc = *ngli_gpu_ctx_get_default_rendertarget_desc(s->gpu_ctx);
 
-    struct ngl_node *scene = arg;
     if (scene) {
         int ret = ngli_node_attach_ctx(scene, s);
         if (ret < 0) {
@@ -271,6 +270,17 @@ static int cmd_set_scene(struct ngl_ctx *s, void *arg)
         if (ret < 0)
             return ret;
     }
+
+    return 0;
+}
+
+static int cmd_set_scene(struct ngl_ctx *s, void *arg)
+{
+    struct ngl_node *scene = arg;
+
+    int ret = set_scene(s, scene);
+    if (ret < 0)
+        return ret;
 
     return 0;
 }
