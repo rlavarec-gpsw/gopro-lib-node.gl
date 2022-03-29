@@ -317,10 +317,8 @@ static int cmd_prepare_draw(struct ngl_ctx *s, void *arg)
     return 0;
 }
 
-static int cmd_draw(struct ngl_ctx *s, void *arg)
+static int draw(struct ngl_ctx *s, double t)
 {
-    const double t = *(double *)arg;
-
     int ret = prepare_draw(s, t);
     if (ret < 0)
         return ret;
@@ -368,6 +366,17 @@ static int cmd_draw(struct ngl_ctx *s, void *arg)
     }
 
     return ngli_gpu_ctx_end_draw(s->gpu_ctx, t);
+}
+
+static int cmd_draw(struct ngl_ctx *s, void *arg)
+{
+    const double t = *(double *)arg;
+
+    int ret = draw(s, t);
+    if (ret < 0)
+        return ret;
+
+    return 0;
 }
 
 #define CURRENT_THREAD   0
