@@ -138,6 +138,14 @@ void ngli_gpu_ctx_reset_state(struct gpu_ctx *s)
         s->cls->reset_state(s);
 }
 
+int ngli_gpu_ctx_make_current(struct gpu_ctx *s, int current)
+{
+    if (s->cls->make_current)
+        return s->cls->make_current(s, current);
+
+    return 0;
+}
+
 void ngli_gpu_ctx_freep(struct gpu_ctx **sp)
 {
     if (!*sp)
