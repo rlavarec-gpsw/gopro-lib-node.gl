@@ -48,12 +48,6 @@
 #include "vaapi_ctx.h"
 #endif
 
-#if defined(TARGET_DARWIN) || defined(TARGET_IPHONE)
-#if defined(BACKEND_GL)
-#include "backends/gl/gpu_ctx_gl.h"
-#endif
-#endif
-
 #if defined(TARGET_IPHONE) || defined(TARGET_ANDROID)
 # define DEFAULT_BACKEND NGL_BACKEND_OPENGLES
 #else
@@ -434,16 +428,8 @@ static void *worker_thread(void *arg)
 #if defined(TARGET_IPHONE) || defined(TARGET_DARWIN)
 static int cmd_make_current(struct ngl_ctx *s, void *arg)
 {
-#if defined(BACKEND_GL)
-    const struct ngl_config *config = &s->config;
-    if (config->backend == NGL_BACKEND_OPENGL ||
-        config->backend == NGL_BACKEND_OPENGLES) {
-        const int current = *(int *)arg;
-        struct gpu_ctx_gl *gpu_ctx_gl = (struct gpu_ctx_gl *)s->gpu_ctx;
-        ngli_glcontext_make_current(gpu_ctx_gl->glcontext, current);
-    }
-#endif
-    return 0;
+    const int current = *(int *)arg;
+    return ngli_gpu_ctx_make_current(s->gpu_ctx, current);
 }
 
 #define MAKE_CURRENT &(int[]){1}
