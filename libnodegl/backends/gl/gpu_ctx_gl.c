@@ -202,7 +202,7 @@ static int create_rendertarget(struct gpu_ctx *s,
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
     struct glcontext *gl = s_priv->glcontext;
     const struct ngl_config *config = &s->config;
-    const struct ngl_wrapped_config_gl *wrapped_config = config->wrapped_config;
+    const struct ngl_config_gl *config_gl = config->wrapped_config;
 
     struct rendertarget *rendertarget = ngli_rendertarget_create(s);
     if (!rendertarget)
@@ -233,7 +233,7 @@ static int create_rendertarget(struct gpu_ctx *s,
     if (color) {
         ret = ngli_rendertarget_init(rendertarget, &params);
     } else {
-        const GLuint fbo_id = config->wrapped ? wrapped_config->framebuffer
+        const GLuint fbo_id = config->wrapped ? config_gl->framebuffer
                                               : ngli_glcontext_get_default_framebuffer(gl);
         ret = ngli_rendertarget_gl_wrap(rendertarget, &params, fbo_id);
     }
@@ -451,7 +451,7 @@ static int gl_init(struct gpu_ctx *s)
 {
     int ret;
     struct ngl_config *config = &s->config;
-    const struct ngl_wrapped_config_gl *wrapped_config = config->wrapped_config;
+    const struct ngl_config_gl *config_gl = config->wrapped_config;
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
 
 #if DEBUG_GPU_CAPTURE
@@ -504,7 +504,7 @@ static int gl_init(struct gpu_ctx *s)
 #endif
 
     if (gl->wrapped) {
-        ret = ngli_gpu_ctx_gl_wrap_framebuffer(s, wrapped_config->framebuffer);
+        ret = ngli_gpu_ctx_gl_wrap_framebuffer(s, config_gl->framebuffer);
     } else if (gl->offscreen) {
         ret = offscreen_rendertarget_init(s);
     } else {
@@ -652,7 +652,7 @@ static int gl_set_capture_buffer(struct gpu_ctx *s, void *capture_buffer)
 int ngli_gpu_ctx_gl_wrap_framebuffer(struct gpu_ctx *s, GLuint fbo)
 {
     struct ngl_config *config = &s->config;
-    struct ngl_wrapped_config_gl *wrapped_config = config->wrapped_config;
+    struct ngl_config_gl *config_gl = config->wrapped_config;
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
     struct glcontext *gl = s_priv->glcontext;
 
@@ -721,7 +721,7 @@ int ngli_gpu_ctx_gl_wrap_framebuffer(struct gpu_ctx *s, GLuint fbo)
                                    NGLI_LOAD_OP_LOAD, &s_priv->default_rt_load)) < 0)
         return ret;
 
-    wrapped_config->framebuffer = fbo;
+    config_gl->framebuffer = fbo;
 
     return 0;
 }

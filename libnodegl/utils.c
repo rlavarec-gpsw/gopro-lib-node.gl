@@ -259,7 +259,7 @@ int ngli_config_copy(struct ngl_config *dst, const struct ngl_config *src)
     if (src->wrapped_config) {
         if (src->backend == NGL_BACKEND_OPENGL ||
             src->backend == NGL_BACKEND_OPENGLES) {
-            const size_t size = sizeof(struct ngl_wrapped_config_gl);
+            const size_t size = sizeof(struct ngl_config_gl);
             tmp.wrapped_config = ngli_calloc(1, size);
             if (!tmp.wrapped_config) {
                 ngli_freep(&tmp.hud_export_filename);

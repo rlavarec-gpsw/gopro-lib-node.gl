@@ -109,7 +109,7 @@ cdef extern from "nodegl.h":
 
     cdef struct ngl_ctx
 
-    cdef struct ngl_wrapped_config_gl:
+    cdef struct ngl_config_gl:
         uint32_t framebuffer
 
     cdef struct ngl_config:
@@ -518,15 +518,15 @@ def get_livectls(_Node scene):
     return livectl_dict
 
 
-cdef class WrappedConfigGL:
-    cdef ngl_wrapped_config_gl wrapped_config
+cdef class ConfigGL:
+    cdef ngl_config_gl config
 
     def __cinit__(self, framebuffer=0):
-        memset(&self.wrapped_config, 0, sizeof(self.wrapped_config))
-        self.wrapped_config.framebuffer = framebuffer
+        memset(&self.config, 0, sizeof(self.config))
+        self.config.framebuffer = framebuffer
 
     def cptr(self):
-        return <uintptr_t>&self.wrapped_config
+        return <uintptr_t>&self.config
 
 
 cdef class Context:

@@ -500,10 +500,10 @@ enum {
 };
 
 /**
- * Backend specific wrapped configuration
+ * Backend specific configuration
  */
 
-struct ngl_wrapped_config_gl {
+struct ngl_config_gl {
     /*
      * Wrap an external OpenGL framebuffer and use it for rendering. The
      * wrapped framebuffer must have a color attachment composed of 4 color

@@ -260,7 +260,7 @@ static int cmd_gl_wrap_framebuffer(struct ngl_ctx *s, void *framebuffer)
 {
 #if defined(BACKEND_GL)
     struct ngl_config *config = &s->config;
-    struct ngl_wrapped_config_gl *wrapped_config = config->wrapped_config;
+    struct ngl_config_gl *config_gl = config->wrapped_config;
 
     GLuint fbo = *(GLuint *)framebuffer;
     int ret = ngli_gpu_ctx_gl_wrap_framebuffer(s->gpu_ctx, fbo);
@@ -269,7 +269,7 @@ static int cmd_gl_wrap_framebuffer(struct ngl_ctx *s, void *framebuffer)
         return ret;
     }
 
-    wrapped_config->framebuffer = fbo;
+    config_gl->framebuffer = fbo;
 
     return 0;
 #else
