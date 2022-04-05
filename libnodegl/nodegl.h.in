@@ -504,6 +504,8 @@ enum {
  */
 
 struct ngl_config_gl {
+    /* Whether the OpenGL context is wrapped or not */
+    int wrapped;
     /*
      * Wrap an external OpenGL framebuffer and use it for rendering. The
      * wrapped framebuffer must have a color attachment composed of 4 color
@@ -535,9 +537,7 @@ struct ngl_config {
     int offscreen; /* Whether the rendering should happen offscreen or not.
                       This field is ignored if the context is wrapped. */
 
-    int wrapped; /* Whether the context is wrapped or not */
-
-    void *wrapped_config; /* Backend specific wrapped configuration */
+    void *backend_config; /* Backend specific configuration */
 
     int width;     /* Graphic context width, mandatory for offscreen rendering */
 

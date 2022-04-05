@@ -202,7 +202,7 @@ static int create_rendertarget(struct gpu_ctx *s,
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
     struct glcontext *gl = s_priv->glcontext;
     const struct ngl_config *config = &s->config;
-    const struct ngl_config_gl *config_gl = config->wrapped_config;
+    const struct ngl_config_gl *config_gl = config->backend_config;
 
     struct rendertarget *rendertarget = ngli_rendertarget_create(s);
     if (!rendertarget)
@@ -233,8 +233,8 @@ static int create_rendertarget(struct gpu_ctx *s,
     if (color) {
         ret = ngli_rendertarget_init(rendertarget, &params);
     } else {
-        const GLuint fbo_id = config->wrapped ? config_gl->framebuffer
-                                              : ngli_glcontext_get_default_framebuffer(gl);
+        const int wrapped = config_gl ? config_gl->wrapped : 0;
+        const GLuint fbo_id = wrapped ? config_gl->framebuffer : ngli_glcontext_get_default_framebuffer(gl);
         ret = ngli_rendertarget_gl_wrap(rendertarget, &params, fbo_id);
     }
     if (ret < 0) {
@@ -451,7 +451,7 @@ static int gl_init(struct gpu_ctx *s)
 {
     int ret;
     struct ngl_config *config = &s->config;
-    const struct ngl_config_gl *config_gl = config->wrapped_config;
+    const struct ngl_config_gl *config_gl = config->backend_config;
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
 
 #if DEBUG_GPU_CAPTURE
@@ -472,13 +472,14 @@ static int gl_init(struct gpu_ctx *s)
     }
 #endif
 
+    const int wrapped = config_gl ? config_gl->wrapped : 0;
     const struct glcontext_params params = {
         .platform      = config->platform,
         .backend       = config->backend,
         .display       = config->display,
         .window        = config->window,
         .swap_interval = config->swap_interval,
-        .wrapped       = config->wrapped,
+        .wrapped       = wrapped,
         .offscreen     = config->offscreen,
         .width         = config->width,
         .height        = config->height,
@@ -550,8 +551,10 @@ static int gl_resize(struct gpu_ctx *s, int width, int height, const int *viewpo
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
     struct glcontext *gl = s_priv->glcontext;
     struct ngl_config *config = &s->config;
+    struct ngl_config_gl *config_gl = config->backend_config;
+    const int wrapped = config_gl ? config_gl->wrapped : 0;
 
-    if (config->wrapped) {
+    if (wrapped) {
         config->width = width;
         config->height = height;
     } else {
@@ -567,7 +570,7 @@ static int gl_resize(struct gpu_ctx *s, int width, int height, const int *viewpo
     s_priv->default_rt_load->width = config->width;
     s_priv->default_rt_load->height = config->height;
 
-    if (!config->wrapped) {
+    if (!wrapped) {
         /*
         * The default framebuffer id can change after a resize operation on EAGL,
         * thus we need to update the rendertargets wrapping the default framebuffer
@@ -652,7 +655,7 @@ static int gl_set_capture_buffer(struct gpu_ctx *s, void *capture_buffer)
 int ngli_gpu_ctx_gl_wrap_framebuffer(struct gpu_ctx *s, GLuint fbo)
 {
     struct ngl_config *config = &s->config;
-    struct ngl_config_gl *config_gl = config->wrapped_config;
+    struct ngl_config_gl *config_gl = config->backend_config;
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
     struct glcontext *gl = s_priv->glcontext;
 
@@ -771,13 +774,15 @@ static int gl_end_draw(struct gpu_ctx *s, double t)
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
     struct glcontext *gl = s_priv->glcontext;
     const struct ngl_config *config = &s->config;
+    const struct ngl_config_gl *config_gl = config->backend_config;
+    const int wrapped = config_gl ? config_gl->wrapped : 0;
 
     if (s_priv->capture_func && config->capture_buffer)
         s_priv->capture_func(s);
 
     int ret = ngli_glcontext_check_gl_error(gl, __func__);
 
-    if (!config->wrapped && !config->offscreen) {
+    if (!wrapped && !config->offscreen) {
         if (config->set_surface_pts)
             ngli_glcontext_set_surface_pts(gl, t);
 

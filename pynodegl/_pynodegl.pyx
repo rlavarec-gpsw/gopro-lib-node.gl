@@ -119,8 +119,7 @@ cdef extern from "nodegl.h":
         uintptr_t window
         int  swap_interval
         int  offscreen
-        int  wrapped
-        void *wrapped_config
+        void *backend_config
         int  width
         int  height
         int  viewport[4]
@@ -547,12 +546,11 @@ cdef class Context:
         config.window = kwargs.get('window', 0)
         config.swap_interval = kwargs.get('swap_interval', -1)
         config.offscreen = kwargs.get('offscreen', 0)
-        config.wrapped = kwargs.get('wrapped', 0)
-        wrapped_config = kwargs.get('wrapped_config')
+        backend_config = kwargs.get('backend_config')
         cdef uintptr_t ptr
-        if wrapped_config is not None:
-            ptr = wrapped_config.cptr()
-            config.wrapped_config = <void *>ptr
+        if backend_config is not None:
+            ptr = backend_config.cptr()
+            config.backend_config = <void *>ptr
         config.width = kwargs.get('width', 0)
         config.height = kwargs.get('height', 0)
         viewport = kwargs.get('viewport', (0, 0, 0, 0))

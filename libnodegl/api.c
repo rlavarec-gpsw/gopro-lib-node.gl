@@ -260,7 +260,7 @@ static int cmd_gl_wrap_framebuffer(struct ngl_ctx *s, void *framebuffer)
 {
 #if defined(BACKEND_GL)
     struct ngl_config *config = &s->config;
-    struct ngl_config_gl *config_gl = config->wrapped_config;
+    struct ngl_config_gl *config_gl = config->backend_config;
 
     GLuint fbo = *(GLuint *)framebuffer;
     int ret = ngli_gpu_ctx_gl_wrap_framebuffer(s->gpu_ctx, fbo);
@@ -754,13 +754,19 @@ int ngl_configure(struct ngl_ctx *s, struct ngl_config *config)
         return NGL_ERROR_INVALID_ARG;
     }
 
-    if (config->wrapped) {
+    if (config->backend == NGL_BACKEND_AUTO && config->backend_config) {
+        LOG(ERROR, "backend specific configuration is not allowed "
+                   "while automatic backend selection is used");
+        return NGL_ERROR_INVALID_USAGE;
+    }
+
+    if (config->backend_config) {
         if (config->backend == NGL_BACKEND_AUTO) {
             LOG(ERROR, "automatic backend selection cannot be used with wrapped mode");
             return NGL_ERROR_INVALID_USAGE;
         }
 
-        if (!config->wrapped_config) {
+        if (!config->backend_config) {
             LOG(ERROR, "wrapped configuration cannot be NULL if wrapped mode is enabled");
             return NGL_ERROR_INVALID_USAGE;
         }
@@ -785,8 +791,7 @@ int ngl_configure(struct ngl_ctx *s, struct ngl_config *config)
     }
 
     if (s->configured) {
-        const int thread = s->config.wrapped ? CURRENT_THREAD : RENDERING_THREAD;
-        dispatch_cmd(s, thread, cmd_reset, &(int[]){KEEP_SCENE});
+        dispatch_cmd(s, s->rendering_thread, cmd_reset, &(int[]){KEEP_SCENE});
         s->configured = 0;
     }
 

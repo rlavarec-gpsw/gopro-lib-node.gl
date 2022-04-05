@@ -66,6 +66,7 @@ typedef int (*cmd_func_type)(struct ngl_ctx *s, void *arg);
 struct ngl_ctx {
     /* Controller-only fields */
     int configured;
+    int rendering_thread;
     pthread_t worker_tid;
 
     /* Worker-only fields */
