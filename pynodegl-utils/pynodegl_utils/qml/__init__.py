@@ -25,9 +25,13 @@ import platform
 
 from pynodegl_utils.qml import ngl_widget  # noqa: register NodeGLWidget as a QML element
 from PySide6.QtCore import QObject, QUrl
-from PySide6.QtGui import QGuiApplication, QSurfaceFormat
+from PySide6.QtGui import QSurfaceFormat
 from PySide6.QtQml import QQmlApplicationEngine, QQmlComponent
 from PySide6.QtQuick import QQuickWindow, QSGRendererInterface
+
+# We use a QApplication instead of QGuiApplication in order to access widgets
+# such as the color dialog, which is not available in QML
+from PySide6.QtWidgets import QApplication
 
 
 def create_app_engine(argv, qml_file):
@@ -47,7 +51,7 @@ def create_app_engine(argv, qml_file):
         surface_format.setAlphaBufferSize(8)
         QSurfaceFormat.setDefaultFormat(surface_format)
 
-    app = QGuiApplication(argv)
+    app = QApplication(argv)
     QQuickWindow.setGraphicsApi(QSGRendererInterface.OpenGL)
     engine = QQmlApplicationEngine(qml_file)
     engine.quit.connect(app.quit)
