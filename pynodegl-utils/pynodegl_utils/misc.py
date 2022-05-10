@@ -29,7 +29,9 @@ import random
 import subprocess
 import tempfile
 from collections import namedtuple
+from typing import Optional
 from functools import wraps
+import dataclasses
 
 import pynodegl as ngl
 
@@ -157,25 +159,19 @@ _MEDIA_PATHS = [
 ]
 
 
+@dataclasses.dataclass
 class SceneCfg:
+    aspect_ratio: tuple[int, int] = (16, 9)
+    duration: float = 30.0
+    framerate: tuple[int, int] = (60, 1)
+    backend: str = "opengl"
+    samples: int = 0
+    system: str = platform.system()
+    files: list[str] = dataclasses.field(default_factory=list)
+    medias: Optional[list[Media]] = None
+    clear_color: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
 
-    _DEFAULT_FIELDS = {
-        "aspect_ratio": (16, 9),
-        "duration": 30.0,
-        "framerate": (60, 1),
-        "backend": "opengl",
-        "samples": 0,
-        "system": platform.system(),
-        "files": [],
-        "medias": None,
-        "clear_color": (0.0, 0.0, 0.0, 1.0),
-    }
-
-    def __init__(self, **kwargs):
-        for field, def_val in self._DEFAULT_FIELDS.items():
-            val = kwargs.get(field, def_val)
-            setattr(self, field, val)
-
+    def __post_init__(self):
         if self.medias is None:
             self.medias = [Media(m) for m in _MEDIA_PATHS]
 
@@ -187,10 +183,7 @@ class SceneCfg:
         return self.aspect_ratio[0] / float(self.aspect_ratio[1])
 
     def as_dict(self):
-        odict = {}
-        for field in self._DEFAULT_FIELDS.keys():
-            odict[field] = getattr(self, field)
-        return odict
+        return dataclasses.asdict(self)
 
     def _get_shader(self, name, stype, module):
         if module is None:
