@@ -391,10 +391,10 @@ cdef class _Node:
         return ret
 
 
-_ANIM_EVALUATE, _ANIM_DERIVATE, _ANIM_SOLVE = range(3)
+ANIM_EVALUATE, ANIM_DERIVATE, ANIM_SOLVE = range(3)
 
 
-cdef _animate(name, src, args, offsets, mode):
+def animate(const char *name, src, args, offsets, mode):
     cdef double c_args[2]
     cdef double *c_args_param = NULL
     cdef int nb_args = 0
@@ -415,15 +415,15 @@ cdef _animate(name, src, args, offsets, mode):
 
     cdef double dst
     cdef int ret
-    if mode == _ANIM_EVALUATE:
+    if mode == ANIM_EVALUATE:
         ret = ngl_easing_evaluate(name, c_args_param, nb_args, c_offsets_param, src, &dst)
         if ret < 0:
             raise Exception(f'Error evaluating {name}')
-    elif mode == _ANIM_DERIVATE:
+    elif mode == ANIM_DERIVATE:
         ret = ngl_easing_derivate(name, c_args_param, nb_args, c_offsets_param, src, &dst)
         if ret < 0:
             raise Exception(f'Error derivating {name}')
-    elif mode == _ANIM_SOLVE:
+    elif mode == ANIM_SOLVE:
         ret = ngl_easing_solve(name, c_args_param, nb_args, c_offsets_param, src, &dst)
         if ret < 0:
             raise Exception(f'Error solving {name}')
@@ -433,34 +433,22 @@ cdef _animate(name, src, args, offsets, mode):
     return dst
 
 
-def easing_evaluate(name, t, args=None, offsets=None):
-    return _animate(name, t, args, offsets, _ANIM_EVALUATE)
+PROBE_MODE_FULL = 0
+PROBE_MODE_NO_GRAPHICS = 1
 
 
-def easing_derivate(name, t, args=None, offsets=None):
-    return _animate(name, t, args, offsets, _ANIM_DERIVATE)
-
-
-def easing_solve(name, v, args=None, offsets=None):
-    return _animate(name, v, args, offsets, _ANIM_SOLVE)
-
-
-_PROBE_MODE_FULL = 0
-_PROBE_MODE_NO_GRAPHICS = 1
-
-
-def _probe_backends(mode, **kwargs):
+def probe_backends(mode, py_config):
     cdef ngl_config config
     cdef ngl_config *configp = NULL
-    if kwargs:
+    if py_config is not None:
         configp = &config
-        Context._init_ngl_config_from_dict(configp, kwargs)
+        Context._init_ngl_config(configp, py_config)
     cdef int nb_backends = 0
     cdef ngl_backend *backend = NULL
     cdef ngl_backend *backends = NULL
     cdef ngl_cap *cap = NULL
     cdef int ret
-    if mode == _PROBE_MODE_NO_GRAPHICS:
+    if mode == PROBE_MODE_NO_GRAPHICS:
         ret = ngl_backends_get(configp, &nb_backends, &backends)
     else:
         ret = ngl_backends_probe(configp, &nb_backends, &backends)
@@ -486,14 +474,6 @@ def _probe_backends(mode, **kwargs):
         ))
     ngl_backends_freep(&backends)
     return backend_set
-
-
-def probe_backends(**kwargs):
-    return _probe_backends(_PROBE_MODE_FULL, **kwargs)
-
-
-def get_backends(**kwargs):
-    return _probe_backends(_PROBE_MODE_NO_GRAPHICS, **kwargs)
 
 
 LIVECTL_INFO = {}  # Filled dynamically by the Python side
@@ -549,7 +529,7 @@ def get_livectls(_Node scene):
 cdef class ConfigGL:
     cdef ngl_config_gl config
 
-    def __cinit__(self, external=False, external_framebuffer=0):
+    def __cinit__(self, external, external_framebuffer):
         memset(&self.config, 0, sizeof(self.config))
         self.config.external = external
         self.config.external_framebuffer = external_framebuffer
@@ -568,49 +548,43 @@ cdef class Context:
             raise MemoryError()
 
     @staticmethod
-    cdef void _init_ngl_config_from_dict(ngl_config *config, kwargs):
+    cdef void _init_ngl_config(ngl_config *config, py_config):
         memset(config, 0, sizeof(ngl_config))
-        config.platform = kwargs.get('platform', PLATFORM_AUTO)
-        config.backend = kwargs.get('backend', BACKEND_AUTO)
-        backend_config = kwargs.get('backend_config')
+        config.platform = py_config.platform.value
+        config.backend = py_config.backend.value
         cdef uintptr_t ptr
-        if backend_config is not None:
-            ptr = backend_config.cptr()
+        if py_config.backend_config is not None:
+            ptr = py_config.backend_config.cptr()
             config.backend_config = <void *>ptr
-        config.display = kwargs.get('display', 0)
-        config.window = kwargs.get('window', 0)
-        config.swap_interval = kwargs.get('swap_interval', -1)
-        config.offscreen = kwargs.get('offscreen', 0)
-        config.width = kwargs.get('width', 0)
-        config.height = kwargs.get('height', 0)
-        viewport = kwargs.get('viewport', (0, 0, 0, 0))
+        config.display = py_config.display
+        config.window = py_config.window
+        config.swap_interval = py_config.swap_interval
+        config.offscreen = py_config.offscreen
+        config.width = py_config.width
+        config.height = py_config.height
         for i in range(4):
-            config.viewport[i] = viewport[i]
-        config.samples = kwargs.get('samples', 0)
-        config.set_surface_pts = kwargs.get('set_surface_pts', 0)
-        clear_color = kwargs.get('clear_color', (0.0, 0.0, 0.0, 1.0))
+            config.viewport[i] = py_config.viewport[i]
+        config.samples = py_config.samples
+        config.set_surface_pts = py_config.set_surface_pts
         for i in range(4):
-            config.clear_color[i] = clear_color[i]
-        capture_buffer = kwargs.get('capture_buffer')
-        if capture_buffer is not None:
-            config.capture_buffer = <uint8_t *>capture_buffer
-        config.hud = kwargs.get('hud', 0)
-        config.hud_measure_window = kwargs.get('hud_measure_window', 0)
-        hud_refresh_rate = kwargs.get('hud_refresh_rate', (0, 0))
-        config.hud_refresh_rate[0] = hud_refresh_rate[0]
-        config.hud_refresh_rate[1] = hud_refresh_rate[1]
-        hud_export_filename = kwargs.get('hud_export_filename')
-        if hud_export_filename is not None:
-            config.hud_export_filename = hud_export_filename
-        config.hud_scale = kwargs.get('hud_scale', 0)
+            config.clear_color[i] = py_config.clear_color[i]
+        if py_config.capture_buffer is not None:
+            config.capture_buffer = <uint8_t *>py_config.capture_buffer
+        config.hud = py_config.hud
+        config.hud_measure_window = py_config.hud_measure_window
+        config.hud_refresh_rate[0] = py_config.hud_refresh_rate[0]
+        config.hud_refresh_rate[1] = py_config.hud_refresh_rate[1]
+        if py_config.hud_export_filename is not None:
+            config.hud_export_filename = py_config.hud_export_filename
+        config.hud_scale = py_config.hud_scale
 
-    def configure(self, **kwargs):
-        self.capture_buffer = kwargs.get('capture_buffer')
+    def configure(self, py_config):
+        self.capture_buffer = py_config.capture_buffer
         cdef ngl_config config
-        Context._init_ngl_config_from_dict(&config, kwargs)
+        Context._init_ngl_config(&config, py_config)
         return ngl_configure(self.ctx, &config)
 
-    def resize(self, width, height, viewport=None):
+    def resize(self, width, height, viewport):
         if viewport is None:
             return ngl_resize(self.ctx, width, height, NULL)
         cdef int c_viewport[4]

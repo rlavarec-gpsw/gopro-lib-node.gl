@@ -22,7 +22,9 @@
 import array
 import os
 import platform
-from typing import Mapping, Optional, Sequence, Tuple, Union
+from dataclasses import dataclass
+from enum import IntEnum
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 if platform.system() == "Windows":
     ngl_dll_dirs = os.getenv("NGL_DLL_DIRS")
@@ -35,62 +37,6 @@ if platform.system() == "Windows":
 
 import _pynodegl as _ngl
 from _pynodegl import _Node
-
-# fmt: off
-ConfigGL          = _ngl.ConfigGL
-Context           = _ngl.Context
-easing_derivate   = _ngl.easing_derivate
-easing_evaluate   = _ngl.easing_evaluate
-easing_solve      = _ngl.easing_solve
-get_backends      = _ngl.get_backends
-get_livectls      = _ngl.get_livectls
-log_set_min_level = _ngl.log_set_min_level
-probe_backends    = _ngl.probe_backends
-
-PLATFORM_AUTO    = _ngl.PLATFORM_AUTO
-PLATFORM_XLIB    = _ngl.PLATFORM_XLIB
-PLATFORM_ANDROID = _ngl.PLATFORM_ANDROID
-PLATFORM_MACOS   = _ngl.PLATFORM_MACOS
-PLATFORM_IOS     = _ngl.PLATFORM_IOS
-PLATFORM_WINDOWS = _ngl.PLATFORM_WINDOWS
-PLATFORM_WAYLAND = _ngl.PLATFORM_WAYLAND
-
-BACKEND_AUTO      = _ngl.BACKEND_AUTO
-BACKEND_OPENGL    = _ngl.BACKEND_OPENGL
-BACKEND_OPENGLES  = _ngl.BACKEND_OPENGLES
-BACKEND_VULKAN    = _ngl.BACKEND_VULKAN
-
-CAP_BLOCK                          = _ngl.CAP_BLOCK
-CAP_COMPUTE                        = _ngl.CAP_COMPUTE
-CAP_DEPTH_STENCIL_RESOLVE          = _ngl.CAP_DEPTH_STENCIL_RESOLVE
-CAP_INSTANCED_DRAW                 = _ngl.CAP_INSTANCED_DRAW
-CAP_MAX_COLOR_ATTACHMENTS          = _ngl.CAP_MAX_COLOR_ATTACHMENTS
-CAP_MAX_COMPUTE_GROUP_COUNT_X      = _ngl.CAP_MAX_COMPUTE_GROUP_COUNT_X
-CAP_MAX_COMPUTE_GROUP_COUNT_Y      = _ngl.CAP_MAX_COMPUTE_GROUP_COUNT_Y
-CAP_MAX_COMPUTE_GROUP_COUNT_Z      = _ngl.CAP_MAX_COMPUTE_GROUP_COUNT_Z
-CAP_MAX_COMPUTE_GROUP_INVOCATIONS  = _ngl.CAP_MAX_COMPUTE_GROUP_INVOCATIONS
-CAP_MAX_COMPUTE_GROUP_SIZE_X       = _ngl.CAP_MAX_COMPUTE_GROUP_SIZE_X
-CAP_MAX_COMPUTE_GROUP_SIZE_Y       = _ngl.CAP_MAX_COMPUTE_GROUP_SIZE_Y
-CAP_MAX_COMPUTE_GROUP_SIZE_Z       = _ngl.CAP_MAX_COMPUTE_GROUP_SIZE_Z
-CAP_MAX_COMPUTE_SHARED_MEMORY_SIZE = _ngl.CAP_MAX_COMPUTE_SHARED_MEMORY_SIZE
-CAP_MAX_SAMPLES                    = _ngl.CAP_MAX_SAMPLES
-CAP_MAX_TEXTURE_DIMENSION_1D       = _ngl.CAP_MAX_TEXTURE_DIMENSION_1D
-CAP_MAX_TEXTURE_DIMENSION_2D       = _ngl.CAP_MAX_TEXTURE_DIMENSION_2D
-CAP_MAX_TEXTURE_DIMENSION_3D       = _ngl.CAP_MAX_TEXTURE_DIMENSION_3D
-CAP_MAX_TEXTURE_DIMENSION_CUBE     = _ngl.CAP_MAX_TEXTURE_DIMENSION_CUBE
-CAP_NPOT_TEXTURE                   = _ngl.CAP_NPOT_TEXTURE
-CAP_SHADER_TEXTURE_LOD             = _ngl.CAP_SHADER_TEXTURE_LOD
-CAP_TEXTURE_3D                     = _ngl.CAP_TEXTURE_3D
-CAP_TEXTURE_CUBE                   = _ngl.CAP_TEXTURE_CUBE
-CAP_UINT_UNIFORMS                  = _ngl.CAP_UINT_UNIFORMS
-
-LOG_VERBOSE = _ngl.LOG_VERBOSE
-LOG_DEBUG   = _ngl.LOG_DEBUG
-LOG_INFO    = _ngl.LOG_INFO
-LOG_WARNING = _ngl.LOG_WARNING
-LOG_ERROR   = _ngl.LOG_ERROR
-LOG_QUIET   = _ngl.LOG_QUIET
-# fmt: on
 
 
 class Node(_Node):
@@ -131,3 +77,166 @@ class Node(_Node):
 
     def _set_rational(self, param_name, ratio):
         return self._param_set_rational(param_name, ratio[0], ratio[1])
+
+
+class Log(IntEnum):
+    # fmt: off
+    VERBOSE = _ngl.LOG_VERBOSE
+    DEBUG   = _ngl.LOG_DEBUG
+    INFO    = _ngl.LOG_INFO
+    WARNING = _ngl.LOG_WARNING
+    ERROR   = _ngl.LOG_ERROR
+    QUIET   = _ngl.LOG_QUIET
+    # fmt: on
+
+
+def log_set_min_level(level: Log):
+    _ngl.log_set_min_level(level.value)
+
+
+def get_livectls(scene: Node):
+    return _ngl.get_livectls(scene)
+
+
+class Platform(IntEnum):
+    # fmt: off
+    AUTO    = _ngl.PLATFORM_AUTO
+    XLIB    = _ngl.PLATFORM_XLIB
+    ANDROID = _ngl.PLATFORM_ANDROID
+    MACOS   = _ngl.PLATFORM_MACOS
+    IOS     = _ngl.PLATFORM_IOS
+    WINDOWS = _ngl.PLATFORM_WINDOWS
+    WAYLAND = _ngl.PLATFORM_WAYLAND
+    # fmt: on
+
+
+class Backend(IntEnum):
+    # fmt: off
+    AUTO     = _ngl.BACKEND_AUTO
+    OPENGL   = _ngl.BACKEND_OPENGL
+    OPENGLES = _ngl.BACKEND_OPENGLES
+    VULKAN   = _ngl.BACKEND_VULKAN
+    # fmt: on
+
+
+class Cap(IntEnum):
+    # fmt: off
+    BLOCK                          = _ngl.CAP_BLOCK
+    COMPUTE                        = _ngl.CAP_COMPUTE
+    DEPTH_STENCIL_RESOLVE          = _ngl.CAP_DEPTH_STENCIL_RESOLVE
+    INSTANCED_DRAW                 = _ngl.CAP_INSTANCED_DRAW
+    MAX_COLOR_ATTACHMENTS          = _ngl.CAP_MAX_COLOR_ATTACHMENTS
+    MAX_COMPUTE_GROUP_COUNT_X      = _ngl.CAP_MAX_COMPUTE_GROUP_COUNT_X
+    MAX_COMPUTE_GROUP_COUNT_Y      = _ngl.CAP_MAX_COMPUTE_GROUP_COUNT_Y
+    MAX_COMPUTE_GROUP_COUNT_Z      = _ngl.CAP_MAX_COMPUTE_GROUP_COUNT_Z
+    MAX_COMPUTE_GROUP_INVOCATIONS  = _ngl.CAP_MAX_COMPUTE_GROUP_INVOCATIONS
+    MAX_COMPUTE_GROUP_SIZE_X       = _ngl.CAP_MAX_COMPUTE_GROUP_SIZE_X
+    MAX_COMPUTE_GROUP_SIZE_Y       = _ngl.CAP_MAX_COMPUTE_GROUP_SIZE_Y
+    MAX_COMPUTE_GROUP_SIZE_Z       = _ngl.CAP_MAX_COMPUTE_GROUP_SIZE_Z
+    MAX_COMPUTE_SHARED_MEMORY_SIZE = _ngl.CAP_MAX_COMPUTE_SHARED_MEMORY_SIZE
+    MAX_SAMPLES                    = _ngl.CAP_MAX_SAMPLES
+    MAX_TEXTURE_DIMENSION_1D       = _ngl.CAP_MAX_TEXTURE_DIMENSION_1D
+    MAX_TEXTURE_DIMENSION_2D       = _ngl.CAP_MAX_TEXTURE_DIMENSION_2D
+    MAX_TEXTURE_DIMENSION_3D       = _ngl.CAP_MAX_TEXTURE_DIMENSION_3D
+    MAX_TEXTURE_DIMENSION_CUBE     = _ngl.CAP_MAX_TEXTURE_DIMENSION_CUBE
+    NPOT_TEXTURE                   = _ngl.CAP_NPOT_TEXTURE
+    SHADER_TEXTURE_LOD             = _ngl.CAP_SHADER_TEXTURE_LOD
+    TEXTURE_3D                     = _ngl.CAP_TEXTURE_3D
+    TEXTURE_CUBE                   = _ngl.CAP_TEXTURE_CUBE
+    UINT_UNIFORMS                  = _ngl.CAP_UINT_UNIFORMS
+    # fmt: on
+
+
+class ConfigGL(_ngl.ConfigGL):
+    def __init__(self, external: bool = False, external_framebuffer: int = 0):
+        super().__init__(external, external_framebuffer)
+
+
+@dataclass
+class Config:
+    platform: Platform = Platform.AUTO
+    backend: Backend = Backend.AUTO
+    backend_config: Optional[ConfigGL] = None
+    display: int = 0
+    window: int = 0
+    swap_interval: int = -1
+    offscreen: bool = False
+    width: int = 0
+    height: int = 0
+    viewport: tuple[int, int, int, int] = (0, 0, 0, 0)
+    samples: int = 0
+    set_surface_pts: bool = False
+    clear_color: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
+    capture_buffer: Optional[bytearray] = None
+    # capture_buffer_type = 0
+    hud: bool = False
+    hud_measure_window: int = 0
+    hud_refresh_rate: tuple[int, int] = (0, 0)
+    hud_export_filename: Optional[str] = None
+    hud_scale: int = 0
+
+
+def probe_backends(config: Optional[Config] = None) -> Sequence[Mapping[str, Any]]:
+    return _ngl.probe_backends(_ngl.PROBE_MODE_FULL, config)
+
+
+def get_backends(config: Optional[Config] = None) -> Sequence[Mapping[str, Any]]:
+    return _ngl.probe_backends(_ngl.PROBE_MODE_NO_GRAPHICS, config)
+
+
+class Context(_ngl.Context):
+    def configure(self, config: Config) -> int:
+        return super().configure(config)
+
+    def resize(
+        self,
+        width: int,
+        height: int,
+        viewport: Optional[tuple[int, int, int, int]] = None,
+    ) -> int:
+        return super().resize(width, height, viewport)
+
+    def set_capture_buffer(self, capture_buffer: bytearray) -> int:
+        return super().set_capture_buffer(capture_buffer)
+
+    def set_scene(self, scene: Optional[Node]) -> int:
+        return super().set_scene(scene)
+
+    def set_scene_from_string(self, s: str) -> int:
+        return super().set_scene_from_string(s)
+
+    def draw(self, t: float) -> int:
+        return super().draw(t)
+
+    def dot(self, t: float) -> Optional[str]:
+        return super().dot(t)
+
+    def gl_wrap_framebuffer(self, framebuffer: int) -> int:
+        return super().gl_wrap_framebuffer(framebuffer)
+
+
+def easing_evaluate(
+    name: str,
+    t: float,
+    args: Optional[Sequence[float]] = None,
+    offsets: Optional[tuple[float, float]] = None,
+) -> float:
+    return _ngl.animate(name, t, args, offsets, _ngl.ANIM_EVALUATE)
+
+
+def easing_derivate(
+    name: str,
+    t: float,
+    args: Optional[Sequence[float]] = None,
+    offsets: Optional[tuple[float, float]] = None,
+) -> float:
+    return _ngl.animate(name, t, args, offsets, _ngl.ANIM_DERIVATE)
+
+
+def easing_solve(
+    name: str,
+    v: float,
+    args: Optional[Sequence[float]] = None,
+    offsets: Optional[tuple[float, float]] = None,
+) -> float:
+    return _ngl.animate(name, v, args, offsets, _ngl.ANIM_SOLVE)
