@@ -21,6 +21,7 @@
 
 option('gbackend-gl', type: 'feature', value: 'auto')
 option('gbackend-vk', type: 'feature', value: 'auto')
+option('gbackend-ngfx', type: 'feature', value: 'auto')
 
 option('wayland', type: 'feature', value: 'auto',
        description: 'Wayland support')
@@ -42,6 +43,11 @@ option('debug_opts', type: 'array', choices: ['gl', 'vk', 'mem', 'scene', 'gpu_c
 
 option('renderdoc_dir', type: 'string',
        description: 'Renderdoc directory')
+option('enable_ngfx_backend', type: 'boolean', value: true,
+        description: 'Enable ngfx backend')
+
+option('ngfx_graphics_backend', type: 'string', value: '',
+        description: 'ngfx graphics backend (VULKAN | METAL | DIRECT3D12)')
 
 option('extra_library_dirs', type: 'array',
        description: 'list of directories to look from for external libraries', value: [])

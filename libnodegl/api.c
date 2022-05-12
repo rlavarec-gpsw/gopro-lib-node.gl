@@ -56,6 +56,7 @@
 
 extern const struct api_impl api_gl;
 extern const struct api_impl api_vk;
+extern const struct api_impl api_ngfx;
 
 static const struct {
     const char *string_id;
@@ -77,6 +78,12 @@ static const struct {
         .string_id = "vulkan",
 #ifdef BACKEND_VK
         .api_impl = &api_vk,
+#endif
+    },
+    [NGL_BACKEND_NGFX] = {
+        .string_id = "ngfx",
+#ifdef BACKEND_NGFX
+        .api_impl = &api_ngfx,
 #endif
     },
 };
@@ -508,6 +515,9 @@ static const int backend_ids[] = {
 #endif
 #ifdef BACKEND_VK
     NGL_BACKEND_VULKAN,
+#endif
+#ifdef BACKEND_NGFX
+    NGL_BACKEND_NGFX,
 #endif
 };
 

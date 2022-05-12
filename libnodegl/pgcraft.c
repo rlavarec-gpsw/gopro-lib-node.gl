@@ -1378,6 +1378,15 @@ static void setup_glsl_info_vk(struct pgcraft *s)
 }
 #endif
 
+#if defined(BACKEND_NGFX)
+static void setup_glsl_info_ngfx(struct pgcraft* s)
+{
+    //use same GLSL shader for ngfx backend
+    //use spirv-cross to convert to HLSL/MSL as necessary
+    setup_glsl_info_vk(s);
+}
+#endif
+
 static void setup_glsl_info(struct pgcraft *s)
 {
     struct ngl_ctx *ctx = s->ctx;
@@ -1396,6 +1405,13 @@ static void setup_glsl_info(struct pgcraft *s)
 #if defined(BACKEND_VK)
     if (config->backend == NGL_BACKEND_VULKAN) {
         setup_glsl_info_vk(s);
+        return;
+    }
+#endif
+
+#if defined(BACKEND_NGFX)
+    if (config->backend == NGL_BACKEND_NGFX) {
+        setup_glsl_info_ngfx(s);
         return;
     }
 #endif
