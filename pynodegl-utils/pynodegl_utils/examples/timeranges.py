@@ -1,11 +1,11 @@
-from pynodegl_utils.misc import scene
+from pynodegl_utils.misc import SceneCfg, scene
 from pynodegl_utils.toolbox.grid import AutoGrid
 
 import pynodegl as ngl
 
 
 @scene(overlap_time=scene.Range(range=[0, 5], unit_base=10), dim=scene.Range(range=[1, 10]))
-def queued_medias(cfg, overlap_time=1.0, dim=3):
+def queued_medias(cfg: SceneCfg, overlap_time=1.0, dim=3):
     """Queue of medias, mainly used as a demonstration for the prefetch/release mechanism"""
     nb_videos = dim * dim
     tqs = []
@@ -39,7 +39,7 @@ def queued_medias(cfg, overlap_time=1.0, dim=3):
 
 
 @scene(fast=scene.Bool(), segment_time=scene.Range(range=[0.1, 10], unit_base=10), constrained_timeranges=scene.Bool())
-def parallel_playback(cfg, fast=True, segment_time=2.0, constrained_timeranges=False):
+def parallel_playback(cfg: SceneCfg, fast=True, segment_time=2.0, constrained_timeranges=False):
     """
     Parallel media playback, flipping between the two sources.
 
@@ -97,7 +97,7 @@ def parallel_playback(cfg, fast=True, segment_time=2.0, constrained_timeranges=F
 
 
 @scene(transition_start=scene.Range(range=[0, 30]), transition_duration=scene.Range(range=[0, 30]))
-def simple_transition(cfg, transition_start=2, transition_duration=4):
+def simple_transition(cfg: SceneCfg, transition_start=2, transition_duration=4):
     """Fading transition between two medias"""
 
     cfg.duration = transition_start * 2 + transition_duration

@@ -2,7 +2,7 @@ import array
 import colorsys
 import math
 
-from pynodegl_utils.misc import scene
+from pynodegl_utils.misc import SceneCfg, scene
 from pynodegl_utils.toolbox.grid import AutoGrid
 
 import pynodegl as ngl
@@ -186,7 +186,7 @@ def _get_easing_nodes(cfg, color_program):
 
 
 @scene(easing_id=scene.List(choices=["*"] + _easing_names))
-def easings(cfg, easing_id="*"):
+def easings(cfg: SceneCfg, easing_id="*"):
     """Display all the easings (primitive for animation / motion design) at once"""
     cfg.duration = 2.0
 
