@@ -21,7 +21,7 @@
 
 import math
 
-from pynodegl_utils.misc import scene
+from pynodegl_utils.misc import SceneCfg, scene
 from pynodegl_utils.tests.cmp_cuepoints import test_cuepoints
 from pynodegl_utils.tests.debug import get_debug_points
 from pynodegl_utils.toolbox.colors import COLORS
@@ -209,7 +209,7 @@ _TEST_SETTINGS = dict(show_dbg_points=False, show_labels=False, clear_color=list
 
 @test_cuepoints(points=_get_dbg_positions(_NB_BLENDINGS), **_TEST_SETTINGS)
 @scene(show_dbg_points=scene.Bool(), show_labels=scene.Bool())
-def blending_all_diamond(cfg, show_dbg_points=True, show_labels=True):
+def blending_all_diamond(cfg: SceneCfg, show_dbg_points=True, show_labels=True):
     scenes = _get_blending_scenes(cfg)
     scene = autogrid_simple(scenes)
     return _debug_overlay(cfg, scene, _BLENDINGS, show_dbg_points, show_labels)
@@ -217,7 +217,7 @@ def blending_all_diamond(cfg, show_dbg_points=True, show_labels=True):
 
 @test_cuepoints(points=_get_dbg_positions(_NB_BLENDINGS), nb_keyframes=_NB_BLENDINGS + 1, **_TEST_SETTINGS)
 @scene(show_dbg_points=scene.Bool(), show_labels=scene.Bool())
-def blending_all_timed_diamond(cfg, show_dbg_points=True, show_labels=True):
+def blending_all_timed_diamond(cfg: SceneCfg, show_dbg_points=True, show_labels=True):
     scenes = _get_blending_scenes(cfg)
     scene = autogrid_queue(scenes, duration=cfg.duration, overlap_time=1.5)
     return _debug_overlay(cfg, scene, _BLENDINGS, show_dbg_points, show_labels)
@@ -226,7 +226,7 @@ def blending_all_timed_diamond(cfg, show_dbg_points=True, show_labels=True):
 def _get_blending_function(bname, bcolor, **bparams):
     @test_cuepoints(points=_get_dbg_positions(), **_TEST_SETTINGS)
     @scene(show_dbg_points=scene.Bool(), show_labels=scene.Bool())
-    def scene_func(cfg, show_dbg_points=True, show_labels=True):
+    def scene_func(cfg: SceneCfg, show_dbg_points=True, show_labels=True):
         scene = _get_blending_scene(cfg, bname, bcolor, **bparams)
         return _debug_overlay(cfg, scene, [bname], show_dbg_points, show_labels)
 

@@ -20,7 +20,7 @@
 #
 
 
-from pynodegl_utils.misc import scene
+from pynodegl_utils.misc import SceneCfg, scene
 from pynodegl_utils.tests.cmp_cuepoints import test_cuepoints
 
 import pynodegl as ngl
@@ -29,7 +29,7 @@ import pynodegl as ngl
 def _get_anim_color_scene_func(c0, c1, space):
     @test_cuepoints(points={"c": (0, 0)}, nb_keyframes=10, tolerance=1)
     @scene()
-    def scene_func(cfg):
+    def scene_func(cfg: SceneCfg):
         cfg.duration = 5
         color_animkf = [
             # Start at t=1 and end 1s earlier so that it tests the underflow

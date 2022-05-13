@@ -22,7 +22,7 @@
 import colorsys
 import textwrap
 
-from pynodegl_utils.misc import scene
+from pynodegl_utils.misc import SceneCfg, scene
 from pynodegl_utils.tests.cmp_fingerprint import test_fingerprint
 from pynodegl_utils.tests.cmp_resources import test_resources
 
@@ -371,30 +371,30 @@ def _get_scene(cfg, seed=0, enable_computes=True):
 
 
 @scene(seed=scene.Range(range=[0, 1000]), enable_computes=scene.Bool())
-def benchmark_test(cfg, seed=82, enable_computes=True):
+def benchmark_test(cfg: SceneCfg, seed=82, enable_computes=True):
     """Function to be used for manual testing"""
     return _get_scene(cfg, seed, enable_computes)
 
 
 @test_fingerprint(width=1920, height=1080, nb_keyframes=120, tolerance=4)
 @scene()
-def benchmark_fingerprint_with_compute(cfg):
+def benchmark_fingerprint_with_compute(cfg: SceneCfg):
     return _get_scene(cfg, seed=0, enable_computes=True)
 
 
 @test_fingerprint(width=1920, height=1080, nb_keyframes=120, tolerance=4)
 @scene()
-def benchmark_fingerprint_without_compute(cfg):
+def benchmark_fingerprint_without_compute(cfg: SceneCfg):
     return _get_scene(cfg, seed=1, enable_computes=False)
 
 
 @test_resources(nb_keyframes=60)
 @scene()
-def benchmark_resources_with_compute(cfg):
+def benchmark_resources_with_compute(cfg: SceneCfg):
     return _get_scene(cfg, seed=2, enable_computes=True)
 
 
 @test_resources(nb_keyframes=60)
 @scene()
-def benchmark_resources_without_compute(cfg):
+def benchmark_resources_without_compute(cfg: SceneCfg):
     return _get_scene(cfg, seed=3, enable_computes=False)
