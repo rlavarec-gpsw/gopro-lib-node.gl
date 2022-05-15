@@ -15,6 +15,9 @@ Versioning](https://semver.org/spec/v2.0.0.html) for `libnodegl`.
 - The installed `nodes.specs` is now in `JSON` instead of `YAML`
 - The default branch is now named `main`
 
+### Removed
+- `ResourceProps.variadic` bool flag as it was never a functional interface
+
 ## [2022.8] [libnodegl 0.6.1] - 2022-09-22
 ### Fixed
 - Crash with specific draw time sequences in some time filtered diamond-tree
