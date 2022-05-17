@@ -28,6 +28,14 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#if !defined(restrict)
+#if defined(_WIN32)
+#define restrict __restrict
+#elif defined(__APPLE__)
+#define restrict __restrict__
+#endif
+#endif
+
 #define NGLI_POLY1(a, b, x)       ((a) * (x) + (b))
 #define NGLI_POLY2(a, b, c, x)    (NGLI_POLY1(a, b, x) * (x) + (c))
 #define NGLI_POLY3(a, b, c, d, x) (NGLI_POLY2(a, b, c, x) * (x) + (d))
