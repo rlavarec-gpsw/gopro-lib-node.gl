@@ -242,10 +242,12 @@ hosts_cfg = {
 }
 
 lib_deps = [
-  cc.find_library('m', required: false),
   dependency('libsxplayer', version: '>= 9.10.0'),
   dependency('threads'),
 ]
+if host_system == 'linux'
+  lib_deps += cc.find_library('m', required: true)
+endif
 
 host_cfg = hosts_cfg.get(host_system, {})
 foreach dep : host_cfg.get('deps', [])
@@ -314,7 +316,9 @@ if 'gpu_capture' in debug_opts
   if cc.has_header(renderdoc_include_dir / 'renderdoc_app.h', required: true)
     lib_src += files('gpu_capture_renderdoc.c')
     lib_deps += declare_dependency(include_directories: renderdoc_include_dir)
-    lib_deps += cc.find_library('dl', required: host_system == 'linux')
+    if host_system == 'linux'
+      lib_deps += cc.find_library('dl', required: true)
+    endif
   endif
 endif
 
@@ -476,7 +480,7 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
         # Add the dependency if the library is marked as required or if it has
         # been found so the backend can be disabled later on.
         if lib.get('required') or dep.found()
-          gbackend_deps += dep
+          gbackend_deps += {'name':lib,'dep':dep}
         endif
       endforeach
       glslang_header = 'glslang/build_info.h'
@@ -499,24 +503,26 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
         glslang_min_ver = '>= 11.1'
         message('glslang version: ', glslang_ver)
         if glslang_ver.version_compare(glslang_min_ver)
-          gbackend_deps += declare_dependency(include_directories: glslang_include_dirs)
+          dep = declare_dependency(include_directories: glslang_include_dirs)
+          gbackend_deps += {'name':dep.name(),'dep':dep}
         else
           if opt_gbackend.enabled()
             error('detected glslang version @0@ is too old, must be @1@'.format(
                   glslang_ver, glslang_min_ver))
           else
-            gbackend_deps += disabler()
+            gbackend_deps += {'name':'d0','dep':disabler()}
           endif
         endif
       else
         if opt_gbackend.enabled()
           error('glslang header not found')
         else
-          gbackend_deps += disabler()
+          gbackend_deps += {'name':'d1','dep':disabler()}
         endif
       endif
     else
-      gbackend_deps += dependency(dep, required: opt_gbackend)
+      dep = dependency(dep, required: opt_gbackend)
+      gbackend_deps += {'name':dep.name(),'dep':dep}
     endif
   endforeach
   foreach lib : host_backend_cfg.get('libs', [])
@@ -527,18 +533,22 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
     if not dep.found()
       dep = cc.find_library(lib, required: opt_gbackend, dirs: extra_library_dirs)
       if dep.found()
-        gbackend_deps += declare_dependency(include_directories: extra_include_dirs)
+        gbackend_deps += {'name':dep.name(),'dep':declare_dependency(include_directories: extra_include_dirs)}
       endif
     endif
-    gbackend_deps += dep
+    message('lib: @0@ found: @1@'.format(lib, dep.found()))
+    gbackend_deps += {'name':lib,'dep':dep}
   endforeach
   if 'frameworks' in host_backend_cfg
-    gbackend_deps += dependency('appleframeworks', modules: host_backend_cfg.get('frameworks'), required: opt_gbackend)
+    dep = dependency('appleframeworks', modules: host_backend_cfg.get('frameworks'), required: opt_gbackend)
+    gbackend_deps += {'name':dep.name(),'dep':dep}
   endif
 
   all_dep_found = true
-  foreach dep : gbackend_deps
+  foreach dep_obj : gbackend_deps
+    dep = dep_obj['dep']
     all_dep_found = all_dep_found and dep.found()
+    message('dep: @0@ found: @1@'.format(dep_obj['name'],dep.found()))
   endforeach
   message('backend: @0@ enabled: @1@'.format(gbackend_name, all_dep_found.to_string()))
   if all_dep_found
@@ -553,7 +563,9 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
 
     lib_src += gbackend_cfg.get('src')
     lib_src += host_backend_cfg.get('src', [])
-    lib_deps += gbackend_deps
+    foreach dep_obj : gbackend_deps
+      lib_deps += dep_obj['dep']
+    endforeach
     conf_data.set10(gbackend_cfg.get('cfg'), true)
     if 'cfg' in host_backend_cfg
       conf_data.set10(host_backend_cfg.get('cfg'), true)
