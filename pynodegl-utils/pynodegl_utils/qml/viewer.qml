@@ -35,73 +35,114 @@ ApplicationWindow {
         anchors.fill: parent
         anchors.margins: 5
 
-        Player {
-            objectName: "player"
-            has_stop_button: true
-        }
-
         ScrollView {
             ScrollBar.horizontal.interactive: true
             ScrollBar.vertical.interactive: true
-            //Layout.fillHeight: true
-            ListView {
-                implicitWidth: contentItem.childrenRect.width
-                implicitHeight: contentItem.childrenRect.height
-                //Layout.fillHeight: true
-                objectName: "control_list"
-                boundsBehavior: Flickable.StopAtBounds
-                clip: true
-
-                delegate: DelegateChooser {
-                    role: "type"
-                    DelegateChoice {
-                        roleValue: "range"
-                        RowLayout {
-                            Text { text: model.label }
-                            Slider {
-                                from: model.min
-                                to: model.max
-                                value: model.val
-                                onMoved: model.val = value
-                            }
-                            Text { text: model.val }
+            ColumnLayout {
+                Frame {
+                    ColumnLayout {
+                        ComboBox {
+                            model: ["16:9", "16:10", "4:3", "1:1"]
                         }
-                    }
-                    DelegateChoice {
-                        roleValue: "color"
+                        ComboBox {
+                            model: ["Disabled", "2x", "4x", "8x"]
+                        }
+                        ComboBox {
+                            model: ["60 FPS", "50 FPS", "25 FPS"]
+                        }
+                        ComboBox {
+                            model: ["Verbose", "Debug", "Info"]
+                        }
+                        ComboBox {
+                            model: ["OpenGL", "OpenGLES", "Vulkan"]
+                        }
                         Button {
                             ColorDialog {
                                 id: color_dialog
-                                color: model.val
+                                //color: model.val
                                 //onRejected: currentColor = color
                                 onAccepted: model.val = color
                                 flags: ColorDialog.ShowAlphaChannel | ColorDialog.NoButtons // XXX no effect
                             }
-                            text: model.label
+                            //text: model.label
                             palette.button: color_dialog.color // currentColor
                             onClicked: color_dialog.open()
                         }
                     }
-                    DelegateChoice {
-                        roleValue: "bool"
-                        Switch {
-                            checked: model.val
-                            onToggled: model.val = checked
-                            text: model.label
-                        }
-                    }
-                    DelegateChoice {
-                        roleValue: "text"
-                        RowLayout {
-                            Text { text: model.label }
-                            TextField {
-                                text: model.val
-                                onEditingFinished: model.val = text
+                }
+                GroupBox {
+                    title: "Custom Scene options"
+                    //visible: ...
+                }
+                GroupBox {
+                    title: "Scene live controls"
+                    //visible:
+                    ListView {
+                        implicitWidth: contentItem.childrenRect.width
+                        implicitHeight: contentItem.childrenRect.height
+                        //Layout.fillHeight: true
+                        objectName: "control_list"
+                        boundsBehavior: Flickable.StopAtBounds
+                        clip: true
+
+                        delegate: DelegateChooser {
+                            role: "type"
+                            DelegateChoice {
+                                roleValue: "range"
+                                RowLayout {
+                                    Text { text: model.label }
+                                    Slider {
+                                        from: model.min
+                                        to: model.max
+                                        value: model.val
+                                        onMoved: model.val = value
+                                    }
+                                    Text { text: model.val }
+                                }
+                            }
+                            DelegateChoice {
+                                roleValue: "color"
+                                Button {
+                                    ColorDialog {
+                                        id: color_dialog
+                                        color: model.val
+                                        //onRejected: currentColor = color
+                                        onAccepted: model.val = color
+                                        flags: ColorDialog.ShowAlphaChannel | ColorDialog.NoButtons // XXX no effect
+                                    }
+                                    text: model.label
+                                    palette.button: color_dialog.color // currentColor
+                                    onClicked: color_dialog.open()
+                                }
+                            }
+                            DelegateChoice {
+                                roleValue: "bool"
+                                Switch {
+                                    checked: model.val
+                                    onToggled: model.val = checked
+                                    text: model.label
+                                }
+                            }
+                            DelegateChoice {
+                                roleValue: "text"
+                                RowLayout {
+                                    Text { text: model.label }
+                                    TextField {
+                                        text: model.val
+                                        onEditingFinished: model.val = text
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
+        }
+
+
+        Player {
+            objectName: "player"
+            has_stop_button: true
         }
     }
 }
