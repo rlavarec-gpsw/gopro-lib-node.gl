@@ -31,7 +31,7 @@ import subprocess
 import tempfile
 from collections import namedtuple
 from functools import wraps
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, List, Tuple
 
 import pynodegl as ngl
 
@@ -161,15 +161,15 @@ _MEDIA_PATHS = [
 
 @dataclasses.dataclass
 class SceneCfg:
-    aspect_ratio: tuple[int, int] = (16, 9)
+    aspect_ratio: Tuple[int, int] = (16, 9)
     duration: float = 30.0
-    framerate: tuple[int, int] = (60, 1)
+    framerate: Tuple[int, int] = (60, 1)
     backend: str = "opengl"
     samples: int = 0
     system: str = platform.system()
-    files: list[str] = dataclasses.field(default_factory=list)
-    medias: Optional[list[Media]] = None
-    clear_color: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
+    files: List[str] = dataclasses.field(default_factory=list)
+    medias: Optional[List[Media]] = None
+    clear_color: Tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
 
     def __post_init__(self):
         if self.medias is None:
