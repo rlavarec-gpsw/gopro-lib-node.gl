@@ -19,6 +19,7 @@
 # under the License.
 #
 
+import dataclasses
 import inspect
 import json
 import os
@@ -29,15 +30,14 @@ import random
 import subprocess
 import tempfile
 from collections import namedtuple
-from typing import Optional
 from functools import wraps
-import dataclasses
+from typing import Any, Callable, Dict, Optional
 
 import pynodegl as ngl
 
 
 def scene(**controls):
-    def real_decorator(scene_func):
+    def real_decorator(scene_func: Callable[..., ngl.Node]) -> Callable[..., Dict]:
         @wraps(scene_func)
         def func_wrapper(idict=None, **extra_args):
             if idict is None:
@@ -88,11 +88,11 @@ scene.Text = namedtuple("Text", "")
 
 
 class Media:
-    def __init__(self, filename):
+    def __init__(self, filename: str):
         self._filename = filename
         self._set_media_dimensions()
 
-    def _set_media_dimensions(self):
+    def _set_media_dimensions(self) -> None:
         data = subprocess.check_output(
             [
                 # fmt: off
@@ -112,35 +112,35 @@ class Media:
         self._framerate = tuple(int(x) for x in st["avg_frame_rate"].split("/"))
 
     @property
-    def filename(self):
+    def filename(self) -> str:
         return self._filename
 
     @property
-    def width(self):
+    def width(self) -> int:
         return self._dimensions[0]
 
     @property
-    def height(self):
+    def height(self) -> int:
         return self._dimensions[1]
 
     @property
-    def dimensions(self):
+    def dimensions(self) -> tuple[int, int]:
         return self._dimensions
 
     @property
-    def duration(self):
+    def duration(self) -> float:
         return self._duration
 
     @property
-    def framerate(self):
+    def framerate(self) -> tuple[int, int]:
         return self._framerate
 
     @property
-    def framerate_float(self):
+    def framerate_float(self) -> float:
         return self._framerate[0] / float(self._framerate[1])
 
 
-def get_nodegl_tempdir():
+def get_nodegl_tempdir() -> str:
     tmpdir = op.join(tempfile.gettempdir(), "nodegl")
     os.makedirs(tmpdir, exist_ok=True)
     return tmpdir
@@ -179,13 +179,13 @@ class SceneCfg:
         self.rng = random.Random(0)
 
     @property
-    def aspect_ratio_float(self):
+    def aspect_ratio_float(self) -> float:
         return self.aspect_ratio[0] / float(self.aspect_ratio[1])
 
-    def as_dict(self):
+    def as_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
 
-    def _get_shader(self, name, stype, module):
+    def _get_shader(self, name: str, stype: str, module: Optional[str]) -> str:
         if module is None:
             module = "pynodegl_utils.examples.shaders"
         data = pkgutil.get_data(module, f"{name}.{stype}")
@@ -193,17 +193,17 @@ class SceneCfg:
             raise FileNotFoundError(f"Unable to find shader {name}")
         return data.decode()
 
-    def get_frag(self, name, module=None):
+    def get_frag(self, name: str, module=None) -> str:
         return self._get_shader(name, "frag", module)
 
-    def get_vert(self, name, module=None):
+    def get_vert(self, name: str, module=None) -> str:
         return self._get_shader(name, "vert", module)
 
-    def get_comp(self, name, module=None):
+    def get_comp(self, name: str, module=None) -> str:
         return self._get_shader(name, "comp", module)
 
 
-def get_viewport(width, height, aspect_ratio):
+def get_viewport(width: int, height: int, aspect_ratio: tuple[int, int]) -> tuple[int, int, int, int]:
     view_width = width
     view_height = width * aspect_ratio[1] // aspect_ratio[0]
     if view_height > height:
@@ -214,7 +214,7 @@ def get_viewport(width, height, aspect_ratio):
     return (view_x, view_y, view_width, view_height)
 
 
-def get_backend(backend):
+def get_backend(backend: str) -> ngl.Backend:
     backend_map = {
         "opengl": ngl.Backend.OPENGL,
         "opengles": ngl.Backend.OPENGLES,

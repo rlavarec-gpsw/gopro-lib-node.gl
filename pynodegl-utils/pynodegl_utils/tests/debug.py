@@ -19,13 +19,21 @@
 # under the License.
 #
 
-from pynodegl_utils.misc import SceneCfg
+from typing import Mapping
+
+from pynodegl_utils.misc import SceneCfg, scene
 from pynodegl_utils.toolbox.colors import COLORS
 
 import pynodegl as ngl
 
 
-def get_debug_points(cfg: SceneCfg, points, radius=0.025, color=COLORS.green, text_size=(0.1, 0.1)):
+def get_debug_points(
+    cfg: SceneCfg,
+    points: Mapping[str, tuple[float, float]],
+    radius: float = 0.025,
+    color: tuple[float, float, float] = COLORS.green,
+    text_size: tuple[float, float] = (0.1, 0.1),
+):
     g = ngl.Group(label="Debug circles")
     circle = ngl.Circle(radius=radius)
     circle_render = ngl.RenderColor(color, geometry=circle)

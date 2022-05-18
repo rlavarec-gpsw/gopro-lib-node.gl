@@ -63,7 +63,7 @@ color_static_hsv = _get_static_color_scene_func((0.3, 0.7, 0.6), "hsv")
 
 @test_cuepoints(points={"c": (0, 0)}, nb_keyframes=10, tolerance=0)
 @scene()
-def color_negative_values_srgb(cfg):
+def color_negative_values_srgb(cfg: SceneCfg):
     cfg.duration = 5
     kfs = (
         # The elastic_in easing has the special property to undershoot under 0

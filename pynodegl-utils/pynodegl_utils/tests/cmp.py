@@ -22,6 +22,7 @@
 import difflib
 import os
 import os.path as op
+from typing import Any, Callable, Generator
 
 from pynodegl_utils.misc import get_backend, get_nodegl_tempdir
 
@@ -30,17 +31,17 @@ import pynodegl as ngl
 
 class CompareBase:
     @staticmethod
-    def serialize(data):
+    def serialize(data: Any) -> str:
         return data
 
     @staticmethod
-    def deserialize(data):
+    def deserialize(data: str) -> Any:
         return data
 
     def get_out_data(self, dump=False, func_name=None):
         raise NotImplementedError
 
-    def compare_data(self, test_name, ref_data, out_data):
+    def compare_data(self, test_name: str, ref_data: Any, out_data: Any) -> list[str]:
         ref_data = self.serialize(ref_data)
         out_data = self.serialize(out_data)
 
@@ -55,7 +56,7 @@ class CompareBase:
         return err
 
     @staticmethod
-    def dump_image(img, dump_index, func_name=None):
+    def dump_image(img, dump_index: int, func_name=None):
         test_tmpdir = op.join(get_nodegl_tempdir(), "tests")
         os.makedirs(test_tmpdir, exist_ok=True)
         filename = op.join(test_tmpdir, f"{func_name}_{dump_index:03}.png")
@@ -67,15 +68,15 @@ class CompareBase:
 class CompareSceneBase(CompareBase):
     def __init__(
         self,
-        scene_func,
-        width=1280,
-        height=800,
-        nb_keyframes=1,
+        scene_func: Callable[..., dict],
+        width: int = 1280,
+        height: int = 800,
+        nb_keyframes: int = 1,
         keyframes_callback=None,
-        clear_color=(0.0, 0.0, 0.0, 1.0),
-        exercise_serialization=True,
-        exercise_dot=True,
-        samples=0,
+        clear_color: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0),
+        exercise_serialization: bool = True,
+        exercise_dot: bool = True,
+        samples: int = 0,
         **scene_kwargs,
     ):
         self._width = width
@@ -91,7 +92,7 @@ class CompareSceneBase(CompareBase):
         self._hud = False
         self._hud_export_filename = None
 
-    def render_frames(self):
+    def render_frames(self) -> Generator[tuple[int, int, bytearray], None, None]:
         idict = {}
 
         backend = os.environ.get("BACKEND")
