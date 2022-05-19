@@ -1023,7 +1023,24 @@ static int vk_begin_update(struct gpu_ctx *s, double t)
     s_priv->cur_frame_index = (s_priv->cur_frame_index + 1) % s_priv->nb_in_flight_frames;
 
     s_priv->cur_cmd = s_priv->update_cmds[s_priv->cur_frame_index];
-    return ngli_cmd_vk_begin(s_priv->cur_cmd);
+    res = ngli_cmd_vk_begin(s_priv->cur_cmd);
+    if (res != VK_SUCCESS)
+        return res;
+
+    VkSemaphore *wait_sems = ngli_darray_data(&s_priv->pending_wait_sems);
+    for (int i = 0; i < ngli_darray_count(&s_priv->pending_wait_sems); i++) {
+        res = ngli_cmd_vk_add_wait_sem(s_priv->cur_cmd,
+                                       &wait_sems[i],
+                                       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                                       VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
+                                       VK_PIPELINE_STAGE_TRANSFER_BIT);
+        if (res != VK_SUCCESS)
+            return res;
+
+    }
+    ngli_darray_clear(&s_priv->pending_wait_sems);
+
+    return VK_SUCCESS;
 }
 
 static int vk_end_update(struct gpu_ctx *s, double t)
