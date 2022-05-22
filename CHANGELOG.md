@@ -8,6 +8,10 @@ for the globale releases (`YYYY.MINOR`), and to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html) for `libnodegl`.
 
 ## [Unreleased]
+### Added
+- Visual scopes support through the `ColorStats`, `RenderHistogram` and
+  `RenderWaveform` nodes (see `scopes` example in the demos)
+
 ### Fixed
 - Color channel difference in `ngl-diff` is now done in linear space
 
