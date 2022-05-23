@@ -41,6 +41,7 @@ struct buffer {
     struct gpu_ctx *gpu_ctx;
     int size;
     int usage;
+    void* data;
 };
 
 struct buffer *ngli_buffer_create(struct gpu_ctx *gpu_ctx);
