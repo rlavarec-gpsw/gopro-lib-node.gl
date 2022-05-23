@@ -113,6 +113,7 @@ VkResult ngli_buffer_vk_init(struct buffer *s, int size, int usage)
 
     s->size = size;
     s->usage = usage;
+    s->data = NULL;
 
     VkMemoryPropertyFlags mem_props;
     if (usage & NGLI_BUFFER_USAGE_MAP_READ) {
@@ -194,7 +195,9 @@ VkResult ngli_buffer_vk_map(struct buffer *s, int size, int offset, void **data)
     struct vkcontext *vk = gpu_ctx_vk->vkcontext;
     struct buffer_vk *s_priv = (struct buffer_vk *)s;
 
-    return vkMapMemory(vk->device, s_priv->memory, offset, size, 0, data);
+    VkResult r = vkMapMemory(vk->device, s_priv->memory, offset, size, 0, &s->data);
+    *data = s->data;
+    return r;
 }
 
 void ngli_buffer_vk_unmap(struct buffer *s)
@@ -204,6 +207,7 @@ void ngli_buffer_vk_unmap(struct buffer *s)
     struct buffer_vk *s_priv = (struct buffer_vk *)s;
 
     vkUnmapMemory(vk->device, s_priv->memory);
+    s->data = NULL;
 }
 
 void ngli_buffer_vk_freep(struct buffer **sp)

@@ -52,6 +52,7 @@ int ngli_buffer_gl_init(struct buffer *s, int size, int usage)
 
     s->size = size;
     s->usage = usage;
+    s->data = NULL;
     ngli_glGenBuffers(gl, 1, &s_priv->id);
     ngli_glBindBuffer(gl, GL_ARRAY_BUFFER, s_priv->id);
     ngli_glBufferData(gl, GL_ARRAY_BUFFER, size, NULL, get_gl_usage(usage));
