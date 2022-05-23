@@ -753,8 +753,8 @@ static int rendertexture_prepare(struct ngl_node *node)
         textures[0].type = NGLI_PGCRAFT_SHADER_TEX_TYPE_2D;
 
     static const struct pgcraft_iovar vert_out_vars[] = {
-        {.name = "uv",        .type = NGLI_TYPE_VEC2},
         {.name = "tex_coord", .type = NGLI_TYPE_VEC2},
+        {.name = "uv",        .type = NGLI_TYPE_VEC2},
     };
 
     const struct pipeline_desc *descs = ngli_darray_data(&c->pipeline_descs);
