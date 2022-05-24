@@ -1,4 +1,5 @@
 #include <cstdio>
+#undef _DEBUG
 #include <Python.h>
 #include <vector>
 #include <string>
@@ -34,7 +35,7 @@ int main(int argc, char** argv) {
     }
     chdir(TESTS_DIR);
 #ifdef _WIN32
-    setenv("PYTHONPATH", "..\\pynodegl;..\\pynodegl-utils", 1);
+    setenv("PYTHONPATH", "..\\pynodegl;..\\pynodegl-utils;..\\venv\\Lib\\site-packages", 1);
 #else
     setenv("PYTHONPATH", "../pynodegl:../pynodegl-utils:../venv/lib/python3.9/site-packages", 1);
 #endif
