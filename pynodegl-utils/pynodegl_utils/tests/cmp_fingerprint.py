@@ -73,7 +73,7 @@ class _CompareFingerprints(CompareSceneBase):
         for (width, height, capture_buffer) in self.render_frames():
             img = Image.frombuffer(_MODE, (width, height), capture_buffer, "raw", _MODE, 0, 1)
             if dump:
-                CompareBase.dump_image(img, dump_index, func_name)
+                CompareBase.dump_image(img, dump_index, func_name, self._backend)
                 dump_index += 1
             img = img.resize((_HSIZE + 1, _HSIZE + 1), resample=Image.LANCZOS)
             data = img.tobytes()
