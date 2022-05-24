@@ -55,10 +55,10 @@ class CompareBase:
         return err
 
     @staticmethod
-    def dump_image(img, dump_index, func_name=None):
+    def dump_image(img, dump_index, func_name=None, backend=None):
         test_tmpdir = op.join(get_nodegl_tempdir(), "tests")
         os.makedirs(test_tmpdir, exist_ok=True)
-        filename = op.join(test_tmpdir, f"{func_name}_{dump_index:03}.png")
+        filename = op.join(test_tmpdir, f"{func_name}_{dump_index:03}_{backend}.png")
         print(f"Dumping output image to {filename}")
         img.save(filename)
         dump_index += 1
@@ -90,6 +90,7 @@ class CompareSceneBase(CompareBase):
         self._samples = samples
         self._hud = 0
         self._hud_export_filename = None
+        self._backend = None
 
     def render_frames(self):
         idict = {}
@@ -97,6 +98,7 @@ class CompareSceneBase(CompareBase):
         backend = os.environ.get("BACKEND")
         if backend:
             idict["backend"] = backend
+        self._backend = backend
 
         ret = self._scene_func(idict=idict, **self._scene_kwargs)
         width, height = self._width, self._height
