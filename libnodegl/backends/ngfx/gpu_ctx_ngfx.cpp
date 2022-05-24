@@ -405,16 +405,7 @@ static void ngfx_transform_projection_matrix(struct gpu_ctx *s, float *dst)
 
 static void ngfx_get_rendertarget_uvcoord_matrix(struct gpu_ctx *s, float *dst)
 {
-#if defined(NGFX_GRAPHICS_BACKEND_DIRECT3D12)
-    static const NGLI_ALIGNED_MAT(matrix) = {
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f,-1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 1.0f,
-    };
-#else
     static const NGLI_ALIGNED_MAT(matrix) = NGLI_MAT4_IDENTITY;
-#endif
     memcpy(dst, matrix, sizeof(matrix));
 }
 
