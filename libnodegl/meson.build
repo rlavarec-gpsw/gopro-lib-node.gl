@@ -243,10 +243,13 @@ hosts_cfg = {
 }
 
 lib_deps = [
-  cc.find_library('m', required: false),
+
   dependency('libsxplayer', version: '>= 9.12.0'),
   dependency('threads'),
 ]
+if host_system == 'linux'
+  lib_deps += cc.find_library('m', required: true)
+endif
 
 host_cfg = hosts_cfg.get(host_system, {})
 foreach dep : host_cfg.get('deps', [])
@@ -315,7 +318,9 @@ if 'gpu_capture' in debug_opts
   if cc.has_header(renderdoc_include_dir / 'renderdoc_app.h', required: true)
     lib_src += files('gpu_capture_renderdoc.c')
     lib_deps += declare_dependency(include_directories: renderdoc_include_dir)
-    lib_deps += cc.find_library('dl', required: host_system == 'linux')
+    if host_system == 'linux'
+      lib_deps += cc.find_library('dl', required: true)
+    endif
   endif
 endif
 
