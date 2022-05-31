@@ -21,8 +21,8 @@
 
 project(
   'libnodegl',
-  'c',
-   default_options: ['c_std=c99'],
+  [ 'c', 'cpp' ],
+   default_options: ['c_std=c99', 'b_lundef=false', 'b_vscrt=md'],
    license: 'Apache',
    meson_version: '>= 0.57.0',
    version: files('NODEGL_VERSION'),
@@ -38,6 +38,11 @@ host_system = host_machine.system()
 cpu_family = host_machine.cpu_family()
 cc = meson.get_compiler('c')
 
+if cc.get_id() == 'msvc'
+  add_global_arguments('/std:c++20', language: 'cpp')
+else
+  add_global_arguments('-std=gnu++2a', language: 'cpp')
+endif
 # meson currently (0.56.0) doesn't distinguish between macOS and iOS (the
 # "darwin" identifier is shared), so we need to test explicitly.
 # We are also checking for IPHONE and not IOS but since the latter is actually
@@ -328,6 +333,40 @@ endif
 #
 # Graphic backend dependencies
 #
+ngfx_src = [
+  'backends/ngfx/api_ngfx.c',
+  'backends/ngfx/buffer_ngfx.cpp',
+  'backends/ngfx/format_ngfx.cpp',
+  'backends/ngfx/gpu_ctx_ngfx.cpp',
+  'backends/ngfx/hwmap_ngfx.c',
+  'backends/ngfx/pipeline_ngfx.cpp',
+  'backends/ngfx/program_ngfx.cpp',
+  'backends/ngfx/rendertarget_ngfx.cpp',
+  'backends/ngfx/texture_ngfx.cpp',
+  'backends/ngfx/topology_ngfx.cpp',
+  'backends/ngfx/util_ngfx.cpp',
+]
+enable_ngfx_backend = get_option('gbackend-ngfx').enabled()
+if host_system == 'windows' and cc.get_id() != 'msvc'
+  enable_ngfx_backend = false
+endif
+
+if enable_ngfx_backend
+  ngfx_graphics_backend = get_option('ngfx_graphics_backend')
+  if ngfx_graphics_backend == 'NGFX_GRAPHICS_BACKEND_DIRECT3D12' and host_system == 'windows'
+    ngfx_src += 'backends/ngfx/surface_util_ngfx_d3d.cpp'
+    ngfx_src += 'backends/ngfx/swapchain_util_ngfx_d3d.cpp'
+  elif ngfx_graphics_backend == 'NGFX_GRAPHICS_BACKEND_VULKAN'
+    ngfx_src += 'backends/ngfx/surface_util_ngfx_vk.cpp'
+    ngfx_src += 'backends/ngfx/swapchain_util_ngfx_vk.cpp'
+  elif ngfx_graphics_backend == 'NGFX_GRAPHICS_BACKEND_METAL' and host_system == 'darwin'
+    ngfx_src += 'backends/ngfx/surface_util_ngfx_mtl.mm'
+    ngfx_src += 'backends/ngfx/swapchain_util_ngfx_mtl.mm'
+    ngfx_src += 'backends/ngfx/hwmap_videotoolbox_darwin_ngfx.mm'
+  else
+    error('invalid value for ngfx_graphics_backend: @0@'.format(ngfx_graphics_backend))
+  endif
+endif
 
 gbackends_cfg = {
   'gl': {
@@ -450,6 +489,23 @@ gbackends_cfg = {
       },
     },
   },
+  'ngfx': {
+    'src': files(ngfx_src),
+    'cfg': 'BACKEND_NGFX',
+    'hosts_cfg': {
+      'linux': {
+        'deps': ['ngfx'],
+      },
+      'darwin': {
+        'deps': ['ngfx'],
+      },
+      'android': {},
+      'iphone': {},
+      'windows': {
+        'deps': ['ngfx'],
+      },
+    },
+  }
 }
 
 if host_system in ['darwin', 'iphone']
@@ -705,9 +761,17 @@ install_data(files('android/java/OnFrameAvailableListener.java'), install_dir: d
 # between the library and these tools?
 # https://git.archlinux.org/pacman.git/tree/meson.build?id=4533c6a8e0f39c7707e671b7f9687607b46f1417#n310
 # seem to imply some extract_all_objects(recursive: true)
+# add_global_arguments doesn't seem to work here
+  gen_specs_cpp_args = []
+  if cc.get_id() == 'msvc'
+    gen_specs_cpp_args += ['/std:c++20']
+  else
+    gen_specs_cpp_args += ['-std=gnu++2a']
+  endif
 gen_specs = executable(
   'gen_specs',
   lib_src + files('gen_specs.c'),
+  cpp_args: gen_specs_cpp_args,
   dependencies: lib_deps,
   build_by_default: false,
   native: true,
@@ -729,9 +793,17 @@ run_target(
 #
 
 if not get_option('small')
+  # add_global_arguments doesn't seem to work here
+  gen_doc_cpp_args = []
+  if cc.get_id() == 'msvc'
+    gen_doc_cpp_args += ['/std:c++20']
+  else
+    gen_doc_cpp_args += ['-std=gnu++2a']
+  endif
   gen_doc = executable(
     'gen_doc',
     lib_src + files('gen_doc.c'),
+    cpp_args: gen_doc_cpp_args,
     dependencies: lib_deps,
     build_by_default: false,
     native: true,

@@ -65,6 +65,7 @@ class Config(QtCore.QObject):
             "opengl",
             "opengles",
             "vulkan",
+            "ngfx",
         ],
     }
 
