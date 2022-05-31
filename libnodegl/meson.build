@@ -25,7 +25,7 @@ project(
    default_options: ['c_std=c99'],
    license: 'Apache',
    meson_version: '>= 0.57.0',
-   version: files('VERSION'),
+   version: files('NODEGL_VERSION'),
 )
 
 conf_data = configuration_data()
