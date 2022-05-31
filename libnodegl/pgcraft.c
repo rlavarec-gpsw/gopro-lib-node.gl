@@ -1354,24 +1354,40 @@ static void setup_glsl_info_gl(struct pgcraft *s)
 }
 #endif
 
-#if defined(BACKEND_VK)
-static void setup_glsl_info_vk(struct pgcraft *s)
+#if defined(BACKEND_VK) || defined(BACKEND_NGFX)
+static void setup_glsl_info_modern(struct pgcraft* s)
 {
     s->glsl_version = 450;
 
-    s->sym_vertex_index   = "gl_VertexIndex";
+    s->sym_vertex_index = "gl_VertexIndex";
     s->sym_instance_index = "gl_InstanceIndex";
 
-    s->has_explicit_bindings        = 1;
-    s->has_in_out_qualifiers        = 1;
+    s->has_explicit_bindings = 1;
+    s->has_in_out_qualifiers = 1;
     s->has_in_out_layout_qualifiers = 1;
-    s->has_precision_qualifiers     = 0;
-    s->has_modern_texture_picking   = 1;
-    s->compat_info.use_ublocks      = 1;
+    s->has_precision_qualifiers = 0;
+    s->has_modern_texture_picking = 1;
+    s->compat_info.use_ublocks = 1;
 
     /* Bindings are shared across stages and types */
     for (int i = 0; i < NB_BINDINGS; i++)
         s->next_bindings[i] = &s->bindings[0];
+}
+#endif
+
+#if defined(BACKEND_VK)
+static void setup_glsl_info_vk(struct pgcraft *s)
+{
+    setup_glsl_info_modern(s);
+}
+#endif
+
+#if defined(BACKEND_NGFX)
+static void setup_glsl_info_ngfx(struct pgcraft* s)
+{
+    //use same GLSL shader for ngfx backend
+    //use spirv-cross to convert to HLSL/MSL as necessary
+    setup_glsl_info_modern(s);
 }
 #endif
 
@@ -1393,6 +1409,13 @@ static void setup_glsl_info(struct pgcraft *s)
 #if defined(BACKEND_VK)
     if (config->backend == NGL_BACKEND_VULKAN) {
         setup_glsl_info_vk(s);
+        return;
+    }
+#endif
+
+#if defined(BACKEND_NGFX)
+    if (config->backend == NGL_BACKEND_NGFX) {
+        setup_glsl_info_ngfx(s);
         return;
     }
 #endif
