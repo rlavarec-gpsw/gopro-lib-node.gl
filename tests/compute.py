@@ -32,7 +32,8 @@ import pynodegl as ngl
 _PARTICULES_COMPUTE = """
 void main()
 {
-    uvec3 total_size = gl_WorkGroupSize * gl_NumWorkGroups;
+    uvec3 numWorkGroups = uvec3(%u, %u, %u);
+    uvec3 total_size = gl_WorkGroupSize * numWorkGroups;
     uint i = gl_GlobalInvocationID.z * total_size.x * total_size.y
            + gl_GlobalInvocationID.y * total_size.x
            + gl_GlobalInvocationID.x;
@@ -97,7 +98,7 @@ def compute_particles(cfg):
     time = ngl.AnimatedFloat(animkf)
     duration = ngl.UniformFloat(cfg.duration)
 
-    program = ngl.ComputeProgram(_PARTICULES_COMPUTE, workgroup_size=local_size)
+    program = ngl.ComputeProgram(_PARTICULES_COMPUTE % workgroups, workgroup_size=local_size)
     program.update_properties(odata=ngl.ResourceProps(writable=True))
     compute = ngl.Compute(workgroups, program)
     compute.update_resources(time=time, duration=duration, idata=ipositions, odata=opositions)
