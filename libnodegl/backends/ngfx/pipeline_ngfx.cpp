@@ -460,7 +460,8 @@ static void bind_vertex_buffers(CommandBuffer *cmd_buf, pipeline *s) {
         const attribute_binding *attr_binding = (const attribute_binding *)ngli_darray_get(&s_priv->attribute_bindings, j);
         const pipeline_attribute_desc *attr_desc = &attr_binding->desc;
         auto dst_attr_desc = program->vs->findAttribute(attr_desc->name);
-        if (!dst_attr_desc) continue; //unused variable
+        if (!dst_attr_desc)
+            continue; //unused variable
         const buffer_ngfx *buffer = (const buffer_ngfx *)attr_binding->buffer;
         uint32_t dst_attr_stride = dst_attr_desc->elementSize * dst_attr_desc->count;
         gpu_ctx->graphics->bindVertexBuffer(cmd_buf, buffer->v, dst_attr_desc->location, dst_attr_stride);
