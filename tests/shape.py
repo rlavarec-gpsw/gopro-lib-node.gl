@@ -355,9 +355,21 @@ shape_cropboard_indices = _get_cropboard_function(set_indices=True)
 TRIANGLES_MAT4_ATTRIBUTE_VERT = """
 void main()
 {
-    ngl_out_pos = ngl_projection_matrix * ngl_modelview_matrix * matrix * vec4(ngl_position, 1.0);
+    ngl_out_pos = ngl_projection_matrix * ngl_modelview_matrix * mat4(matrix_0, matrix_1, matrix_2, matrix_3) * vec4(ngl_position, 1.0);
 }
 """
+
+
+def convert_mat4_attr(v0):
+    r = []
+    num_mats = int(len(v0) / 16)
+    for j in range(4):
+        v = []
+        for k in range(num_mats):
+            i = k * 16 + 4 * j
+            v += [v0[i], v0[i + 1], v0[i + 2], v0[i + 3]]
+        r.append(ngl.BufferVec4(data=array.array("f", v)))
+    return r
 
 
 @test_fingerprint()
@@ -366,23 +378,20 @@ def shape_triangles_mat4_attribute(cfg):
     cfg.aspect_ratio = (1, 1)
     p0, p1, p2 = equilateral_triangle_coords(1)
     geometry = ngl.Triangle(p0, p1, p2)
-    matrices = ngl.BufferMat4(
-        data=array.array(
-            "f",
-            [
-                # fmt: off
-                1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-               -0.5, 0.0, 0.0, 1.0,
+    matrices = convert_mat4_attr(
+        [
+            # fmt: off
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        -0.5, 0.0, 0.0, 1.0,
 
-                1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                0.5, 0.0, 0.0, 1.0,
-                # fmt: on
-            ],
-        )
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.5, 0.0, 0.0, 1.0,
+            # fmt: on
+        ]
     )
 
     program = ngl.Program(
@@ -390,7 +399,9 @@ def shape_triangles_mat4_attribute(cfg):
         fragment=cfg.get_frag("color"),
     )
     render = ngl.Render(geometry, program, nb_instances=2)
-    render.update_instance_attributes(matrix=matrices)
+    render.update_instance_attributes(
+        matrix_0=matrices[0], matrix_1=matrices[1], matrix_2=matrices[2], matrix_3=matrices[3]
+    )
     render.update_frag_resources(color=ngl.UniformVec3(value=COLORS.orange), opacity=ngl.UniformFloat(1))
     return render
 
