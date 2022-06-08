@@ -48,8 +48,8 @@ struct gpu_ctx_ngfx {
     float clear_color[4];
 
     struct {
-        texture *color_texture = nullptr, *depth_texture = nullptr,
-                *color_resolve_texture = nullptr, *depth_resolve_texture = nullptr;
+        texture *color_texture = nullptr, *depth_stencil_texture = nullptr,
+                *color_resolve_texture = nullptr, *depth_stencil_resolve_texture = nullptr;
         rendertarget *rt = nullptr, *rt_load = nullptr;
     } offscreen_resources;
 

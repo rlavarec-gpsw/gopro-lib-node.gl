@@ -158,9 +158,9 @@ static int create_offscreen_resources(struct gpu_ctx *s) {
     if (res < 0)
         return res;
 
-    auto& depth_texture = s_priv->offscreen_resources.depth_texture;
-    res = create_texture(s, to_ngli_format(s_priv->graphics_context->depthFormat), config->width, config->height, config->samples,
-        NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &s_priv->offscreen_resources.depth_texture);
+    auto& depth_stencil_texture = s_priv->offscreen_resources.depth_stencil_texture;
+    res = create_texture(s, to_ngli_format(s_priv->graphics_context->depthStencilFormat), config->width, config->height, config->samples,
+        NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &depth_stencil_texture);
     if (res < 0)
         return res;
 
@@ -175,13 +175,13 @@ static int create_offscreen_resources(struct gpu_ctx *s) {
 
     auto& rt = s_priv->offscreen_resources.rt;
     //TODO: use STORE_OP_DONT_CARE for depth buffer?
-    res = create_rendertarget(s, color_texture, color_resolve_texture, depth_texture,
+    res = create_rendertarget(s, color_texture, color_resolve_texture, depth_stencil_texture,
         NGLI_LOAD_OP_CLEAR, NGLI_STORE_OP_STORE, NGLI_LOAD_OP_CLEAR, NGLI_STORE_OP_STORE, &rt);
     if (res < 0)
         return res;
 
     auto& rt_load = s_priv->offscreen_resources.rt_load;
-    res = create_rendertarget(s, color_texture, color_resolve_texture, depth_texture,
+    res = create_rendertarget(s, color_texture, color_resolve_texture, depth_stencil_texture,
         NGLI_LOAD_OP_LOAD, NGLI_STORE_OP_STORE, NGLI_LOAD_OP_LOAD, NGLI_STORE_OP_STORE, &rt_load);
     if (res < 0)
         return res;
@@ -267,14 +267,14 @@ static int ngfx_init(struct gpu_ctx *s)
         default_rt_desc.colors[0].format = NGLI_FORMAT_R8G8B8A8_UNORM;
         default_rt_desc.samples = config->samples;
         default_rt_desc.colors[0].resolve = config->samples > 0 ? 1 : 0;
-        default_rt_desc.depth_stencil.format = to_ngli_format(graphics_context->depthFormat);
+        default_rt_desc.depth_stencil.format = to_ngli_format(graphics_context->depthStencilFormat);
         default_rt_desc.depth_stencil.resolve = 0;
     } else {
         default_rt_desc.nb_colors = 1;
         default_rt_desc.colors[0].format = to_ngli_format(graphics_context->surfaceFormat);
         default_rt_desc.samples = config->samples;
         default_rt_desc.colors[0].resolve = config->samples > 0 ? 1 : 0;
-        default_rt_desc.depth_stencil.format = to_ngli_format(graphics_context->depthFormat);
+        default_rt_desc.depth_stencil.format = to_ngli_format(graphics_context->depthStencilFormat);
     }
 
     // TODO: query programmatically
@@ -407,10 +407,10 @@ static void ngfx_destroy(struct gpu_ctx* s)
 
     auto output_color_texture = ((texture*)ctx->offscreen_resources.color_texture);
     auto output_color_resolve_texture = ((texture*)ctx->offscreen_resources.color_resolve_texture);
-    auto output_depth_texture = ((texture*)ctx->offscreen_resources.depth_texture);
+    auto output_depth__stencil_texture = ((texture*)ctx->offscreen_resources.depth_stencil_texture);
     auto dummy_texture = ctx->dummy_texture;
-    if (output_depth_texture)
-        ngli_texture_freep(&output_depth_texture);
+    if (output_depth__stencil_texture)
+        ngli_texture_freep(&output_depth__stencil_texture);
     if (output_color_texture)
         ngli_texture_freep(&output_color_texture);
     if (output_color_resolve_texture)
