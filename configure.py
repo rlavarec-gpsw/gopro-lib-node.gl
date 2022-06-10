@@ -223,6 +223,38 @@ def _block(name, prerequisites=None):
     return real_decorator
 
 
+def _get_cmake_setup_options(
+    cfg,
+    build_type="$(CMAKE_BUILD_TYPE)",
+    generator="$(CMAKE_GENERATOR)",
+    prefix="$(PREFIX)",
+    external_dir="$(EXTERNAL_DIR)",
+):
+    opts = f'-DCMAKE_BUILD_TYPE={build_type} -G"{generator}" -DCMAKE_INSTALL_PREFIX="{prefix}" -DEXTERNAL_DIR="{external_dir}"'
+    if _SYSTEM == "Windows":
+        opts += f" -DCMAKE_INSTALL_INCLUDEDIR=Include -DCMAKE_INSTALL_LIBDIR=Lib -DCMAKE_INSTALL_BINDIR=Scripts"
+        # Always use MultiThreadedDLL (/MD), not MultiThreadedDebugDLL (/MDd)
+        # Some external libraries are only available in Release mode, not in Debug mode
+        # MSVC toolchain doesn't allow mixing libraries built in /MD mode with libraries built in /MDd mode
+        opts += f" -DCMAKE_MSVC_RUNTIME_LIBRARY:STRING=MultiThreadedDLL"
+        # Set Windows SDK Version
+        opts += f" -DCMAKE_SYSTEM_VERSION=$(CMAKE_SYSTEM_VERSION)"
+        # Set VCPKG Directory
+        opts += f" -DVCPKG_DIR=$(VCPKG_DIR)"
+    return opts
+
+
+def _get_cmake_compile_options(cfg, build_type="$(CMAKE_BUILD_TYPE)", num_threads=cpu_count() + 1):
+    opts = f"--config {build_type} -j{num_threads}"
+    if cfg.args.verbose:
+        opts += "-v"
+    return opts
+
+
+def _get_cmake_install_options(cfg, build_type="$(CMAKE_BUILD_TYPE)"):
+    return f"--config {build_type}"
+
+
 def _meson_compile_install_cmd(component, external=False):
     builddir = op.join("external", component, "builddir") if external else op.join("builddir", component)
     return ["$(MESON) " + _cmd_join(action, "-C", builddir) for action in ("compile", "install")]
