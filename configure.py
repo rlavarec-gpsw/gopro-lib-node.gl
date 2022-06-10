@@ -36,7 +36,7 @@ import tarfile
 import urllib.request
 import venv
 import zipfile
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 from subprocess import run
 
 _ROOTDIR = op.abspath(op.dirname(__file__))
@@ -64,17 +64,30 @@ _EXTERNAL_DEPS = dict(
         url="https://renderdoc.org/stable/@VERSION@/renderdoc_@VERSION@.tar.gz",
         sha256="c8ec16f7463266641e21b64f8e436a452a15105e4bd517bf114a9349d74cc02e",
     ),
+    # TODO: push change upstream to shaderc, or use G-P-S repo
+    shaderc=dict(
+        url="https://github.com/jmoguillansky-gpsw/shaderc.git",
+        branch="main",
+    ),
+    ngfx=dict(
+        url="https://github.com/gopro/ngfx.git",
+        branch="develop",
+    ),
 )
 
 
 def _get_external_deps(args):
     deps = ["sxplayer"]
     if _SYSTEM == "Windows":
-        deps.append("pkgconf")
+        deps += ["pkgconf", "shaderc"]
     if "gpu_capture" in args.debug_opts:
         if _SYSTEM not in {"Windows", "Linux"}:
             raise Exception(f"Renderdoc is not supported on {_SYSTEM}")
         deps.append(_RENDERDOC_ID)
+    if _SYSTEM == "Darwin":
+        deps += ["shaderc"]
+    if args.enable_ngfx_backend:
+        deps += ["ngfx"]
     return {dep: _EXTERNAL_DEPS[dep] for dep in deps}
 
 
@@ -256,7 +269,7 @@ def _get_cmake_install_options(cfg, build_type="$(CMAKE_BUILD_TYPE)"):
 
 
 def _meson_compile_install_cmd(component, external=False):
-    builddir = op.join("external", component, "builddir") if external else op.join("builddir", component)
+    builddir = op.join("external", component, "builddir") if external else op.join("$(BUILDDIR)", component)
     return ["$(MESON) " + _cmd_join(action, "-C", builddir) for action in ("compile", "install")]
 
 
@@ -291,16 +304,83 @@ def _renderdoc_install(cfg):
     return [f"copy {renderdoc_dll} {cfg.bin_path}"]
 
 
+@_block("shaderc-install")
+def _shaderc_install(cfg):
+    shaderc_cmake_setup_options = _get_cmake_setup_options(cfg, build_type="Release", generator="Ninja")
+    shaderc_cmake_compile_options = _get_cmake_compile_options(cfg, build_type="Release")
+    shaderc_cmake_install_options = _get_cmake_install_options(cfg, build_type="Release")
+    if _SYSTEM == "Darwin":
+        shaderc_lib_filename = "libshaderc_shared.1.dylib"
+    cmd = []
+    if _SYSTEM in ["Darwin", "Windows"]:
+        cmd += ["cd external/shaderc && python ./utils/git-sync-deps"]
+        cmd += [
+            f"$(CMAKE) -S external/shaderc -B $(BUILDDIR)/shaderc {shaderc_cmake_setup_options} -DSHADERC_SKIP_TESTS=ON -DLLVM_USE_CRT_DEBUG=MD -DLLVM_USE_CRT_RELEASE=MD",
+            f"$(CMAKE) --build $(BUILDDIR)/shaderc {shaderc_cmake_compile_options}",
+            f"$(CMAKE) --install $(BUILDDIR)/shaderc {shaderc_cmake_install_options}",
+        ]
+        if _SYSTEM == "Darwin":
+            cmd += [f"install_name_tool -id @rpath/{shaderc_lib_filename} $(PREFIX)/lib/{shaderc_lib_filename}"]
+    return cmd
+
+
+@_block("ngl-debug-tools-install")
+def _ngl_debug_tools_install(cfg):
+    ngl_debug_tools_cmake_setup_options = _get_cmake_setup_options(cfg)
+    ngl_debug_tools_cmake_compile_options = _get_cmake_compile_options(cfg)
+    ngl_debug_tools_cmake_install_options = _get_cmake_install_options(cfg)
+    cmd = [
+        f"$(CMAKE) -S ngl-debug-tools -B $(BUILDDIR)/ngl-debug-tools {ngl_debug_tools_cmake_setup_options}",
+        f"$(CMAKE) --build $(BUILDDIR)/ngl-debug-tools --verbose {ngl_debug_tools_cmake_compile_options}",
+        f"$(CMAKE) --install $(BUILDDIR)/ngl-debug-tools {ngl_debug_tools_cmake_install_options}",
+    ]
+    return cmd
+
+
+@_block("ngfx-install", [_shaderc_install])
+def _ngfx_install(cfg):
+    ngfx_deps = ["nlohmann-json", "stb"]
+    if _SYSTEM == "Windows":
+        ngfx_deps += ["glm", "d3dx12", "glfw"]
+    ngfx_deps_str = " ".join(s for s in ngfx_deps)
+    if _SYSTEM == "Windows":
+        ngfx_install_deps_cmd = (
+            f"echo& set OS={_SYSTEM}& set PKGS={ngfx_deps_str}& python external/ngfx/build_scripts/install_deps.py&"
+        )
+    else:
+        ngfx_install_deps_cmd = f'export OS={_SYSTEM} && export PKGS="{ngfx_deps_str}" && python external/ngfx/build_scripts/install_deps.py'
+    cmd = [ngfx_install_deps_cmd]
+    ngfx_cmake_setup_options = _get_cmake_setup_options(cfg)
+    ngfx_cmake_compile_options = _get_cmake_compile_options(cfg)
+    ngfx_cmake_install_options = _get_cmake_install_options(cfg)
+    cmd += [
+        f"$(CMAKE) -S external/ngfx -B $(BUILDDIR)/ngfx {ngfx_cmake_setup_options} -D$(NGFX_GRAPHICS_BACKEND)=ON",
+        f"$(CMAKE) --build $(BUILDDIR)/ngfx --verbose {ngfx_cmake_compile_options}",
+        f"$(CMAKE) --install $(BUILDDIR)/ngfx {ngfx_cmake_install_options}",
+    ]
+    if cfg.ngfx_graphics_backend == "NGFX_GRAPHICS_BACKEND_DIRECT3D12":
+        cmd += ["$(PREFIX)\\Scripts\\ngfx_compile_shaders_dx12.exe d3dBlitOp"]
+    return cmd
+
+
 @_block("nodegl-setup", [_sxplayer_install])
 def _nodegl_setup(cfg):
-    nodegl_opts = []
+    nodegl_setup_opts = ["--default-library", "shared"]
+    nodegl_debug_opts = []
     if cfg.args.debug_opts:
         debug_opts = ",".join(cfg.args.debug_opts)
-        nodegl_opts += [f"-Ddebug_opts={debug_opts}"]
+        nodegl_debug_opts += [f"-Ddebug_opts={debug_opts}"]
+        if "gpu_capture" in cfg.args.debug_opts:
+            if _SYSTEM in ("Linux", "Windows"):
+                renderdoc_dir = cfg.externals[_RENDERDOC_ID]
+                nodegl_debug_opts += [f"-Drenderdoc_dir={renderdoc_dir}"]
+        nodegl_setup_opts += nodegl_debug_opts
 
-    if "gpu_capture" in cfg.args.debug_opts:
-        renderdoc_dir = cfg.externals[_RENDERDOC_ID]
-        nodegl_opts += [f"-Drenderdoc_dir={renderdoc_dir}"]
+    if cfg.args.enable_ngfx_backend:
+        nodegl_setup_opts += [f"-Dgbackend-ngfx=enabled"]
+        nodegl_setup_opts += [f"-Dngfx_graphics_backend=$(NGFX_GRAPHICS_BACKEND)"]
+    else:
+        nodegl_setup_opts += [f"-Dgbackend-ngfx=disabled"]
 
     extra_library_dirs = []
     extra_include_dirs = []
@@ -322,13 +402,15 @@ def _nodegl_setup(cfg):
 
     if extra_library_dirs:
         opts = ",".join(extra_library_dirs)
-        nodegl_opts += [f"-Dextra_library_dirs={opts}"]
+        nodegl_setup_opts += [f"-Dextra_library_dirs={opts}"]
 
     if extra_include_dirs:
         opts = ",".join(extra_include_dirs)
-        nodegl_opts += [f"-Dextra_include_dirs={opts}"]
+        nodegl_setup_opts += [f"-Dextra_include_dirs={opts}"]
 
-    return ["$(MESON_SETUP) -Drpath=true " + _cmd_join(*nodegl_opts, "libnodegl", op.join("builddir", "libnodegl"))]
+    return [
+        "$(MESON_SETUP) -Drpath=true " + _cmd_join(*nodegl_setup_opts, "libnodegl", op.join("$(BUILDDIR)", "libnodegl"))
+    ]
 
 
 @_block("nodegl-install", [_nodegl_setup])
@@ -375,7 +457,7 @@ def _pynodegl_utils_install(cfg):
 
 @_block("ngl-tools-setup", [_nodegl_install])
 def _ngl_tools_setup(cfg):
-    return ["$(MESON_SETUP) -Drpath=true " + _cmd_join("ngl-tools", op.join("builddir", "ngl-tools"))]
+    return ["$(MESON_SETUP) -Drpath=true " + _cmd_join("ngl-tools", op.join("$(BUILDDIR)", "ngl-tools"))]
 
 
 @_block("ngl-tools-install", [_ngl_tools_setup])
@@ -384,7 +466,7 @@ def _ngl_tools_install(cfg):
 
 
 def _nodegl_run_target_cmd(cfg, target):
-    builddir = op.join("builddir", "libnodegl")
+    builddir = op.join("$(BUILDDIR)", "libnodegl")
     return ["$(MESON) " + _cmd_join("compile", "-C", builddir, target)]
 
 
@@ -421,7 +503,7 @@ def _tests_setup(cfg):
 
 @_block("nodegl-tests", [_nodegl_install])
 def _nodegl_tests(cfg):
-    return ["$(MESON) " + _cmd_join("test", "-C", op.join("builddir", "libnodegl"))]
+    return ["$(MESON) " + _cmd_join("test", "-C", op.join("$(BUILDDIR)", "libnodegl"))]
 
 
 def _rm(f):
@@ -451,9 +533,10 @@ def _clean_py(cfg):
 @_block("clean", [_clean_py])
 def _clean(cfg):
     return [
-        _rd(op.join("builddir", "libnodegl")),
-        _rd(op.join("builddir", "ngl-tools")),
-        _rd(op.join("builddir", "tests")),
+        _rd(op.join("$(BUILDDIR)", "libnodegl")),
+        _rd(op.join("$(BUILDDIR)", "ngl-tools")),
+        _rd(op.join("$(BUILDDIR)", "tests")),
+        _rd(op.join("$(BUILDDIR)", "shaderc")),
         _rd(op.join("external", "pkgconf", "builddir")),
         _rd(op.join("external", "sxplayer", "builddir")),
     ]
@@ -462,7 +545,7 @@ def _clean(cfg):
 def _coverage(cfg, output):
     # We don't use `meson coverage` here because of
     # https://github.com/mesonbuild/meson/issues/7895
-    return [_cmd_join("ninja", "-C", op.join("builddir", "libnodegl"), f"coverage-{output}")]
+    return [_cmd_join("ninja", "-C", op.join("$(BUILDDIR)", "libnodegl"), f"coverage-{output}")]
 
 
 @_block("coverage-html")
@@ -477,7 +560,7 @@ def _coverage_xml(cfg):
 
 @_block("tests", [_nodegl_tests, _tests_setup])
 def _tests(cfg):
-    return ["$(MESON) " + _cmd_join("test", "-C", op.join("builddir", "tests"))]
+    return ["$(MESON) " + _cmd_join("test", "-C", op.join("$(BUILDDIR)", "tests"))]
 
 
 def _quote(s):
@@ -511,7 +594,9 @@ def _get_make_vars(cfg):
     # mechanism.
     #
     meson = "MAKEFLAGS= meson" if _SYSTEM != "Windows" else "meson"
-
+    cmake = "cmake"
+    builddir = os.getenv("BUILDDIR", "builddir")
+    buildtype = "debug" if debug else "release"
     meson_setup = [
         "setup",
         "--prefix",
@@ -519,29 +604,53 @@ def _get_make_vars(cfg):
         "--pkg-config-path",
         cfg.pkg_config_path,
         "--buildtype",
-        "debugoptimized" if debug else "release",
+        buildtype,
     ]
     if cfg.args.coverage:
         meson_setup += ["-Db_coverage=true"]
     if _SYSTEM != "MinGW" and "debug" not in cfg.args.buildtype:
         meson_setup += ["-Db_lto=true"]
 
+    cmake_builddtype = "Debug" if debug else "Release"
+    cmake_setup = [
+        f"-DCMAKE_INSTALL_PREFIX={cfg.prefix}",
+        f"-DCMAKE_BUILD_TYPE={cmake_builddtype}",
+        "-GNinja",
+    ]
     if _SYSTEM == "Windows":
         meson_setup += ["--bindir=Scripts", "--libdir=Lib", "--includedir=Include"]
     elif op.isfile("/etc/debian_version"):
         # Workaround Debian/Ubuntu bug; see https://github.com/mesonbuild/meson/issues/5925
         meson_setup += ["--libdir=lib"]
 
+    if _SYSTEM == "Windows":
+        # Use Multithreaded DLL runtime library for debug and release configurations
+        # Third party libs are compiled in release mode
+        # Visual Studio toolchain requires all libraries to use the same runtime library
+        meson_setup += ["-Db_vscrt=md"]
     ret = dict(
+        BUILDDIR=builddir,
+        PREFIX=cfg.prefix,  # .replace('\\','/'),
         PIP=_cmd_join(python, "-m", "pip"),
         MESON=meson,
+        CMAKE=cmake,
+        CMAKE_GENERATOR=cfg.cmake_generator,
+        CMAKE_BUILD_TYPE=cfg.cmake_build_type,
     )
 
     ret["MESON_SETUP"] = "$(MESON) " + _cmd_join(*meson_setup, f"--backend={cfg.args.build_backend}")
     # Our tests/meson.build logic is not well supported with the VS backend so
     # we need to fallback on Ninja
-    ret["MESON_SETUP_TESTS"] = "$(MESON) " + _cmd_join(*meson_setup, "--backend=ninja")
+    meson_setup_tests = "$(MESON) " + _cmd_join(*meson_setup, "--backend=ninja")
+    ret["MESON_SETUP_TESTS"] = meson_setup_tests
 
+    ret["CMAKE_SETUP"] = "cmake " + _cmd_join(*cmake_setup)
+
+    if _SYSTEM == "Windows":
+        ret["CMAKE_SYSTEM_VERSION"] = cfg.cmake_system_version
+        ret["VCPKG_DIR"] = cfg.args.vcpkg_dir
+    if cfg.args.enable_ngfx_backend:
+        ret["NGFX_GRAPHICS_BACKEND"] = cfg.ngfx_graphics_backend
     return ret
 
 
@@ -628,7 +737,25 @@ class _Config:
             self.pkg_config_path = op.join(self.prefix, "lib", "pkgconfig")
         self.externals = _fetch_externals(args)
 
+        if args.enable_ngfx_backend:
+            self.ngfx_graphics_backend = os.getenv(
+                "NGFX_GRAPHICS_BACKEND",
+                "NGFX_GRAPHICS_BACKEND_" + {"Windows": "DIRECT3D12", "Linux": "VULKAN", "Darwin": "METAL"}[_SYSTEM],
+            )
+
+        self.cmake_generator = os.getenv(
+            "CMAKE_GENERATOR",
+            {"Windows": "Visual Studio 16 2019", "Linux": "Ninja", "Darwin": "Xcode", "MinGW": "Ninja"}[_SYSTEM],
+        )
+        if args.buildtype == "debug":
+            self.cmake_build_type = "Debug"
+        else:
+            self.cmake_build_type = "Release"
+
         if _SYSTEM == "Windows":
+            # Set Windows SDK Version
+            self.cmake_system_version = os.getenv("CMAKE_SYSTEM_VERSION", "10.0.22000.0")
+
             _sxplayer_setup.prerequisites.append(_pkgconf_install)
             if "gpu_capture" in args.debug_opts:
                 _nodegl_setup.prerequisites.append(_renderdoc_install)
@@ -638,10 +765,14 @@ class _Config:
                 logging.info("copy %s to venv/Scripts", f)
                 shutil.copy2(f, op.join("venv", "Scripts"))
 
+        if args.enable_ngfx_backend:
+            _nodegl_setup.prerequisites.append(_ngfx_install)
+
     def get_env(self):
         sep = ":" if _SYSTEM == "MinGW" else os.pathsep
         env = {}
         env["PATH"] = sep.join((self.bin_path, "$(PATH)"))
+        env["EXTERNAL_DIR"] = op.join(_ROOTDIR, "external")
         env["PKG_CONFIG_PATH"] = self.pkg_config_path
         if _SYSTEM == "Windows":
             env["PKG_CONFIG_ALLOW_SYSTEM_LIBS"] = "1"
@@ -667,10 +798,13 @@ def _run():
         help="Debug options",
     )
     parser.add_argument(
-        "--build-backend", choices=("ninja", "vs"), default=default_build_backend, help="Build backend to use"
+        "--build-backend", choices=("ninja", "vs", "xcode"), default=default_build_backend, help="Build backend to use"
     )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     if _SYSTEM == "Windows":
         parser.add_argument("--vcpkg-dir", default=r"C:\vcpkg", help="Vcpkg directory")
+
+    parser.add_argument("--enable-ngfx-backend", action="store_true", help="Enable NGFX Backend")
 
     args = parser.parse_args()
 
@@ -688,7 +822,10 @@ def _run():
         _nodegl_updatedoc,
         _nodegl_updatespecs,
         _nodegl_updateglwrappers,
+        _ngl_debug_tools_install,
     ]
+    if _SYSTEM == "Darwin":
+        blocks += [_shaderc_install]
     if args.coverage:
         blocks += [_coverage_html, _coverage_xml]
     makefile = _get_makefile(cfg, blocks)

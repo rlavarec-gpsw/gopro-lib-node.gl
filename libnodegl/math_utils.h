@@ -28,8 +28,12 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-#if defined _WIN32 && !defined(restrict)
+#if !defined(restrict)
+#if defined(_WIN32)
 #define restrict __restrict
+#elif defined(DARWIN)
+#define restrict __restrict__
+#endif
 #endif
 
 #define NGLI_POLY1(a, b, x)       ((a) * (x) + (b))
