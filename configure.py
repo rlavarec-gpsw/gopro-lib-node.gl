@@ -134,22 +134,34 @@ def _download_extract(dep_item):
 
     name, dep = dep_item
 
-    version = dep["version"]
+    version = dep["version"] if "version" in dep else ""
     url = dep["url"].replace("@VERSION@", version)
-    chksum = dep["sha256"]
+    chksum = dep.get("sha256")
+    is_git_repo = url.endswith(".git")
+    if is_git_repo:
+        git_branch = dep["branch"] if "branch" in dep else "main"
     dst_file = dep.get("dst_file", op.basename(url)).replace("@VERSION@", version)
+    if dst_file.endswith(".git"):
+        dst_file = dst_file[:-4]
     dst_base = op.join(_ROOTDIR, "external")
     dst_path = op.join(dst_base, dst_file)
     os.makedirs(dst_base, exist_ok=True)
 
     # Download
-    if not op.exists(dst_path) or not _file_chk(dst_path, chksum):
-        logging.info("downloading %s to %s", url, dst_file)
-        urllib.request.urlretrieve(url, dst_path)
-        assert _file_chk(dst_path, chksum)
+    if is_git_repo:
+        if not op.exists(dst_path):
+            logging.info("cloning %s", url)
+            run(["git", "clone", url, "-b", git_branch, dst_path], check=True)
+    else:
+        if not op.exists(dst_path) or not _file_chk(dst_path, chksum):
+            logging.info("downloading %s to %s", url, dst_file)
+            urllib.request.urlretrieve(url, dst_path)
+            assert _file_chk(dst_path, chksum)
 
     # Extract
-    if tarfile.is_tarfile(dst_path):
+    if is_git_repo:
+        pass
+    elif tarfile.is_tarfile(dst_path):
         with tarfile.open(dst_path) as tar:
             dirs = {f.name for f in tar.getmembers() if f.isdir()}
             extract_dir = op.join(dst_base, _guess_base_dir(dirs))
@@ -169,16 +181,21 @@ def _download_extract(dep_item):
 
     # Remove previous link if needed
     target = op.join(dst_base, name)
-    rel_extract_dir = op.basename(extract_dir)
-    if op.islink(target) and os.readlink(target) != rel_extract_dir:
-        logging.info("unlink %s target", target)
-        os.unlink(target)
-    elif op.exists(target) and not op.islink(target):
-        logging.info("remove previous %s copy", target)
-        _rmtree(target)
+    if is_git_repo:
+        pass
+    else:
+        rel_extract_dir = op.basename(extract_dir)
+        if op.islink(target) and os.readlink(target) != rel_extract_dir:
+            logging.info("unlink %s target", target)
+            os.unlink(target)
+        elif op.exists(target) and not op.islink(target):
+            logging.info("remove previous %s copy", target)
+            _rmtree(target)
 
     # Link (or copy)
-    if not op.exists(target):
+    if is_git_repo:
+        pass
+    elif not op.exists(target):
         logging.info("symlink %s -> %s", target, rel_extract_dir)
         try:
             os.symlink(rel_extract_dir, target)
