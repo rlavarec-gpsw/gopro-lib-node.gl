@@ -34,10 +34,10 @@ extern "C" {
 #include "format.h"
 #include "hwmap.h"
 #include "image.h"
+#include "internal.h"
 #include "log.h"
 #include "math_utils.h"
 #include "nodegl.h"
-#include "nodes.h"
 #include "type.h"
 }
 #include "gpu_ctx_ngfx.h"
