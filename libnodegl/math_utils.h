@@ -31,7 +31,7 @@
 #if !defined(restrict)
 #if defined(_WIN32)
 #define restrict __restrict
-#elif defined(DARWIN)
+#elif defined(__APPLE__)
 #define restrict __restrict__
 #endif
 #endif
