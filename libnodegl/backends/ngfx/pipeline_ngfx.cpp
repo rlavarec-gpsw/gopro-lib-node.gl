@@ -443,12 +443,6 @@ static ShaderModule *get_shader_module(program_ngfx *program, int stage)
     return nullptr;
 }
 
-static int get_binding(pipeline_ngfx *s_priv, int set)
-{
-    return s_priv->gp ? s_priv->gp->descriptorBindings[set]
-                      : s_priv->cp->descriptorBindings[set];
-}
-
 static void bind_buffers(CommandBuffer *cmd_buf, pipeline *s)
 {
     gpu_ctx_ngfx *gpu_ctx = (gpu_ctx_ngfx *)s->gpu_ctx;
@@ -468,7 +462,7 @@ static void bind_buffers(CommandBuffer *cmd_buf, pipeline *s)
             if (!buffer_info)
                 continue; // unused variable
             gpu_ctx->graphics->bindUniformBuffer(
-                cmd_buf, buffer->v, get_binding(s_priv, buffer_info->set),
+                cmd_buf, buffer->v, buffer_info->set,
                 buffer_info->shaderStages);
         } else {
             auto buffer_info =
@@ -476,7 +470,7 @@ static void bind_buffers(CommandBuffer *cmd_buf, pipeline *s)
             if (!buffer_info)
                 continue; // unused variable
             gpu_ctx->graphics->bindStorageBuffer(
-                cmd_buf, buffer->v, get_binding(s_priv, buffer_info->set),
+                cmd_buf, buffer->v, buffer_info->set,
                 buffer_info->shaderStages, buffer_info->readonly);
         }
     }
@@ -503,7 +497,7 @@ static void bind_textures(CommandBuffer *cmd_buf, pipeline *s)
             texture = (texture_ngfx *)gpu_ctx->dummy_texture;
         if (texture) {
             gpu_ctx->graphics->bindTexture(
-                cmd_buf, texture->v, get_binding(s_priv, texture_info->set));
+                cmd_buf, texture->v, texture_info->set);
         }
     }
 }
