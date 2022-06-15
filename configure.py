@@ -377,6 +377,14 @@ def _nodegl_setup(cfg):
 
     if cfg.args.enable_ngfx_backend:
         nodegl_setup_opts += [f"-Dgbackend-ngfx=enabled"]
+        if _SYSTEM == "Darwin":
+            # TODO: currently we can't enable both ngfx and vulkan backends simultaneously
+            # on MacOS because of a build issue: vk backend uses glslang
+            # and ngfx backend uses shaderc which uses different version of glslang
+            # shaderc is compiled against one version of glslang and then tries to call
+            # a different version of glslang at runtime, resulting in runtime crash.
+            # We can probably fix this issue by statically linking against shaderc
+            nodegl_setup_opts += [f"-Dgbackend-vk=disabled"]
         nodegl_setup_opts += [f"-Dngfx_graphics_backend=$(NGFX_GRAPHICS_BACKEND)"]
     else:
         nodegl_setup_opts += [f"-Dgbackend-ngfx=disabled"]
