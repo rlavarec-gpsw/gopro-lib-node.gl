@@ -97,7 +97,7 @@ static int vt_darwin_map_frame(struct hwmap *hwmap,
         ngfx::MTLTexture *texture_ngfx = (ngfx::MTLTexture *)plane_ngfx->v;
         texture_ngfx->v                = mtl_texture;
 
-        // TODO: call CFRelease(texture_ref) when texture is rendered
+        CVBufferRelease(texture_ref);
     }
     return 0;
 }
@@ -178,6 +178,11 @@ static void vt_darwin_uninit(struct hwmap *hwmap)
 extern "C" const struct hwmap_class ngli_hwmap_vt_darwin_ngfx_class = {
     .name      = "videotoolbox (iosurface → nv12)",
     .hwformat  = SXPLAYER_PIXFMT_VT,
+    .layouts   = (const int[]){
+        NGLI_IMAGE_LAYOUT_DEFAULT,
+        NGLI_IMAGE_LAYOUT_NV12,
+        NGLI_IMAGE_LAYOUT_NONE
+    },
     .flags     = HWMAP_FLAG_FRAME_OWNER,
     .priv_size = sizeof(struct hwmap_vt_darwin),
     .init      = vt_darwin_init,
