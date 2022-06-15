@@ -313,18 +313,22 @@ endif
 #
 
 if 'gpu_capture' in debug_opts
-  renderdoc_dir = get_option('renderdoc_dir')
-  renderdoc_include_dir = ''
-  if host_system == 'windows'
-    renderdoc_include_dir = renderdoc_dir
+  if host_system == 'darwin'
+    if get_option('gbackend-ngfx').enabled() or get_option('gbackend-vk').enabled()
+      lib_src += files('gpu_capture_metal.mm')
+    endif
   else
-    renderdoc_include_dir = renderdoc_dir / 'include'
-  endif
-  if cc.has_header(renderdoc_include_dir / 'renderdoc_app.h', required: true)
-    lib_src += files('gpu_capture_renderdoc.c')
-    lib_deps += declare_dependency(include_directories: renderdoc_include_dir)
-    if host_system == 'linux'
-      lib_deps += cc.find_library('dl', required: true)
+    renderdoc_dir = get_option('renderdoc_dir')
+    renderdoc_include_dir = ''
+    if host_system == 'windows'
+      renderdoc_include_dir = renderdoc_dir
+    else
+      renderdoc_include_dir = renderdoc_dir / 'include'
+    endif
+    if cc.has_header(renderdoc_include_dir / 'renderdoc_app.h', required: true)
+      lib_src += files('gpu_capture_renderdoc.c')
+      lib_deps += declare_dependency(include_directories: renderdoc_include_dir)
+      lib_deps += cc.find_library('dl', required: host_system == 'linux')
     endif
   endif
 endif

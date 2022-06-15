@@ -81,9 +81,8 @@ def _get_external_deps(args):
     if _SYSTEM == "Windows":
         deps += ["pkgconf", "shaderc"]
     if "gpu_capture" in args.debug_opts:
-        if _SYSTEM not in {"Windows", "Linux"}:
-            raise Exception(f"Renderdoc is not supported on {_SYSTEM}")
-        deps.append(_RENDERDOC_ID)
+        if _SYSTEM in {"Windows", "Linux"}:
+            deps.append(_RENDERDOC_ID)
     if _SYSTEM == "Darwin":
         deps += ["shaderc"]
     if args.enable_ngfx_backend:
