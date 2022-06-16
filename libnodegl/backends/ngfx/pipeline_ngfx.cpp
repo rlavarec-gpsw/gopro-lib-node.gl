@@ -222,12 +222,7 @@ static int pipeline_graphics_init(pipeline *s, const pipeline_params *params)
 
     state.numSamples = glm::max(rt_desc->samples, 1);
 
-#if defined(NGFX_GRAPHICS_BACKEND_DIRECT3D12) ||                               \
-    defined(NGFX_GRAPHICS_BACKEND_VULKAN)
     state.frontFace = FRONT_FACE_COUNTER_CLOCKWISE;
-#else
-    state.frontFace = FRONT_FACE_CLOCKWISE;
-#endif
 
     // Handle attribute stride mismatch
     const pipeline_layout *layout = &params->layout;
@@ -443,10 +438,14 @@ static ShaderModule *get_shader_module(program_ngfx *program, int stage)
     return nullptr;
 }
 
-static int get_binding(pipeline_ngfx *s_priv, int set)
+static int get_binding(pipeline_ngfx* s_priv, int set)
 {
+#if defined(NGFX_GRAPHICS_BACKEND_METAL)
+    return set;
+#else
     return s_priv->gp ? s_priv->gp->descriptorBindings[set]
                       : s_priv->cp->descriptorBindings[set];
+#endif
 }
 
 static void bind_buffers(CommandBuffer *cmd_buf, pipeline *s)
