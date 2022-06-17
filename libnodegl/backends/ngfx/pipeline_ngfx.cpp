@@ -586,21 +586,21 @@ void ngli_pipeline_ngfx_draw_indexed(pipeline *s, const buffer *indices,
 }
 
 void ngli_pipeline_ngfx_dispatch(pipeline *s, int nb_group_x, int nb_group_y,
-                                 int nb_group_z)
+                                 int nb_group_z, int threads_per_group_x,
+                                 int threads_per_group_y,  int threads_per_group_z)
 {
     gpu_ctx_ngfx *gpu_ctx  = (gpu_ctx_ngfx *)s->gpu_ctx;
     CommandBuffer *cmd_buf = gpu_ctx->cur_command_buffer;
 
     pipeline_set_uniforms((pipeline_ngfx *)s);
 
+    gpu_ctx->graphics->beginComputePass(cmd_buf);
+
     bind_pipeline(s);
     bind_vertex_buffers(cmd_buf, s);
     bind_buffers(cmd_buf, s);
     bind_textures(cmd_buf, s);
 
-    TODO("pass threads_per_group as params");
-    int threads_per_group_x = 1, threads_per_group_y = 1,
-        threads_per_group_z = 1;
     gpu_ctx->graphics->dispatch(cmd_buf, nb_group_x, nb_group_y, nb_group_z,
                                 threads_per_group_x, threads_per_group_y,
                                 threads_per_group_z);
@@ -617,6 +617,8 @@ void ngli_pipeline_ngfx_dispatch(pipeline *s, int nb_group_x, int nb_group_y,
     vkCmdPipelineBarrier(vk(cmd_buf)->v, src_stage, dst_stage, 0, 1, &barrier,
                          0, NULL, 0, NULL);
 #endif
+
+    gpu_ctx->graphics->endComputePass(cmd_buf);
 }
 
 void ngli_pipeline_ngfx_freep(pipeline **sp)
