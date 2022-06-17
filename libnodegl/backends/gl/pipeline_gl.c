@@ -796,7 +796,8 @@ void ngli_pipeline_gl_draw_indexed(struct pipeline *s, const struct buffer *indi
     s_priv->insert_memory_barriers(s);
 }
 
-void ngli_pipeline_gl_dispatch(struct pipeline *s, int nb_group_x, int nb_group_y, int nb_group_z)
+void ngli_pipeline_gl_dispatch(struct pipeline *s, int nb_group_x, int nb_group_y, int nb_group_z,
+                               int threads_per_group_x, int threads_per_group_y, int threads_per_group_z)
 {
     struct gpu_ctx *gpu_ctx = s->gpu_ctx;
     struct gpu_ctx_gl *gpu_ctx_gl = (struct gpu_ctx_gl *)gpu_ctx;

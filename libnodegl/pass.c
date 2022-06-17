@@ -656,7 +656,8 @@ int ngli_pass_exec(struct pass *s)
             ctx->current_rendertarget = ctx->available_rendertargets[1];
         }
 
-        ngli_pipeline_compat_dispatch(pipeline_compat, NGLI_ARG_VEC3(params->workgroup_count));
+        ngli_pipeline_compat_dispatch(pipeline_compat, NGLI_ARG_VEC3(params->workgroup_count),
+                                      NGLI_ARG_VEC3(params->workgroup_size));
     }
 
     return 0;

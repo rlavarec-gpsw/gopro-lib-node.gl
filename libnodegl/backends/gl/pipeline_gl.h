@@ -52,7 +52,8 @@ int ngli_pipeline_gl_update_texture(struct pipeline *s, int index, const struct 
 int ngli_pipeline_gl_update_buffer(struct pipeline *s, int index, const struct buffer *buffer, int offset, int size);
 void ngli_pipeline_gl_draw(struct pipeline *s, int nb_vertices, int nb_instances);
 void ngli_pipeline_gl_draw_indexed(struct pipeline *s, const struct buffer *indices, int indices_format, int nb_indices, int nb_instances);
-void ngli_pipeline_gl_dispatch(struct pipeline *s, int nb_group_x, int nb_group_y, int nb_group_z);
+void ngli_pipeline_gl_dispatch(struct pipeline *s, int nb_group_x, int nb_group_y, int nb_group_z,
+                               int threads_per_group_x, int threads_per_group_y, int threads_per_group_z);
 void ngli_pipeline_gl_freep(struct pipeline **sp);
 
 #endif

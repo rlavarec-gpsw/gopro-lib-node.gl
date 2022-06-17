@@ -66,7 +66,10 @@ void ngli_pipeline_ngfx_draw_indexed(struct pipeline *s,
                                      int indices_format, int nb_indices,
                                      int nb_instances);
 void ngli_pipeline_ngfx_dispatch(struct pipeline *s, int nb_group_x,
-                                 int nb_group_y, int nb_group_z);
+                                 int nb_group_y, int nb_group_z,
+                                 int threads_per_group_x,
+                                 int threads_per_group_y,
+                                 int threads_per_group_z);
 void ngli_pipeline_ngfx_freep(struct pipeline **sp);
 
 #endif
