@@ -16,7 +16,7 @@ jobs:
     env:
         VCPKG_TRIPLET: x64-windows
         VCPKG_INSTALL_PACKAGES: opengl-registry ffmpeg[ffmpeg,ffprobe] sdl2 glslang
-        VULKAN_SDK_VERSION: 1.3.204.1
+        VULKAN_SDK_VERSION: 1.3.216.0
     strategy:
       matrix:
         include:
