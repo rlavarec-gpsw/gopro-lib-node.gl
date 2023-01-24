@@ -74,7 +74,7 @@ ngfx::PixelFormat to_ngfx_format(int format) {
         { NGLI_FORMAT_R32G32B32A32_SFLOAT  , PIXELFORMAT_RGBA32_SFLOAT },
         { NGLI_FORMAT_B8G8R8A8_UNORM       , PIXELFORMAT_BGRA8_UNORM },
         { NGLI_FORMAT_D16_UNORM            , PIXELFORMAT_D16_UNORM },
-        { NGLI_FORMAT_D24_UNORM_S8_UINT    , PIXELFORMAT_D24_UNORM_S8 }
+        { NGLI_FORMAT_D24_UNORM_S8_UINT    , PIXELFORMAT_D24_UNORM }
     };
     return format_map.at(format);
 }

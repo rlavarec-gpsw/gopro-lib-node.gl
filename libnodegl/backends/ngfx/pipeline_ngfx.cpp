@@ -176,6 +176,7 @@ static int pipeline_graphics_init(pipeline *s, const pipeline_params *params)
     state.frontFace = FRONT_FACE_COUNTER_CLOCKWISE;
 #endif
 
+    std::vector<ngfx::GraphicsPipeline::VertexInputAttributeDescription> descs;
     //Handle attribute stride mismatch
     for (int j = 0; j<params->nb_attributes; j++) {
         auto src_attr_desc = &params->attributes_desc[j];
@@ -186,6 +187,11 @@ static int pipeline_graphics_init(pipeline *s, const pipeline_params *params)
         if (src_attr_stride != dst_attr_stride) {
             dst_attr_desc->elementSize = src_attr_desc->stride / dst_attr_desc->count;
         }
+        ngfx::GraphicsPipeline::VertexInputAttributeDescription desc = {
+            .v = dst_attr_desc,
+            .offset = src_attr_desc->offset
+        };
+        descs.push_back(desc);
     }
     s_priv->gp = GraphicsPipeline::create(
         gctx->graphics_context,
@@ -193,6 +199,7 @@ static int pipeline_graphics_init(pipeline *s, const pipeline_params *params)
         program->vs, program->fs,
         to_ngfx_format(color_attachment_desc->format),
         depth_attachment_desc ? to_ngfx_format(depth_attachment_desc->format) : PIXELFORMAT_UNDEFINED,
+        descs,
         get_instance_attributes(params->attributes_desc, params->nb_attributes)
     );
 
