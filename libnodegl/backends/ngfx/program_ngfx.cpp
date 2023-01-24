@@ -23,6 +23,7 @@
 extern "C" {
 #include "memory.h"
 }
+#include <functional>
 #include <stdlib.h>
 #include "ngfx/graphics/ShaderModule.h"
 #include "ngfx/graphics/ShaderTools.h"
@@ -66,7 +67,8 @@ struct ShaderCompiler {
         }
     }
     string compile(string src, const string& ext) {
-        uint64_t h1 = Util::hash(src);
+        //uint64_t h1 = Util::hash(src);
+        uint64_t h1 = std::hash<std::string>{}(src);
         tmpDir = fs::path(FileUtil::tempDir() + "/" + "nodegl").make_preferred().string();
         fs::create_directories(tmpDir);
         string tmpFile = fs::path(tmpDir + "/" + "tmp_" + to_string(h1) + ext).make_preferred().string();

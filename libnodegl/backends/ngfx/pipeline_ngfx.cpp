@@ -154,12 +154,12 @@ static int pipeline_graphics_init(pipeline *s, const pipeline_params *params)
     state.primitiveTopology = to_ngfx_topology(s->graphics.topology);
 
     state.blendEnable = gs->blend;
-    state.colorBlendOp = to_ngfx_blend_op(gs->blend_op);
-    state.srcColorBlendFactor = to_ngfx_blend_factor(gs->blend_src_factor);
-    state.dstColorBlendFactor = to_ngfx_blend_factor(gs->blend_dst_factor);
-    state.alphaBlendOp = to_ngfx_blend_op(gs->blend_op_a);
-    state.srcAlphaBlendFactor = to_ngfx_blend_factor(gs->blend_src_factor_a);
-    state.dstAlphaBlendFactor = to_ngfx_blend_factor(gs->blend_dst_factor_a);
+    state.blendParams.colorBlendOp = to_ngfx_blend_op(gs->blend_op);
+    state.blendParams.srcColorBlendFactor = to_ngfx_blend_factor(gs->blend_src_factor);
+    state.blendParams.dstColorBlendFactor = to_ngfx_blend_factor(gs->blend_dst_factor);
+    state.blendParams.alphaBlendOp = to_ngfx_blend_op(gs->blend_op_a);
+    state.blendParams.srcAlphaBlendFactor = to_ngfx_blend_factor(gs->blend_src_factor_a);
+    state.blendParams.dstAlphaBlendFactor = to_ngfx_blend_factor(gs->blend_dst_factor_a);
 
     state.depthTestEnable = gs->depth_test;
     state.depthWriteEnable = gs->depth_write_mask;
@@ -365,7 +365,7 @@ static void bind_buffers(CommandBuffer *cmd_buf, pipeline *s) {
         else {
             auto buffer_info = shader_module->findStorageBufferInfo(buffer_desc.name);
             if (!buffer_info) continue; //unused variable
-            gctx->graphics->bindStorageBuffer(cmd_buf, buffer->v, buffer_info->set, buffer_info->shaderStages);
+            gctx->graphics->bindStorageBuffer(cmd_buf, buffer->v, buffer_info->set, buffer_info->shaderStages, true);
         }
     }
 }

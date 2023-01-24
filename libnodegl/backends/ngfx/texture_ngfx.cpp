@@ -55,8 +55,8 @@ int ngli_texture_ngfx_init(struct texture *s,
     s_priv->v = Texture::create(gctx, ctx->graphics,
         nullptr, to_ngfx_format(p->format), size, p->width, p->height, depth, array_layers,
         image_usage_flags, to_ngfx_texture_type(p->type), gen_mipmaps,
-        to_ngfx_filter_mode(p->min_filter), to_ngfx_filter_mode(p->mag_filter),
-        gen_mipmaps ? to_ngfx_mip_filter_mode(p->mipmap_filter) : FILTER_NEAREST,
+        /*to_ngfx_filter_mode(p->min_filter),*/ /*to_ngfx_filter_mode(p->mag_filter),*/
+        /*gen_mipmaps ? to_ngfx_mip_filter_mode(p->mipmap_filter) : FILTER_NEAREST,*/
         p->samples == 0 ? 1 : p->samples
     );
 
