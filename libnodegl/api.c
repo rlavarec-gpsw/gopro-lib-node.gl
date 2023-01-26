@@ -60,7 +60,7 @@
 # if defined(BACKEND_VK)
 #  define DEFAULT_BACKEND NGL_BACKEND_VULKAN
 # else
-#  define DEFAULT_BACKEND NGL_BACKEND_OPENGL
+#  define DEFAULT_BACKEND NGL_BACKEND_NGFX
 # endif
 #endif
 

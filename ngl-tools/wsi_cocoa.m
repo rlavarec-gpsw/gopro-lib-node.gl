@@ -38,6 +38,7 @@ int wsi_set_ngl_config(struct ngl_config *config, SDL_Window *window)
     if (info.subsystem == SDL_SYSWM_COCOA) {
         NSWindow *nswindow = info.info.cocoa.window;
         NSView *view = [nswindow contentView];
+        //NSView *view = (NSView *)SDL_Metal_CreateView(nswindow);
 
         // HACK: should be in libnodegl?
         NSBundle *bundle = [NSBundle bundleWithPath:@"/System/Library/Frameworks/QuartzCore.framework"];
