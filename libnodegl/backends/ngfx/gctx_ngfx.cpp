@@ -285,7 +285,10 @@ static int ngfx_end_draw(struct gctx *s, double t)
 static void ngfx_wait_idle(struct gctx *s)
 {
     gctx_ngfx *s_priv = (gctx_ngfx *)s;
-    if (s_priv->cur_command_buffer) s_priv->graphics->waitIdle(s_priv->cur_command_buffer);
+    if (s_priv->cur_command_buffer) {
+        //s_priv->cur_command_buffer = s_priv->graphics_context->drawCommandBuffer();
+        if (s_priv->cur_command_buffer) s_priv->graphics->waitIdle(s_priv->cur_command_buffer);
+    }
 }
 
 static void ngfx_destroy(struct gctx *s)

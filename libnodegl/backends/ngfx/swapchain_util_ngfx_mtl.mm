@@ -45,5 +45,6 @@ void swapchain_util_ngfx_mtl::present(CommandBuffer *cmd_buffer) {
     [mtl(cmd_buffer)->v presentDrawable:mtl_surface->drawable];
     ctx->submit(cmd_buffer);
     [autoReleasePool release];
+    mtl(cmd_buffer)->v = nil;
 }
 
