@@ -156,7 +156,8 @@ static int ngfx_init(struct gctx *s)
 #endif
     /* FIXME */
     s->features = -1;
-    ctx->graphics_context = GraphicsContext::create("NGLApplication", true);
+    ctx->graphics_context = GraphicsContext::create("NGLApplication", true,
+        true, nullptr, s->config.samples);
     auto &graphics_context = ctx->graphics_context;
 #if DEBUG_GPU_CAPTURE
     if (s->gpu_capture)
