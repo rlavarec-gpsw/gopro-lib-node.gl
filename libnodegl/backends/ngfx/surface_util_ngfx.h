@@ -28,7 +28,7 @@ namespace ngfx { class GraphicsContext; }
     
 struct surface_util_ngfx {
     static inline ngfx::Surface* create_offscreen_surface(int w, int h) {
-        return new ngfx::Surface(w, h, true);
+        return ngfx::Surface::create(w, h, true);
     }
     static ngfx::Surface* create_surface_from_window_handle(ngfx::GraphicsContext *ctx,
         int platform, uintptr_t display, uintptr_t window, uintptr_t width, uintptr_t height);
