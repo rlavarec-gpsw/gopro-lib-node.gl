@@ -22,53 +22,52 @@
 #pragma once
 #include "format.h"
 
-#include "utils_mtl.h"
 #include "Metal.hpp"
 
-enum PixelFormat {
-    MTL_NGLI_FORMAT_UNDEFINED = MTL::PixelFormatInvalid,
+const MTL::PixelFormat mtl_format_map[NGLI_FORMAT_NB] = {
+    [NGLI_FORMAT_UNDEFINED]           = MTL::PixelFormatInvalid,
     /*  8 bit formats */
-    MTL_NGLI_FORMAT_R8_UNORM = MTL::PixelFormatR8Unorm,
-    MTL_NGLI_FORMAT_R8_SNORM = MTL::PixelFormatR8Snorm,
-    MTL_NGLI_FORMAT_R8_UINT = MTL::PixelFormatR8Uint,
-    MTL_NGLI_FORMAT_R8_SINT = MTL::PixelFormatR8Sint,
+    [NGLI_FORMAT_R8_UNORM]            = MTL::PixelFormatR8Unorm,
+    [NGLI_FORMAT_R8_SNORM]            = MTL::PixelFormatR8Snorm,
+    [NGLI_FORMAT_R8_UINT]             = MTL::PixelFormatR8Uint,
+    [NGLI_FORMAT_R8_SINT]             = MTL::PixelFormatR8Sint,
     /* 16 bit formats */
-    MTL_NGLI_FORMAT_R8G8_UNORM = MTL::PixelFormatRG8Unorm,
-    MTL_NGLI_FORMAT_R8G8_SNORM = MTL::PixelFormatRG8Snorm,
-    MTL_NGLI_FORMAT_R8G8_UINT = MTL::PixelFormatRG8Uint,
-    MTL_NGLI_FORMAT_R8G8_SINT = MTL::PixelFormatRG8Sint,
+    [NGLI_FORMAT_R8G8_UNORM]          = MTL::PixelFormatRG8Unorm,
+    [NGLI_FORMAT_R8G8_SNORM]          = MTL::PixelFormatRG8Snorm,
+    [NGLI_FORMAT_R8G8_UINT]           = MTL::PixelFormatRG8Uint,
+    [NGLI_FORMAT_R8G8_SINT]           = MTL::PixelFormatRG8Sint,
 
-    MTL_NGLI_FORMAT_R16_UINT = MTL::PixelFormatR16Uint,
-    MTL_NGLI_FORMAT_R16_SINT = MTL::PixelFormatR16Sint,
-    MTL_NGLI_FORMAT_R16_SFLOAT = MTL::PixelFormatR16Float,
+    [NGLI_FORMAT_R16_UINT]            = MTL::PixelFormatR16Uint,
+    [NGLI_FORMAT_R16_SINT]            = MTL::PixelFormatR16Sint,
+    [NGLI_FORMAT_R16_SFLOAT]          = MTL::PixelFormatR16Float,
     /* 32 bit formats */
-    MTL_NGLI_FORMAT_R8G8B8A8_UNORM = MTL::PixelFormatRGBA8Unorm,
-    MTL_NGLI_FORMAT_R8G8B8A8_SNORM = MTL::PixelFormatRGBA8Snorm,
-    MTL_NGLI_FORMAT_R8G8B8A8_UINT = MTL::PixelFormatRGBA8Uint,
-    MTL_NGLI_FORMAT_R8G8B8A8_SINT = MTL::PixelFormatRGBA8Sint,
+    [NGLI_FORMAT_R8G8B8A8_UNORM]      = MTL::PixelFormatRGBA8Unorm,
+    [NGLI_FORMAT_R8G8B8A8_SNORM]      = MTL::PixelFormatRGBA8Snorm,
+    [NGLI_FORMAT_R8G8B8A8_UINT]       = MTL::PixelFormatRGBA8Uint,
+    [NGLI_FORMAT_R8G8B8A8_SINT]       = MTL::PixelFormatRGBA8Sint,
 
-    MTL_NGLI_FORMAT_R32_UINT = MTL::PixelFormatR32Uint,
-    MTL_NGLI_FORMAT_R32_SINT = MTL::PixelFormatR32Sint,
-    MTL_NGLI_FORMAT_R32_SFLOAT = MTL::PixelFormatR32Float,
+    [NGLI_FORMAT_R32_UINT]            = MTL::PixelFormatR32Uint,
+    [NGLI_FORMAT_R32_SINT]            = MTL::PixelFormatR32Sint,
+    [NGLI_FORMAT_R32_SFLOAT]          = MTL::PixelFormatR32Float,
     /* 64 bit formats */
-    MTL_NGLI_FORMAT_R16G16B16A16_UNORM = MTL::PixelFormatRGBA16Unorm,
-    MTL_NGLI_FORMAT_R16G16B16A16_SNORM = MTL::PixelFormatRGBA16Snorm,
-    MTL_NGLI_FORMAT_R16G16B16A16_UINT = MTL::PixelFormatRGBA16Uint,
-    MTL_NGLI_FORMAT_R16G16B16A16_SINT = MTL::PixelFormatRGBA16Sint,
-    MTL_NGLI_FORMAT_R16G16B16A16_SFLOAT = MTL::PixelFormatRGBA16Float,
+    [NGLI_FORMAT_R16G16B16A16_UNORM]  = MTL::PixelFormatRGBA16Unorm,
+    [NGLI_FORMAT_R16G16B16A16_SNORM]  = MTL::PixelFormatRGBA16Snorm,
+    [NGLI_FORMAT_R16G16B16A16_UINT]   = MTL::PixelFormatRGBA16Uint,
+    [NGLI_FORMAT_R16G16B16A16_SINT]   = MTL::PixelFormatRGBA16Sint,
+    [NGLI_FORMAT_R16G16B16A16_SFLOAT] = MTL::PixelFormatRGBA16Float,
 
-    MTL_NGLI_FORMAT_R32G32_UINT = MTL::PixelFormatRG32Uint,
-    MTL_NGLI_FORMAT_R32G32_SINT = MTL::PixelFormatRG32Sint,
-    MTL_NGLI_FORMAT_R32G32_SFLOAT = MTL::PixelFormatRG32Float,
+    [NGLI_FORMAT_R32G32_UINT]         = MTL::PixelFormatRG32Uint,
+    [NGLI_FORMAT_R32G32_SINT]         = MTL::PixelFormatRG32Sint,
+    [NGLI_FORMAT_R32G32_SFLOAT]       = MTL::PixelFormatRG32Float,
     /* 128 bit formats */
-    MTL_NGLI_FORMAT_R32G32B32A32_UINT = MTL::PixelFormatRGBA32Uint,
-    MTL_NGLI_FORMAT_R32G32B32A32_SINT = MTL::PixelFormatRGBA32Sint,
-    MTL_NGLI_FORMAT_R32G32B32A32_SFLOAT = MTL::PixelFormatRGBA32Float,
+    [NGLI_FORMAT_R32G32B32A32_UINT]   = MTL::PixelFormatRGBA32Uint,
+    [NGLI_FORMAT_R32G32B32A32_SINT]   = MTL::PixelFormatRGBA32Sint,
+    [NGLI_FORMAT_R32G32B32A32_SFLOAT] = MTL::PixelFormatRGBA32Float,
     /* depth and stencil formats */
-    MTL_NGLI_FORMAT_D16_UNORM = MTL::PixelFormatDepth16Unorm,
-    MTL_NGLI_FORMAT_D24_UNORM_S8_UINT = MTL::PixelFormatDepth24Unorm_Stencil8,
-    MTL_NGLI_FORMAT_D32_SFLOAT = MTL::PixelFormatDepth32Float,
-    MTL_NGLI_FORMAT_D32_SFLOAT_S8_UINT = MTL::PixelFormatDepth32Float_Stencil8, 
-    MTL_NGLI_FORMAT_S8_UINT = MTL::PixelFormatStencil8
+    [NGLI_FORMAT_D16_UNORM]           = MTL::PixelFormatDepth16Unorm,
+    [NGLI_FORMAT_D24_UNORM_S8_UINT]   = MTL::PixelFormatDepth24Unorm_Stencil8,
+    [NGLI_FORMAT_D32_SFLOAT]          = MTL::PixelFormatDepth32Float,
+    [NGLI_FORMAT_D32_SFLOAT_S8_UINT] = MTL::PixelFormatDepth32Float_Stencil8, 
+    [NGLI_FORMAT_S8_UINT] = MTL::PixelFormatStencil8
 };
 
