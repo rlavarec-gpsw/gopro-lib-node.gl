@@ -587,6 +587,16 @@ uintptr_t ngli_glcontext_get_display(struct glcontext *glcontext)
     return handle;
 }
 
+uintptr_t ngli_glcontext_get_handle_object(struct glcontext *glcontext)
+{
+    uintptr_t handle = 0;
+
+    if (glcontext->cls->get_handle_object)
+        handle = glcontext->cls->get_handle_object(glcontext);
+
+    return handle;
+}
+
 uintptr_t ngli_glcontext_get_handle(struct glcontext *glcontext)
 {
     uintptr_t handle = 0;

@@ -23,7 +23,7 @@
 
 #include "config.h"
 
-#if defined(TARGET_IPHONE)
+#if defined(TARGET_IPHONE) || defined(TARGET_DARWIN)
 #include <CoreVideo/CoreVideo.h>
 #endif
 
@@ -64,6 +64,7 @@ static void capture_corevideo(struct gpu_ctx *s)
     ngli_glFinish(gl);
 }
 
+#if defined(TARGET_IPHONE) || defined(TARGET_DARWIN)
 #if defined(TARGET_IPHONE)
 static int wrap_capture_cvpixelbuffer(struct gpu_ctx *s,
                                       CVPixelBufferRef buffer,
@@ -131,6 +132,66 @@ static int wrap_capture_cvpixelbuffer(struct gpu_ctx *s,
 
     return 0;
 }
+#else
+static int wrap_capture_cvpixelbuffer(struct gpu_ctx *s,
+                                      CVPixelBufferRef buffer,
+                                      struct texture **texturep,
+                                      CVOpenGLTextureRef *cv_texturep)
+{
+    struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
+    struct glcontext *gl = s_priv->glcontext;
+    CVOpenGLTextureRef cv_texture = NULL;
+    
+    const size_t width = CVPixelBufferGetWidth(buffer);
+    const size_t height = CVPixelBufferGetHeight(buffer);
+    
+    CVOpenGLTextureCacheRef cache = ngli_glcontext_get_texture_cache(gl);
+    CVReturn cv_ret = CVOpenGLTextureCacheCreateTextureFromImage(kCFAllocatorDefault,
+                                                                   cache,
+                                                                   buffer,
+                                                                   NULL,
+                                                                   &cv_texture);
+    if (cv_ret != kCVReturnSuccess) {
+        LOG(ERROR, "could not create CoreVideo texture from CVPixelBuffer: %d", cv_ret);
+        return NGL_ERROR_EXTERNAL;
+    }
+    
+    GLuint fbName = CVOpenGLTextureGetName(cv_texture);
+    ngli_glBindTexture(gl, GL_TEXTURE_RECTANGLE, fbName);
+    ngli_glTexParameteri(gl, GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    ngli_glTexParameteri(gl, GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    
+    struct texture *texture = ngli_texture_create(s);
+    if (!texture) {
+        return NGL_ERROR_MEMORY;
+    }
+
+    const struct texture_params attachment_params = {
+        .type   = NGLI_TEXTURE_TYPE_RECTANGLE,
+        .format = NGLI_FORMAT_B8G8R8A8_UNORM,
+        .width  = width,
+        .height = height,
+        .usage  = NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT,
+    };
+
+    const struct texture_gl_wrap_params wrap_params = {
+        .params  = &attachment_params,
+        .texture = fbName,
+    };
+
+    int ret = ngli_texture_gl_wrap(texture, &wrap_params);
+    if (ret < 0) {
+        CFRelease(cv_texture);
+        ngli_texture_freep(&texture);
+        return ret;
+    }
+
+    *texturep = texture;
+    *cv_texturep = cv_texture;
+
+    return 0;
+}
+#endif 
 
 static void reset_capture_cvpixelbuffer(struct gpu_ctx *s)
 {
@@ -266,7 +327,7 @@ static int offscreen_rendertarget_init(struct gpu_ctx *s)
     }
 
     if (config->capture_buffer_type == NGL_CAPTURE_BUFFER_TYPE_COREVIDEO) {
-#if defined(TARGET_IPHONE)
+#if defined(TARGET_IPHONE) || defined(TARGET_DARWIN)
         if (config->capture_buffer) {
             s_priv->capture_cvbuffer = (CVPixelBufferRef)CFRetain(config->capture_buffer);
             int ret = wrap_capture_cvpixelbuffer(s, s_priv->capture_cvbuffer,
@@ -279,7 +340,7 @@ static int offscreen_rendertarget_init(struct gpu_ctx *s)
                 return ret;
         }
 #else
-        LOG(ERROR, "CoreVideo capture is only supported on iOS");
+        LOG(ERROR, "CoreVideo capture is only supported on iOS and macOS");
         return NGL_ERROR_UNSUPPORTED;
 #endif
     } else if (config->capture_buffer_type == NGL_CAPTURE_BUFFER_TYPE_CPU) {
@@ -342,7 +403,7 @@ static void rendertarget_reset(struct gpu_ctx *s)
     ngli_texture_freep(&s_priv->color);
     ngli_texture_freep(&s_priv->ms_color);
     ngli_texture_freep(&s_priv->depth_stencil);
-#if defined(TARGET_IPHONE)
+#if defined(TARGET_IPHONE) || defined(TARGET_DARWIN)
     reset_capture_cvpixelbuffer(s);
 #endif
     s_priv->capture_func = NULL;
@@ -626,7 +687,7 @@ static int gl_resize(struct gpu_ctx *s, int width, int height, const int *viewpo
     return 0;
 }
 
-#if defined(TARGET_IPHONE)
+#if defined(TARGET_IPHONE) || defined(TARGET_DARWIN)
 static int update_capture_cvpixelbuffer(struct gpu_ctx *s, CVPixelBufferRef capture_buffer)
 {
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
@@ -680,7 +741,7 @@ static int gl_set_capture_buffer(struct gpu_ctx *s, void *capture_buffer)
     }
 
     if (config->capture_buffer_type == NGL_CAPTURE_BUFFER_TYPE_COREVIDEO) {
-#if defined(TARGET_IPHONE)
+#if defined(TARGET_IPHONE) || defined(TARGET_DARWIN)
         int ret = update_capture_cvpixelbuffer(s, capture_buffer);
         if (ret < 0)
             return ret;

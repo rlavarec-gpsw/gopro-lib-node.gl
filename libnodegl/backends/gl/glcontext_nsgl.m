@@ -34,6 +34,7 @@
 struct nsgl_priv {
     NSOpenGLPixelFormat *pixel_format;
     NSOpenGLContext *handle;
+    CVOpenGLTextureCacheRef texture_cache;
     NSView *view;
     CFBundleRef framework;
 };
@@ -114,7 +115,17 @@ static int nsgl_init(struct glcontext *ctx, uintptr_t display, uintptr_t window,
 
         [nsgl->handle setView:nsgl->view];
     }
-
+    
+    CVReturn err = CVOpenGLTextureCacheCreate(kCFAllocatorDefault,
+                                                NULL,
+                                                nsgl->handle.CGLContextObj, 
+                                                nsgl->pixel_format.CGLPixelFormatObj, 
+                                                NULL,
+                                                &nsgl->texture_cache);
+    if (err != noErr) {
+        LOG(ERROR, "could not create CoreVideo texture cache: 0x%x", err);
+        return -1;
+    }
     return 0;
 }
 
@@ -185,6 +196,12 @@ static void nsgl_swap_buffers(struct glcontext *ctx)
     [nsgl->handle flushBuffer];
 }
 
+static void *nsgl_get_texture_cache(struct glcontext *ctx)
+{
+    struct nsgl_priv *nsgl = ctx->priv_data;
+    return nsgl->texture_cache;
+}
+
 static int nsgl_set_swap_interval(struct glcontext *ctx, int interval)
 {
     struct nsgl_priv *nsgl = ctx->priv_data;
@@ -215,12 +232,23 @@ static uintptr_t nsgl_get_handle(struct glcontext *ctx)
     return (uintptr_t)nsgl->handle;
 }
 
+static uintptr_t nsgl_get_handle_object(struct glcontext *ctx)
+{
+    struct nsgl_priv *nsgl = ctx->priv_data;
+    return (uintptr_t)nsgl->handle.CGLContextObj;
+}
+
 static void nsgl_uninit(struct glcontext *ctx)
 {
     struct nsgl_priv *nsgl = ctx->priv_data;
 
     if (nsgl->framework)
         CFRelease(nsgl->framework);
+
+    if (nsgl->texture_cache) {
+        CVOpenGLTextureCacheFlush(nsgl->texture_cache, 0);
+        CFRelease(nsgl->texture_cache);
+    }
 
     if (nsgl->handle) {
         [nsgl->handle clearDrawable];
@@ -237,6 +265,10 @@ static void nsgl_uninit_external(struct glcontext *ctx)
 
     if (nsgl->framework)
         CFRelease(nsgl->framework);
+    if (nsgl->texture_cache) {
+        CVOpenGLTextureCacheFlush(nsgl->texture_cache, 0);
+        CFRelease(nsgl->texture_cache);
+    }
 }
 
 const struct glcontext_class ngli_glcontext_nsgl_class = {
@@ -245,9 +277,11 @@ const struct glcontext_class ngli_glcontext_nsgl_class = {
     .resize = nsgl_resize,
     .make_current = nsgl_make_current,
     .swap_buffers = nsgl_swap_buffers,
+    .get_texture_cache = nsgl_get_texture_cache,
     .set_swap_interval = nsgl_set_swap_interval,
     .get_proc_address = nsgl_get_proc_address,
     .get_handle = nsgl_get_handle,
+    .get_handle_object = nsgl_get_handle_object,
     .priv_size = sizeof(struct nsgl_priv),
 };
 
@@ -255,7 +289,9 @@ const struct glcontext_class ngli_glcontext_nsgl_external_class = {
     .init = nsgl_init_external,
     .uninit = nsgl_uninit_external,
     .make_current = nsgl_make_current,
+    .get_texture_cache = nsgl_get_texture_cache,
     .get_proc_address = nsgl_get_proc_address,
     .get_handle = nsgl_get_handle,
+    .get_handle_object = nsgl_get_handle_object,
     .priv_size = sizeof(struct nsgl_priv),
 };

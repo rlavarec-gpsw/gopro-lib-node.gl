@@ -284,6 +284,8 @@ static int texture_init_fields(struct texture *s)
         s_priv->target = GL_TEXTURE_3D;
     else if (params->type == NGLI_TEXTURE_TYPE_CUBE)
         s_priv->target = GL_TEXTURE_CUBE_MAP;
+    else if (params->type == NGLI_TEXTURE_TYPE_RECTANGLE)
+        s_priv->target = GL_TEXTURE_RECTANGLE;
     else
         ngli_assert(0);
 

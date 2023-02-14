@@ -24,7 +24,7 @@
 
 #include "config.h"
 
-#if defined(TARGET_IPHONE)
+#if defined(TARGET_IPHONE) || defined(TARGET_DARWIN)
 #include <CoreVideo/CoreVideo.h>
 #endif
 
@@ -60,7 +60,11 @@ struct gpu_ctx_gl {
     struct texture *depth_stencil;
     /* Offscreen capture callback and resources */
     capture_func_type capture_func;
-#if defined(TARGET_IPHONE)
+#if  defined(TARGET_DARWIN)
+    CVPixelBufferRef capture_cvbuffer;
+    CVOpenGLTextureRef capture_cvtexture;
+#endif
+#if defined(TARGET_IPHONE) 
     CVPixelBufferRef capture_cvbuffer;
     CVOpenGLESTextureRef capture_cvtexture;
 #endif
