@@ -19,12 +19,13 @@
  * under the License.
  */
 
-#ifndef DEFINES_MTL_H
-#define DEFINES_MTL_H
+#ifndef DEFINES_H
+#define DEFINES_H
 
 #ifdef __cplusplus
 extern "C" {
 #include "graphicstate.h"
+#include "rendertarget.h"
 #include "texture.h"
 #include "topology.h"
 }
@@ -32,116 +33,101 @@ extern "C" {
 //#include "utils_mtl.h"
 #include "Metal.hpp"
 
-enum Topology {
-    MTL_NGLI_PRIMITIVE_TOPOLOGY_POINT_LIST = MTL::PrimitiveTypePoint,
-    MTL_NGLI_PRIMITIVE_TOPOLOGY_LINE_LIST = MTL::PrimitiveTypeLine,
-    MTL_NGLI_PRIMITIVE_TOPOLOGY_LINE_STRIP = MTL::PrimitiveTypeLineStrip,
-    MTL_NGLI_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST = MTL::PrimitiveTypeTriangle,
-    MTL_NGLI_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP = MTL::PrimitiveTypeTriangleStrip
+const MTL::PrimitiveType mtl_topology_map[NGLI_PRIMITIVE_TOPOLOGY_NB] = {
+    [NGLI_PRIMITIVE_TOPOLOGY_POINT_LIST] = MTL::PrimitiveTypePoint,
+    [NGLI_PRIMITIVE_TOPOLOGY_LINE_LIST] = MTL::PrimitiveTypeLine,
+    [NGLI_PRIMITIVE_TOPOLOGY_LINE_STRIP] = MTL::PrimitiveTypeLineStrip,
+    [NGLI_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST] = MTL::PrimitiveTypeTriangle,
+    [NGLI_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP] = MTL::PrimitiveTypeTriangleStrip
 };
 
-enum BlendFactor {
-    MTL_NGLI_BLEND_FACTOR_ZERO = MTL::BlendFactorZero,
-    MTL_NGLI_BLEND_FACTOR_ONE = MTL::BlendFactorOne,
-    MTL_NGLI_BLEND_FACTOR_SRC_COLOR = MTL::BlendFactorSourceColor,
-    MTL_NGLI_BLEND_FACTOR_ONE_MINUS_SRC_COLOR = MTL::BlendFactorOneMinusSourceColor,
-    MTL_NGLI_BLEND_FACTOR_DST_COLOR = MTL::BlendFactorDestinationColor,
-    MTL_NGLI_BLEND_FACTOR_ONE_MINUS_DST_COLOR = MTL::BlendFactorOneMinusDestinationColor,
-    MTL_NGLI_BLEND_FACTOR_SRC_ALPHA = MTL::BlendFactorSourceAlpha,
-    MTL_NGLI_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA = MTL::BlendFactorOneMinusSourceAlpha,
-    MTL_NGLI_BLEND_FACTOR_DST_ALPHA = MTL::BlendFactorDestinationAlpha,
-    MTL_NGLI_BLEND_FACTOR_ONE_MINUS_DST_ALPHA = MTL::BlendFactorOneMinusDestinationAlpha
+const MTL::BlendFactor mtl_blend_factor_map[NGLI_BLEND_FACTOR_NB] = {
+    [NGLI_BLEND_FACTOR_ZERO] = MTL::BlendFactorZero,
+    [NGLI_BLEND_FACTOR_ONE] = MTL::BlendFactorOne,
+    [NGLI_BLEND_FACTOR_SRC_COLOR] = MTL::BlendFactorSourceColor,
+    [NGLI_BLEND_FACTOR_ONE_MINUS_SRC_COLOR] = MTL::BlendFactorOneMinusSourceColor,
+    [NGLI_BLEND_FACTOR_DST_COLOR] = MTL::BlendFactorDestinationColor,
+    [NGLI_BLEND_FACTOR_ONE_MINUS_DST_COLOR] = MTL::BlendFactorOneMinusDestinationColor,
+    [NGLI_BLEND_FACTOR_SRC_ALPHA] = MTL::BlendFactorSourceAlpha,
+    [NGLI_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA] = MTL::BlendFactorOneMinusSourceAlpha,
+    [NGLI_BLEND_FACTOR_DST_ALPHA] = MTL::BlendFactorDestinationAlpha,
+    [NGLI_BLEND_FACTOR_ONE_MINUS_DST_ALPHA] = MTL::BlendFactorOneMinusDestinationAlpha
 };
 
-enum BlendOp {
-    MTL_NGLI_BLEND_OP_ADD = MTL::BlendOperationAdd,
-    MTL_NGLI_BLEND_OP_SUBTRACT = MTL::BlendOperationSubtract,
-    MTL_NGLI_BLEND_OP_REVERSE_SUBTRACT = MTL::BlendOperationReverseSubtract,
-    MTL_NGLI_BLEND_OP_MIN = MTL::BlendOperationMin,
-    MTL_NGLI_BLEND_OP_MAX = MTL::BlendOperationMax
+const MTL::BlendOperation mtl_blend_op_map[NGLI_BLEND_OP_NB] = {
+    [NGLI_BLEND_OP_ADD] = MTL::BlendOperationAdd,
+    [NGLI_BLEND_OP_SUBTRACT] = MTL::BlendOperationSubtract,
+    [NGLI_BLEND_OP_REVERSE_SUBTRACT] = MTL::BlendOperationReverseSubtract,
+    [NGLI_BLEND_OP_MIN] = MTL::BlendOperationMin,
+    [NGLI_BLEND_OP_MAX] = MTL::BlendOperationMax
 };
 
-enum DepthOp {
-    MTL_NGLI_COMPARE_OP_NEVER = MTL::CompareFunctionNever,
-    MTL_NGLI_COMPARE_LESS = MTL::CompareFunctionLess,
-    MTL_NGLI_COMPARE_EQUAL = MTL::CompareFunctionEqual,
-    MTL_NGLI_COMPARE_OP_LESS_OR_EQUAL = MTL::CompareFunctionLessEqual,
-    MTL_NGLI_COMPARE_OP_GREATER = MTL::CompareFunctionGreater,
-    MTL_NGLI_COMPARE_OP_NOT_EQUAL = MTL::CompareFunctionNotEqual,
-    MTL_NGLI_COMPARE_OP_GREATER_OR_EQUAL = MTL::CompareFunctionGreaterEqual,
-    MTL_NGLI_COMPARE_OP_ALWAYS = MTL::CompareFunctionAlways
+const MTL::CompareFunction mtl_compare_function_map[NGLI_COMPARE_OP_NB] = {
+    [NGLI_COMPARE_OP_NEVER] = MTL::CompareFunctionNever,
+    [NGLI_COMPARE_OP_LESS] = MTL::CompareFunctionLess,
+    [NGLI_COMPARE_OP_EQUAL] = MTL::CompareFunctionEqual,
+    [NGLI_COMPARE_OP_LESS_OR_EQUAL] = MTL::CompareFunctionLessEqual,
+    [NGLI_COMPARE_OP_GREATER] = MTL::CompareFunctionGreater,
+    [NGLI_COMPARE_OP_NOT_EQUAL] = MTL::CompareFunctionNotEqual,
+    [NGLI_COMPARE_OP_GREATER_OR_EQUAL] = MTL::CompareFunctionGreaterEqual,
+    [NGLI_COMPARE_OP_ALWAYS] = MTL::CompareFunctionAlways
 };
 
-enum ColorWriteBits {
-    MTL_NGLI_COLOR_COMPONENT_R_BIT = MTL::ColorWriteMaskRed,
-    MTL_NGLI_COLOR_COMPONENT_G_BIT = MTL::ColorWriteMaskGreen,
-    MTL_NGLI_COLOR_COMPONENT_B_BIT = MTL::ColorWriteMaskBlue,
-    MTL_NGLI_COLOR_COMPONENT_A_BIT = MTL::ColorWriteMaskAlpha,
+const MTL::ColorWriteMask mtl_color_write_mask_map[16] = {
+    [NGLI_COLOR_COMPONENT_R_BIT] = MTL::ColorWriteMaskRed,
+    [NGLI_COLOR_COMPONENT_G_BIT] = MTL::ColorWriteMaskGreen,
+    [NGLI_COLOR_COMPONENT_B_BIT] = MTL::ColorWriteMaskBlue,
+    [NGLI_COLOR_COMPONENT_A_BIT] = MTL::ColorWriteMaskAlpha,
 };
 
-enum CullMode {
-    MTL_NGLI_CULL_MODE_NONE = MTL::CullModeNone,
-    MTL_NGLI_CULL_MODE_FRONT_BIT = MTL::CullModeFront,
-    MTL_NGLI_CULL_MODE_BACK_BIT = MTL::CullModeBack
+const MTL:: CullMode mtl_cull_mode_map[NGLI_CULL_MODE_NB] = {
+    [NGLI_CULL_MODE_NONE] = MTL::CullModeNone,
+    [NGLI_CULL_MODE_FRONT_BIT] = MTL::CullModeFront,
+    [NGLI_CULL_MODE_BACK_BIT] = MTL::CullModeBack
 };
 
-enum StencilOp {
-    MTL_NGLI_STENCIL_OP_KEEP = MTL::StencilOperationKeep,
-    MTL_NGLI_STENCIL_OP_ZERO = MTL::StencilOperationZero,
-    MTL_NGLI_STENCIL_OP_REPLACE = MTL::StencilOperationReplace,
-    MTL_NGLI_STENCIL_OP_INCREMENT_AND_CLAMP = MTL::StencilOperationIncrementClamp,
-    MTL_NGLI_STENCIL_OP_DECREMENT_AND_CLAMP = MTL::StencilOperationDecrementClamp,
-    MTL_NGLI_STENCIL_OP_INVERT = MTL::StencilOperationInvert,
-    MTL_NGLI_STENCIL_OP_INCREMENT_AND_WRAP = MTL::StencilOperationIncrementWrap,
-    MTL_NGLI_STENCIL_OP_DECREMENT_AND_WRAP = MTL::StencilOperationDecrementWrap
+const MTL::StencilOperation mtl_stencil_operation_map[NGLI_STENCIL_OP_NB] =  {
+    [NGLI_STENCIL_OP_KEEP] = MTL::StencilOperationKeep,
+    [NGLI_STENCIL_OP_ZERO] = MTL::StencilOperationZero,
+    [NGLI_STENCIL_OP_REPLACE] = MTL::StencilOperationReplace,
+    [NGLI_STENCIL_OP_INCREMENT_AND_CLAMP] = MTL::StencilOperationIncrementClamp,
+    [NGLI_STENCIL_OP_DECREMENT_AND_CLAMP] = MTL::StencilOperationDecrementClamp,
+    [NGLI_STENCIL_OP_INVERT] = MTL::StencilOperationInvert,
+    [NGLI_STENCIL_OP_INCREMENT_AND_WRAP] = MTL::StencilOperationIncrementWrap,
+    [NGLI_STENCIL_OP_DECREMENT_AND_WRAP] = MTL::StencilOperationDecrementWrap
 };
 
-enum FrontFace {
-    MTL_NGLI_FRONT_FACE_COUNTER_CLOCKWISE = MTL::WindingCounterClockwise,
-    MTL_NGLI_FRONT_FACE_CLOCKWISE = MTL::WindingClockwise
+const MTL::TextureType mtl_texture_type_map[NGLI_TEXTURE_TYPE_NB] = {
+    [NGLI_TEXTURE_TYPE_2D] = MTL::TextureType2D,
+    [NGLI_TEXTURE_TYPE_3D] = MTL::TextureType3D,
+    [NGLI_TEXTURE_TYPE_CUBE] = MTL::TextureTypeCube
 };
 
-enum ShaderStageFlagBits {
-    SHADER_STAGE_VERTEX_BIT = 1,
-    SHADER_STAGE_TESSELLATION_CONTROL_BIT = 2,
-    SHADER_STAGE_TESSELLATION_EVALUATION_BIT = 4,
-    SHADER_STAGE_GEOMETRY_BIT = 8,
-    SHADER_STAGE_FRAGMENT_BIT = 16,
-    SHADER_STAGE_COMPUTE_BIT = 32,
-    SHADER_STAGE_ALL_GRAPHICS = 31
+/*enum MTL::FilterMode {
+    [NGLI_MIPMAP_FILTER_NONE = MTL::SamplerMipFilterNotMipmapped,
+    [NGLI_MIPMAP_FILTER_NEAREST = MTL::SamplerMipFilterNearest,
+    [NGLI_MIPMAP_FILTER_LINEAR = MTL::SamplerMipFilterLinear,
+    [NGLI_FILTER_NEAREST = MTL::SamplerMinMagFilterNearest,
+    [NGLI_FILTER_LINEAR = MTL::SamplerMinMagFilterLinear
+};*/
+
+const MTL::SamplerAddressMode mtl_sampler_address_mode_map[NGLI_NB_WRAP] = {
+    [NGLI_WRAP_CLAMP_TO_EDGE] = MTL::SamplerAddressModeClampToEdge,
+    [NGLI_WRAP_MIRRORED_REPEAT] = MTL::SamplerAddressModeMirrorRepeat,
+    [NGLI_WRAP_REPEAT] = MTL::SamplerAddressModeRepeat
 };
 
-enum TextureType {
-    MTL_NGLI_TEXTURE_TYPE_2D = MTL::TextureType2D,
-    MTL_NGLI_TEXTURE_TYPE_3D = MTL::TextureType3D,
-    MTL_NGLI_TEXTURE_TYPE_CUBE = MTL::TextureTypeCube
+const MTL::LoadAction mtl_load_action_map[3] = {
+    [NGLI_LOAD_OP_DONT_CARE] = MTL::LoadActionDontCare,
+    [NGLI_LOAD_OP_LOAD] = MTL::LoadActionLoad,
+    [NGLI_LOAD_OP_CLEAR] = MTL::LoadActionClear
 };
 
-enum FilterMode {
-    MTL_NGLI_MIPMAP_FILTER_NONE = MTL::SamplerMipFilterNotMipmapped,
-    MTL_NGLI_MIPMAP_FILTER_NEAREST = MTL::SamplerMipFilterNearest,
-    MTL_NGLI_MIPMAP_FILTER_LINEAR = MTL::SamplerMipFilterLinear,
-    MTL_NGLI_FILTER_NEAREST = MTL::SamplerMinMagFilterNearest,
-    MTL_NGLI_FILTER_LINEAR = MTL::SamplerMinMagFilterLinear
-};
-
-enum SamplerAddressMode {
-    MTL_NGLI_WRAP_CLAMP_TO_EDGE = MTL::SamplerAddressModeClampToEdge,
-    MTL_NGLI_WRAP_MIRROED_REPEAT = MTL::SamplerAddressModeMirrorRepeat,
-    MTL_NGLI_WRAP_REPEAT = MTL::SamplerAddressModeRepeat
-};
-
-enum AttachmentLoadOp {
-    MTL_NGLI_LOAD_OP_DONT_CARE = MTL::LoadActionDontCare,
-    MTL_NGLI_LOAD_OP_LOAD = MTL::LoadActionLoad,
-    MTL_NGLI_LOAD_OP_CLEAR = MTL::LoadActionClear
-};
-
-enum AttachmentStoreOp {
-    MTL_NGLI_STORE_OP_DONT_CARE = MTL::StoreActionDontCare,
-    MTL_NGLI_STORE_OP_STORE = MTL::StoreActionStore,
-    MTL_NGLI_STORE_OP_MULTISAMPLE_RESOLVE = MTL::StoreActionMultisampleResolve,
-    MTL_NGLI_STORE_OP_STORE_AND_MULTISAMPLE_RESOLVE = MTL::StoreActionStoreAndMultisampleResolve
-};
+/*const MTL::StoreAction mtl_store_action_map[NGLI_STORE_OP_NB] = {
+    [NGLI_STORE_OP_DONT_CARE] = MTL::StoreActionDontCare,
+    [NGLI_STORE_OP_STORE] = MTL::StoreActionStore,
+    [NGLI_STORE_OP_MULTISAMPLE_RESOLVE] = MTL::StoreActionMultisampleResolve,
+    [NGLI_STORE_OP_STORE_AND_MULTISAMPLE_RESOLVE] = MTL::StoreActionStoreAndMultisampleResolve
+};*/
 #endif // __cplusplus
 #endif    
