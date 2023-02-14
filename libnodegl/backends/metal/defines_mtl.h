@@ -19,12 +19,17 @@
  * under the License.
  */
 
-#pragma once
+#ifndef DEFINES_MTL_H
+#define DEFINES_MTL_H
+
+#ifdef __cplusplus
+extern "C" {
 #include "graphicstate.h"
 #include "texture.h"
 #include "topology.h"
+}
 
-#include "utils_mtl.h"
+//#include "utils_mtl.h"
 #include "Metal.hpp"
 
 enum Topology {
@@ -138,4 +143,5 @@ enum AttachmentStoreOp {
     MTL_NGLI_STORE_OP_MULTISAMPLE_RESOLVE = MTL::StoreActionMultisampleResolve,
     MTL_NGLI_STORE_OP_STORE_AND_MULTISAMPLE_RESOLVE = MTL::StoreActionStoreAndMultisampleResolve
 };
-    
+#endif // __cplusplus
+#endif    

@@ -19,8 +19,13 @@
  * under the License.
  */
 
-#pragma once
+#ifndef FORMAT_MTL_H
+#define FORMAT_MTL_H
+
+#ifdef __cplusplus
+extern "C" {
 #include "format.h"
+}
 
 #include "Metal.hpp"
 
@@ -70,4 +75,5 @@ const MTL::PixelFormat mtl_format_map[NGLI_FORMAT_NB] = {
     [NGLI_FORMAT_D32_SFLOAT_S8_UINT] = MTL::PixelFormatDepth32Float_Stencil8, 
     [NGLI_FORMAT_S8_UINT] = MTL::PixelFormatStencil8
 };
-
+#endif // __cplusplus
+#endif
