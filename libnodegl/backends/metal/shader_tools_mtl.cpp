@@ -34,8 +34,8 @@ extern "C" {
 #include <glslang/Public/ResourceLimits.h>
 #include <glslang/Public/ShaderLang.h>
 #include "glslang/Include/ShHandle.h"
-#include "glslang/SPIRV/GlslangToSpv.h"
-#include "glslang/SPIRV/GLSL.std.450.h"
+#include "SPIRV/GlslangToSpv.h"
+#include "SPIRV/GLSL.std.450.h"
 
 bool ShaderToolsMSL::glsl_initialized = false;
 
@@ -68,24 +68,25 @@ bool ShaderToolsMSL::compileGLSLToSpirv(int stage, const std::string &glsl_data,
         { NGLI_PROGRAM_SHADER_COMP, EShLangCompute },
     };
 
-    glslang::TProgram &proram = *new glslang::TProgram;
+
+    glslang::TProgram &program = *new glslang::TProgram;
     glslang::TShader *shader = new glslang::TShader(stages[stage].lang);
-    shader->setStrings(&(glsl_data.c_str()), 1);
+    const char *data = glsl_data.c_str();
+    shader->setStrings(&data, 1);
     shader->setOverrideVersion(0);
-    shader->setEnvInput(glslang::EShSourceGlsl, stages[stage].lang, glslang::EShClientOpenGL);
+    shader->setEnvInput(glslang::EShSourceGlsl, stages[stage].lang, glslang::EShClientOpenGL, 450);
     shader->setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_1);
-    shader->setEnvTarget(glslang::EShTargetSPV, glslang::EShTargetSPV_1_3);
-    glslang::TShader::Includer includer;
-    if (!shader->preprocess(glslang::GetDefaultResources(), 450, glslang::ENoProfile,
-                        false, false, glslang::EShMsgDefault, &glsl_data, includer)) {
+    shader->setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_3);
+    /*glslang::TShader::Includer includer;
+    if (!shader->preprocess(GetDefaultResources(), 450, ENoProfile,
+                        false, false, EShMsgDefault, &glsl_data, includer)) {
         LOG(ERROR, "unable to preprocess glsl: \n%s", shader->getInfoLog());
         delete &program;
         delete shader;
         return false;
-    }
+    }*/
 
-    if (!shader->parse(glslang::GetDefaultResources(), 450, false, glslang::EShMsgDefault, 
-                       includir)) {
+    if (!shader->parse(GetDefaultResources(), 450, false, EShMsgDefault)) { 
         LOG(ERROR, "unable to parse glsl: \n%s", shader->getInfoLog());
         delete &program;
         delete shader;
@@ -93,7 +94,7 @@ bool ShaderToolsMSL::compileGLSLToSpirv(int stage, const std::string &glsl_data,
     }
 
     program.addShader(shader);
-    if (!program.link(glslang::EShMsgDefault)) {
+    if (!program.link(EShMsgDefault)) {
         LOG(ERROR, "unable to link shader: \n%s", program.getInfoLog());
         delete &program;
         delete shader;
@@ -102,11 +103,11 @@ bool ShaderToolsMSL::compileGLSLToSpirv(int stage, const std::string &glsl_data,
 
     if (program.getIntermediate(stages[stage].lang)) { 
         // compile to spirv
-        SpvBuildLogger logger;
+        spv::SpvBuildLogger logger;
         glslang::SpvOptions spv_options;
-        spvOptions.validate = true;
+        spv_options.validate = true;
         std::vector<unsigned int> spirv;
-        glslang::GlslangToSpv(*program.getIntermediate(stages[stage], spirv,
+        glslang::GlslangToSpv(*program.getIntermediate(stages[stage].lang), spirv,
                               &logger, &spv_options);
         glslang::OutputSpvBin(spirv, out_filename.c_str());
     } else {
@@ -116,7 +117,7 @@ bool ShaderToolsMSL::compileGLSLToSpirv(int stage, const std::string &glsl_data,
         return false;
     }
 
-    delete *program;
+    delete &program;
     delete shader;
     return true;
 }
