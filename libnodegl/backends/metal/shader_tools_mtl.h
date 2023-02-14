@@ -22,22 +22,23 @@
 #ifndef SHADER_TOOLS_MTL_H
 #define SHADER_TOOLS_MTL_H
 
-#include <cstddef>
 #include <mutex>
 #include <string>
+#include <vector>
 
 class ShaderToolsMSL {
 public:
     static void initialize();
     static void finalize();
     static bool compileGLSLToSpirv(int stage, const std::string &glsl_data,
-                                   std::string &spv_data);
-    static bool convertSpirvToMSL(const std::string &spv_data, std::string &msl_data);
+                                   std::vector<uint32_t> &spv_data);
+    static bool convertSpirvToMSL(const std::vector<uint32_t> &spv_data, std::string &msl_data);
     static void writeToFile(const std::string &filename, std::string &data);
-    static void compileMSL(const std::string &filename);
+    static bool compileMSL(const std::string &filename);
 
 private:
-    static std::mutex mutex;
+    static std::mutex glslang_mutex;
+    static std::mutex file_mutex;
     static bool glsl_initialized;
 };
 
