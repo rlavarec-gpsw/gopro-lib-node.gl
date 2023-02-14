@@ -31,8 +31,8 @@ public:
     static void initialize();
     static void finalize();
     static bool compileGLSLToSpirv(int stage, const std::string &glsl_data,
-                                   const std::string &out_filename);
-    static bool convertSpirvToMSL();
+                                   std::string &spv_data);
+    static bool convertSpirvToMSL(const std::string &spv_data, std::string &msl_data);
     static void writeToFile(const std::string &filename, std::string &data);
     static void compileMSL(const std::string &filename);
 

@@ -58,7 +58,7 @@ void ShaderToolsMSL::finalize() {
 }
 
 bool ShaderToolsMSL::compileGLSLToSpirv(int stage, const std::string &glsl_data,
-                                        const std::string &out_filename ) {
+                                        std::string &spv_data ) {
     const struct {
         int stage;
         EShLanguage lang;
@@ -109,7 +109,13 @@ bool ShaderToolsMSL::compileGLSLToSpirv(int stage, const std::string &glsl_data,
         std::vector<unsigned int> spirv;
         glslang::GlslangToSpv(*program.getIntermediate(stages[stage].lang), spirv,
                               &logger, &spv_options);
-        glslang::OutputSpvBin(spirv, out_filename.c_str());
+        for (auto word : spirv) {
+            char *s = (char *)&word;
+            for (int i = 0; i < 4; i++) {
+                spv_data.push_back(s[i]);
+            }
+        }
+        //glslang::OutputSpvBin(spirv, out_filename.c_str());
     } else {
         LOG(ERROR, "unable to get program intermediate");
         delete &program;
