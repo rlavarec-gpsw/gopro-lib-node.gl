@@ -359,3 +359,171 @@ def compute_image_load_store(cfg: SceneCfg, show_dbg_points=False):
         group.add_children(get_debug_points(cfg, cuepoints))
 
     return group
+
+
+_LAYERED_STORE_COMPUTE = """
+void main()
+{
+    ivec2 pos_store = ivec2(gl_GlobalInvocationID.xy);
+    imageStore(tex_out, ivec3(pos_store, 0), vec4(1.0, 0.0, 0.0, 1.0));
+    imageStore(tex_out, ivec3(pos_store, 1), vec4(0.0, 1.0, 0.0, 1.0));
+    imageStore(tex_out, ivec3(pos_store, 2), vec4(0.0, 0.0, 1.0, 1.0));
+    imageStore(tex_out, ivec3(pos_store, 3), vec4(1.0, 1.0, 0.0, 1.0));
+    imageStore(tex_out, ivec3(pos_store, 4), vec4(0.0, 1.0, 1.0, 1.0));
+    imageStore(tex_out, ivec3(pos_store, 5), vec4(1.0, 0.0, 1.0, 1.0));
+}
+"""
+
+
+_LAYERED_LOAD_COMPUTE = """
+void main()
+{
+    ivec3 pos_load;
+
+    ivec2 pos_store = ivec2(gl_GlobalInvocationID.xy);
+    ivec3 cube_size = imageSize(tex_in);
+
+    if(pos_store.y >= cube_size.y)
+    {
+        if(pos_store.x >= cube_size.x*2)
+        {
+            ivec2 pos_face = pos_store - ivec2(cube_size.x*2, cube_size.y);
+            pos_load = ivec3(pos_face, 5);
+        }
+        else if(pos_store.x >= cube_size.x)
+        {
+            ivec2 pos_face = pos_store - ivec2(cube_size.x, cube_size.y);
+            pos_load = ivec3(pos_face, 4);
+        }
+        else
+        {
+            ivec2 pos_face = pos_store - ivec2(0, cube_size.y);
+            pos_load = ivec3(pos_face, 3);
+        }
+    }
+    else
+    {
+        if(pos_store.x >= cube_size.x*2)
+        {
+            ivec2 pos_face = pos_store - ivec2(cube_size.x*2, 0);
+            pos_load = ivec3(pos_face, 2);
+        }
+        else if(pos_store.x >= cube_size.x)
+        {
+            ivec2 pos_face = pos_store - ivec2(cube_size.x, 0);
+            pos_load = ivec3(pos_face, 1);
+        }
+        else
+        {
+            ivec2 pos_face = pos_store - ivec2(0, 0);
+            pos_load = ivec3(pos_face, 0);
+        }
+    }
+
+    vec4 color;
+    color = imageLoad(tex_in, pos_load);
+    imageStore(tex_out, pos_store, color);
+}
+"""
+
+_B_X = 6
+_B_Y = 4
+
+
+def _get_compute_colorbox_cuepoints():
+    c = lambda i, f: (i / f + (1 / (2 * f))) * 2 - 1
+    return {f"{x}{y}": (c(x, _B_X), c(y, _B_Y)) for y in range(_B_Y) for x in range(_B_X)}
+
+
+def compute_group_count(size, group_size):
+    return (size / group_size) if (size % group_size == 0) else (size / group_size + 1)
+
+
+@test_cuepoints(points=_get_compute_colorbox_cuepoints(), tolerance=1)
+@scene(show_dbg_points=scene.Bool())
+def compute_cubemap_load_store(cfg: SceneCfg, show_dbg_points=False):
+    group_size = 8
+    cube_size = 256
+
+    texture_cube = ngl.TextureCube(size=cube_size, min_filter="linear", mag_filter="linear")
+
+    program_cube_store = ngl.ComputeProgram(_LAYERED_STORE_COMPUTE, workgroup_size=(group_size, group_size, 1))
+    program_cube_store.update_properties(
+        tex_out=ngl.ResourceProps(as_image=True, writable=True),
+    )
+
+    group_count_x = compute_group_count(cube_size, group_size)
+    group_count_y = compute_group_count(cube_size, group_size)
+    compute_cube_store = ngl.Compute(workgroup_count=(group_count_x, group_count_y, 1), program=program_cube_store)
+    compute_cube_store.update_resources(tex_out=texture_cube)
+
+    image_width = cube_size * 3
+    image_height = cube_size * 2
+    texture_rgba = ngl.Texture2D(width=image_width, height=image_height)
+
+    program_cube_load = ngl.ComputeProgram(_LAYERED_LOAD_COMPUTE, workgroup_size=(group_size, group_size, 1))
+    program_cube_load.update_properties(
+        tex_in=ngl.ResourceProps(as_image=True),
+        tex_out=ngl.ResourceProps(as_image=True, writable=True),
+    )
+
+    group_count_x = compute_group_count(image_width, group_size)
+    group_count_y = compute_group_count(image_height, group_size)
+    compute_cube_load = ngl.Compute(workgroup_count=(group_count_x, group_count_y, 1), program=program_cube_load)
+    compute_cube_load.update_resources(tex_in=texture_cube, tex_out=texture_rgba)
+
+    render = ngl.RenderTexture(texture_rgba)
+    group = ngl.Group(children=(compute_cube_store, compute_cube_load, render))
+
+    if show_dbg_points:
+        cuepoints = _get_compute_colorbox_cuepoints()
+        group.add_children(get_debug_points(cfg, cuepoints))
+
+    return group
+
+
+@test_cuepoints(points=_get_compute_colorbox_cuepoints(), tolerance=1)
+@scene(show_dbg_points=scene.Bool())
+def compute_3D_load_store(cfg: SceneCfg, show_dbg_points=False):
+    group_size = 8
+    texture_width = 256
+    texture_height = 256
+    texture_depth = 6
+
+    texture_3D = ngl.Texture3D(
+        width=texture_width, height=texture_height, depth=texture_depth, min_filter="linear", mag_filter="linear"
+    )
+
+    program_3D_store = ngl.ComputeProgram(_LAYERED_STORE_COMPUTE, workgroup_size=(group_size, group_size, 1))
+    program_3D_store.update_properties(
+        tex_out=ngl.ResourceProps(as_image=True, writable=True),
+    )
+
+    group_count_x = compute_group_count(texture_width, group_size)
+    group_count_y = compute_group_count(texture_height, group_size)
+    compute_3D_store = ngl.Compute(workgroup_count=(group_count_x, group_count_y, 1), program=program_3D_store)
+    compute_3D_store.update_resources(tex_out=texture_3D)
+
+    image_width = texture_width * 3
+    image_height = texture_height * 2
+    texture_rgba = ngl.Texture2D(width=image_width, height=image_height)
+
+    program_3D_load = ngl.ComputeProgram(_LAYERED_LOAD_COMPUTE, workgroup_size=(group_size, group_size, 1))
+    program_3D_load.update_properties(
+        tex_in=ngl.ResourceProps(as_image=True),
+        tex_out=ngl.ResourceProps(as_image=True, writable=True),
+    )
+
+    group_count_x = compute_group_count(image_width, group_size)
+    group_count_y = compute_group_count(image_height, group_size)
+    compute_3D_load = ngl.Compute(workgroup_count=(group_count_x, group_count_y, 1), program=program_3D_load)
+    compute_3D_load.update_resources(tex_in=texture_3D, tex_out=texture_rgba)
+
+    render = ngl.RenderTexture(texture_rgba)
+    group = ngl.Group(children=(compute_3D_store, compute_3D_load, render))
+
+    if show_dbg_points:
+        cuepoints = _get_compute_colorbox_cuepoints()
+        group.add_children(get_debug_points(cfg, cuepoints))
+
+    return group

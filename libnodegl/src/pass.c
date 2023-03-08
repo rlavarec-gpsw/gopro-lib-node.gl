@@ -154,15 +154,24 @@ static int register_texture(struct pass *s, const char *name, struct ngl_node *t
         if (resprops_node) {
             const struct resourceprops_opts *resprops = resprops_node->opts;
             if (resprops->as_image) {
-                if (texture->cls->id != NGL_NODE_TEXTURE2D) {
-                    LOG(ERROR, "\"%s\" can not be accessed as an image; only Texture2D is supported as image", name);
-                    return NGL_ERROR_UNSUPPORTED;
-                }
                 /* Disable direct rendering when using image load/store */
                 texture_priv->supported_image_layouts = 1 << NGLI_IMAGE_LAYOUT_DEFAULT;
                 texture_priv->params.usage |= NGLI_TEXTURE_USAGE_STORAGE_BIT;
 
-                crafter_texture.type = NGLI_PGCRAFT_SHADER_TEX_TYPE_IMAGE_2D;
+                switch (texture->cls->id) {
+                case NGL_NODE_TEXTURECUBE:
+                    crafter_texture.type = NGLI_PGCRAFT_SHADER_TEX_TYPE_IMAGE_2D_ARRAY;
+                    break;
+                case NGL_NODE_TEXTURE3D:
+                    crafter_texture.type = NGLI_PGCRAFT_SHADER_TEX_TYPE_IMAGE_3D;
+                    break;
+                case NGL_NODE_TEXTURE2D:
+                    crafter_texture.type = NGLI_PGCRAFT_SHADER_TEX_TYPE_IMAGE_2D;
+                    break;
+                default:
+                    LOG(ERROR, "\"%s\" can not be accessed as an image; only Texture2D, Texture3D, and TextureCube are supported as image", name);
+                    return NGL_ERROR_UNSUPPORTED;
+                }
             }
             crafter_texture.writable  = resprops->writable;
             crafter_texture.precision = resprops->precision;

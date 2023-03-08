@@ -45,6 +45,8 @@ static const char * const type_map[NGLI_TYPE_NB] = {
     [NGLI_TYPE_SAMPLER_EXTERNAL_OES]        = "samplerExternalOES",
     [NGLI_TYPE_SAMPLER_EXTERNAL_2D_Y2Y_EXT] = "__samplerExternal2DY2YEXT",
     [NGLI_TYPE_IMAGE_2D]                    = "image2D",
+    [NGLI_TYPE_IMAGE_3D]                    = "image3D",
+    [NGLI_TYPE_IMAGE_2D_ARRAY]              = "image2DArray",
     [NGLI_TYPE_UNIFORM_BUFFER]              = "uniform",
     [NGLI_TYPE_STORAGE_BUFFER]              = "buffer",
 };
