@@ -84,6 +84,12 @@ if host_system == 'windows'
   endif
 endif
 
+# Need a flag to declare if using cross compilation or not
+is_native = true
+if host_system == 'android' or host_system == 'iphone'
+  is_native = false
+endif
+
 # This trim prefix is used to make __FILE__ starts from the source dir with
 # out-of-tree builds.
 # Adjusted from https://github.com/mesonbuild/meson/issues/7485
@@ -107,7 +113,7 @@ add_project_arguments(project_args, language: 'c')
 
 # Also apply to local generator targets such as gen_doc
 # See https://github.com/mesonbuild/meson/issues/7940
-add_project_arguments(project_args, language: 'c', native: true)
+add_project_arguments(project_args, language: 'c', native: is_native)
 
 inc_dir = include_directories('src')
 
@@ -208,12 +214,14 @@ lib_src = files(
   'src/utils.c',
 )
 
+# Add lib_src_asm for assembly, because of gen_specs which need to be native
+lib_src_asm = files()
 if host_machine.cpu_family() == 'aarch64'
-  lib_src += files('src/asm_aarch64.S')
+  lib_src_asm += files('src/asm_aarch64.S')
 endif
 have_x86_intr = host_machine.cpu_family().startswith('x86') and cc.has_header('immintrin.h')
 if have_x86_intr
-  lib_src += files('src/simd_x86.c')
+  lib_src_asm += files('src/simd_x86.c')
   conf_data.set10('HAVE_X86_INTR', true)
 endif
 
@@ -469,7 +477,13 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
   gbackend_deps = []
   foreach dep : host_backend_cfg.get('deps', [])
     if dep == 'glslang'
-      add_languages('cpp')
+      # need to add cpp language into native if is_native and not native
+      if is_native == false
+        add_languages('cpp', native: true)
+      	add_languages('cpp', native: false)
+      else
+        add_languages('cpp')
+      endif
       cxx = meson.get_compiler('cpp')
       # glslang can be distributed as shared or static libraries optionally
       # linked to SPIRV-Tools:
@@ -675,11 +689,12 @@ endif
 
 libnodegl = library(
   'nodegl',
-  lib_src,
+  lib_src + lib_src_asm,
   dependencies: lib_deps,
   install: true,
   install_rpath: install_rpath,
   version: meson.project_version(),
+  native: is_native,
   c_args: lib_c_args,
   objc_args: lib_objc_args,
   gnu_symbol_visibility: 'hidden',
@@ -862,6 +877,7 @@ if get_option('tests')
       test_data.get('src'),
       dependencies: lib_deps,
       build_by_default: false,
+      native: is_native,
       install: false,
       include_directories: inc_dir,
     )
