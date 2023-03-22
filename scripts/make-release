@@ -12,7 +12,7 @@ if ! git diff-index --quiet HEAD; then
     exit 1
 fi
 
-today=$(date -I)
+today=$(date -Idate)
 
 # If the year changed since last release, we reset the digit to 0, otherwise we
 # simply increment it
