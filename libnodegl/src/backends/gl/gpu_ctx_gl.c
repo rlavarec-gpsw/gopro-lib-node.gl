@@ -102,7 +102,7 @@ static int wrap_capture_cvpixelbuffer(struct gpu_ctx *s,
 
     struct texture *texture = ngli_texture_create(s);
     if (!texture) {
-        CFRelease(cv_texture);
+        NGLI_CFRELEASE(cv_texture);
         return NGL_ERROR_MEMORY;
     }
 
@@ -121,7 +121,7 @@ static int wrap_capture_cvpixelbuffer(struct gpu_ctx *s,
 
     int ret = ngli_texture_gl_wrap(texture, &wrap_params);
     if (ret < 0) {
-        CFRelease(cv_texture);
+        NGLI_CFRELEASE(cv_texture);
         ngli_texture_freep(&texture);
         return ret;
     }
@@ -136,14 +136,8 @@ static void reset_capture_cvpixelbuffer(struct gpu_ctx *s)
 {
     struct gpu_ctx_gl *s_priv = (struct gpu_ctx_gl *)s;
 
-    if (s_priv->capture_cvbuffer) {
-        CFRelease(s_priv->capture_cvbuffer);
-        s_priv->capture_cvbuffer = NULL;
-    }
-    if (s_priv->capture_cvtexture) {
-        CFRelease(s_priv->capture_cvtexture);
-        s_priv->capture_cvtexture = NULL;
-    }
+    NGLI_CFRELEASE(s_priv->capture_cvbuffer);
+    NGLI_CFRELEASE(s_priv->capture_cvtexture);
 }
 #endif
 

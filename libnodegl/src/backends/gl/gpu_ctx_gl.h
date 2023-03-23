@@ -41,6 +41,13 @@ struct rendertarget;
 
 typedef void (*capture_func_type)(struct gpu_ctx *s);
 
+#define NGLI_CFRELEASE(ref) do { \
+    if (ref) {                   \
+        CFRelease(ref);          \
+        ref = NULL;              \
+    }                            \
+} while (0)
+
 struct gpu_ctx_gl {
     struct gpu_ctx parent;
     struct glcontext *glcontext;
