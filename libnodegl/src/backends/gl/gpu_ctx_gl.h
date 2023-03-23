@@ -24,7 +24,7 @@
 
 #include "config.h"
 
-#if defined(TARGET_IPHONE)
+#if defined(TARGET_IPHONE) || defined(TARGET_DARWIN)
 #include <CoreVideo/CoreVideo.h>
 #endif
 
