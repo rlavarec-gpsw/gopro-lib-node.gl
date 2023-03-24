@@ -717,6 +717,7 @@ static int update_capture_cvpixelbuffer(struct gpu_ctx *s, CVPixelBufferRef capt
                                    NGLI_LOAD_OP_LOAD, &s_priv->default_rt_load)) < 0)
         return ret;
 
+    ngli_texture_freep(&s_priv->color);
     return 0;
 }
 #endif
