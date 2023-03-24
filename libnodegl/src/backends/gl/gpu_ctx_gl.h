@@ -67,9 +67,13 @@ struct gpu_ctx_gl {
     struct texture *depth_stencil;
     /* Offscreen capture callback and resources */
     capture_func_type capture_func;
-#if defined(TARGET_IPHONE)
+#if defined(TARGET_IPHONE) || defined(TARGET_DARWIN)
     CVPixelBufferRef capture_cvbuffer;
+#endif
+#if defined(TARGET_IPHONE)
     CVOpenGLESTextureRef capture_cvtexture;
+#elif defined(TARGET_DARWIN)
+    CVOpenGLTextureRef capture_cvtexture;
 #endif
     /* Timer */
     GLuint queries[2];
