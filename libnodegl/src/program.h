@@ -19,8 +19,7 @@
  * under the License.
  */
 
-#ifndef PROGRAM_H
-#define PROGRAM_H
+#pragma once
 
 #include "hmap.h"
 
@@ -33,7 +32,7 @@ struct program_variable_info {
     int location;
 };
 
-enum {
+enum program_shaders{
     NGLI_PROGRAM_SHADER_VERT,
     NGLI_PROGRAM_SHADER_FRAG,
     NGLI_PROGRAM_SHADER_COMP,
@@ -57,5 +56,3 @@ struct program {
 struct program *ngli_program_create(struct gpu_ctx *gpu_ctx);
 int ngli_program_init(struct program *s, const struct program_params *params);
 void ngli_program_freep(struct program **sp);
-
-#endif

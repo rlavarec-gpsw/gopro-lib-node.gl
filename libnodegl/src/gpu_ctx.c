@@ -30,6 +30,7 @@
 extern const struct gpu_ctx_class ngli_gpu_ctx_gl;
 extern const struct gpu_ctx_class ngli_gpu_ctx_gles;
 extern const struct gpu_ctx_class ngli_gpu_ctx_vk;
+extern const struct gpu_ctx_class ngli_gpu_ctx_d3d12;
 
 static const struct {
     const struct gpu_ctx_class *cls;
@@ -47,6 +48,11 @@ static const struct {
 #ifdef BACKEND_VK
     [NGL_BACKEND_VULKAN] = {
         .cls = &ngli_gpu_ctx_vk,
+    },
+#endif
+#ifdef BACKEND_D3D12
+    [NGL_BACKEND_D3D12] = {
+        .cls = &ngli_gpu_ctx_d3d12,
     },
 #endif
 };

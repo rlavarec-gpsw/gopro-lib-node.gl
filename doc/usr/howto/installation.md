@@ -14,6 +14,7 @@ building and running the complete `node.gl` stack.
   - **Graphviz**
   - **SDL2**
   - **Glslang**
+  - **Windows 11 SDK** (Windows, Direct3D 12, optional)
   - **MoltenVK** (macOS, optional)
 - Build with `./configure.py && make`
 - Enter the virtual environment with `. venv/bin/activate`
@@ -41,7 +42,7 @@ building and running the complete `node.gl` stack.
 - Install [Microsoft Visual
   Studio](https://visualstudio.microsoft.com/downloads/) and make sure the
   *Desktop development with C++* is included (it should enable MSVC build tools
-  and Windows 10 SDK).
+  and Windows 11 SDK).
 - Install [VulkanSDK](https://vulkan.lunarg.com/sdk/home#windows) (optional)
 - Download and extract [Vcpkg](https://github.com/microsoft/vcpkg) in
   `C:\vcpkg`, then from Windows PowerShell:

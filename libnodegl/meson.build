@@ -21,11 +21,11 @@
 
 project(
   'libnodegl',
-  'c',
+   'c',
    default_options: ['c_std=c99'],
    license: 'Apache',
    meson_version: '>= 0.57.0',
-   version: files('VERSION'),
+   version: files('NODEGL_VERSION'),
 )
 
 conf_data = configuration_data()
@@ -36,7 +36,17 @@ conf_data.set('version_micro', version_array[2])
 
 host_system = host_machine.system()
 cpu_family = host_machine.cpu_family()
-cc = meson.get_compiler('c')
+
+defaultLanguage = 'c'
+
+cpp_args = []
+if host_system == 'windows'
+  defaultLanguage = 'cpp'
+  add_languages('cpp')
+  cpp_args = ['/std:c++20']
+endif
+
+cc = meson.get_compiler(defaultLanguage)
 
 # meson currently (0.56.0) doesn't distinguish between macOS and iOS (the
 # "darwin" identifier is shared), so we need to test explicitly.
@@ -78,7 +88,7 @@ if host_system == 'windows'
       '/w14101', # 'identifier' : unreferenced local variable
       '/w14189', # 'identifier' : local variable is initialized but not referenced
     ]
-    add_project_arguments(msvc_args, language: 'c')
+    add_project_arguments(msvc_args, language: defaultLanguage)
   else
     conf_data.set10('TARGET_MINGW_W64', true)
   endif
@@ -109,11 +119,11 @@ project_args = cc.get_supported_arguments([
   '-Wlogical-op',
   '-fmacro-prefix-map=@0@/='.format(trim_prefix),
 ])
-add_project_arguments(project_args, language: 'c')
+add_project_arguments(project_args, language: defaultLanguage)
 
 # Also apply to local generator targets such as gen_doc
 # See https://github.com/mesonbuild/meson/issues/7940
-add_project_arguments(project_args, language: 'c', native: is_native)
+add_project_arguments(project_args, language: defaultLanguage, native: is_native)
 
 inc_dir = include_directories('src')
 
@@ -212,6 +222,15 @@ lib_src = files(
   'src/transforms.c',
   'src/type.c',
   'src/utils.c',
+)
+
+# backends common
+lib_src += files(
+  'src/backends/common/File.cpp',
+  'src/backends/common/FileUtil.cpp',
+  'src/backends/common/RegexUtil.cpp',
+  'src/backends/common/ShaderTools.cpp',
+  'src/backends/common/StringUtil.cpp',
 )
 
 # Add lib_src_asm for assembly, because of gen_specs which need to be native
@@ -454,6 +473,55 @@ gbackends_cfg = {
       },
     },
   },
+  'd3d12': {
+    'src': files(
+      'src/backends/d3d12/api_d3d12.cpp',
+      'src/backends/d3d12/buffer_d3d12.cpp',
+      'src/backends/d3d12/format_d3d12.cpp',
+      'src/backends/d3d12/gpu_ctx_d3d12.cpp',
+      'src/backends/d3d12/hwmap_d3d12.cpp',
+      'src/backends/d3d12/pipeline_d3d12.cpp',
+      'src/backends/d3d12/program_d3d12.cpp',
+      'src/backends/d3d12/rendertarget_d3d12.cpp',
+      'src/backends/d3d12/surface_util_d3d12.cpp',
+      'src/backends/d3d12/swapchain_util_d3d12.cpp',
+      'src/backends/d3d12/texture_d3d12.cpp',
+      'src/backends/d3d12/topology_d3d12.cpp',
+      'src/backends/d3d12/util_d3d12.cpp',
+      'src/backends/d3d12/impl/D3DBuffer.cpp',
+      'src/backends/d3d12/impl/D3DBlitOp.cpp',
+      'src/backends/d3d12/impl/D3DCommandList.cpp',
+      'src/backends/d3d12/impl/D3DCommandQueue.cpp',
+      'src/backends/d3d12/impl/D3DComputePipeline.cpp',
+      'src/backends/d3d12/impl/D3DDescriptorHandle.cpp',
+      'src/backends/d3d12/impl/D3DDescriptorHeap.cpp',
+      'src/backends/d3d12/impl/D3DDevice.cpp',
+      'src/backends/d3d12/impl/D3DFence.cpp',
+      'src/backends/d3d12/impl/D3DFramebuffer.cpp',
+      'src/backends/d3d12/impl/D3DGraphics.cpp',
+      'src/backends/d3d12/impl/D3DGraphicsContext.cpp',
+      'src/backends/d3d12/impl/D3DGraphicsPipeline.cpp',
+      'src/backends/d3d12/impl/D3DPipelineCache.cpp',
+      'src/backends/d3d12/impl/D3DPipeline.cpp',
+      'src/backends/d3d12/impl/D3DPipelineUtil.cpp',
+      'src/backends/d3d12/impl/D3DQueryHeap.cpp',
+      'src/backends/d3d12/impl/D3DReadbackBuffer.cpp',
+      'src/backends/d3d12/impl/D3DRenderPass.cpp',
+      'src/backends/d3d12/impl/D3DSurface.cpp',
+      'src/backends/d3d12/impl/D3DSampler.cpp',
+      'src/backends/d3d12/impl/D3DSamplerDesc.cpp',
+      'src/backends/d3d12/impl/D3DShaderModule.cpp',
+      'src/backends/d3d12/impl/D3DTexture.cpp',
+      'src/backends/d3d12/impl/D3DSwapchain.cpp',
+      'src/backends/d3d12/impl/D3DUtils.cpp',
+    ),
+    'cfg': 'BACKEND_D3D12',
+    'hosts_cfg': {
+      'windows': {
+        'deps': ['glslang'],
+      },
+    },
+  },
 }
 
 if host_system in ['darwin', 'iphone']
@@ -466,6 +534,7 @@ extra_include_dirs = get_option('extra_include_dirs')
 
 foreach gbackend_name, gbackend_cfg : gbackends_cfg
   opt_gbackend = get_option('gbackend-' + gbackend_name)
+  message('opt_gbackend: @0@'.format(opt_gbackend))
   if opt_gbackend.disabled()
     continue
   endif
@@ -473,6 +542,7 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
   if host_system not in hosts_backend_cfg
     continue
   endif
+  message('hosts_backend_cfg: @0@'.format(hosts_backend_cfg))
   host_backend_cfg = hosts_backend_cfg.get(host_system)
   gbackend_deps = []
   foreach dep : host_backend_cfg.get('deps', [])
@@ -482,7 +552,7 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
         add_languages('cpp', native: true)
       	add_languages('cpp', native: false)
       else
-        add_languages('cpp')
+      add_languages('cpp')
       endif
       cxx = meson.get_compiler('cpp')
       # glslang can be distributed as shared or static libraries optionally
@@ -678,6 +748,7 @@ nodegl_version_cdata.set('NODEGL_MICRO_VERSION', version_array[2])
 nodegl_version_cdata.set('NODEGL_VERSION', meson.project_version())
 
 # Add properties information with a rc file for the DLL under Windows
+cpp_pch = []
 if cc.get_id() == 'msvc'
   nodegl_rc = configure_file(
     input: 'nodegl.rc.in',
@@ -685,6 +756,8 @@ if cc.get_id() == 'msvc'
     configuration: nodegl_version_cdata,
   )
   lib_src += import('windows').compile_resources(nodegl_rc)
+
+  cpp_pch =  'src/pch/windows/stdafx.h'
 endif
 
 libnodegl = library(
@@ -699,7 +772,10 @@ libnodegl = library(
   objc_args: lib_objc_args,
   gnu_symbol_visibility: 'hidden',
   include_directories: inc_dir,
+  cpp_pch : cpp_pch,
+  cpp_args : cpp_args
 )
+
 lib_header = configure_file(
   input: files('src/nodegl.h.in'),
   output: 'nodegl.h',
@@ -732,6 +808,13 @@ specs_filename = 'nodes.specs'
 dest_datadir = get_option('datadir') / 'nodegl'
 install_data(files(specs_filename), install_dir: dest_datadir)
 install_data(files('src/android/java/OnFrameAvailableListener.java'), install_dir: dest_datadir / 'java/org/nodegl')
+
+# D3D12 extra
+if host_system == 'windows'
+  if cc.get_id() == 'msvc'
+  install_subdir('src/backends/d3d12/data', install_dir: get_option('datadir') / 'd3d12')
+  endif
+endif
 
 # XXX: should we use an intermediate static_library() to share the objects
 # between the library and these tools?

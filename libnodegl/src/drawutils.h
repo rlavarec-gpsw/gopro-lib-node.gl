@@ -31,11 +31,11 @@
 
 struct canvas {
     uint8_t *buf;
-    int w, h;
+    int32_t w, h;
 };
 
 struct rect {
-    int x, y, w, h;
+    int32_t x, y, w, h;
 };
 
 #define NGLI_FONT_H 8

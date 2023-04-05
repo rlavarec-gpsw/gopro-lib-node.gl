@@ -8,6 +8,8 @@ for the globale releases (`YYYY.MINOR`), and to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html) for `libnodegl`.
 
 ## [Unreleased]
+### Added
+- Initial Direct3D 12 support
 
 ## [2023.2] [libnodegl 0.9.0] - 2023-06-28
 

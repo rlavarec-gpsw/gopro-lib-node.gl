@@ -95,7 +95,8 @@ struct gpu_ctx_class {
     int (*pipeline_update_buffer)(struct pipeline *s, int index, const struct buffer *buffer, int offset, int size);
     void (*pipeline_draw)(struct pipeline *s, int nb_vertices, int nb_instances);
     void (*pipeline_draw_indexed)(struct pipeline *s, const struct buffer *indices, int indices_format, int nb_indices, int nb_instances);
-    void (*pipeline_dispatch)(struct pipeline *s, int nb_group_x, int nb_group_y, int nb_group_z);
+    void (*pipeline_dispatch)(struct pipeline* s, int nb_group_x, int nb_group_y, int nb_group_z,
+                              int threads_per_group_x, int threads_per_group_y, int threads_per_group_z);
     void (*pipeline_freep)(struct pipeline **sp);
 
     struct program *(*program_create)(struct gpu_ctx *ctx);

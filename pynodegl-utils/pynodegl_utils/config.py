@@ -64,6 +64,7 @@ class Config(QtCore.QObject):
             "opengl",
             "opengles",
             "vulkan",
+            "d3d12",
         ],
     }
 

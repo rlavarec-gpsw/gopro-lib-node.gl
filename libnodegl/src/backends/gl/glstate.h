@@ -28,7 +28,7 @@
 struct graphicstate;
 
 struct glstate {
-    /* Graphics state */
+    /* D3DGraphics state */
     GLenum blend;
     GLenum blend_dst_factor;
     GLenum blend_src_factor;

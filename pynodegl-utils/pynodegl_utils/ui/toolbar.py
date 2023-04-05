@@ -112,6 +112,7 @@ class Toolbar(QtWidgets.QWidget):
             "opengl": "OpenGL",
             "opengles": "OpenGL ES",
             "vulkan": "Vulkan",
+            "d3d12": "Direct3D 12",
         }
         all_backends = config.CHOICES["backend"]
         default_backend = config.get("backend")

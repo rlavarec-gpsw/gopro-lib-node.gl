@@ -56,6 +56,7 @@
 
 extern const struct api_impl api_gl;
 extern const struct api_impl api_vk;
+extern const struct api_impl api_d3d12;
 
 static const struct {
     const struct api_impl *api_impl;
@@ -75,14 +76,20 @@ static const struct {
         .api_impl = &api_vk,
     },
 #endif
+#ifdef BACKEND_D3D12
+    [NGL_BACKEND_D3D12] = {
+        .api_impl = &api_d3d12,
+    },
+#endif
 };
 
 const char* ngli_get_backend_string_id(int backend)
 {
     switch (backend) {
-    case NGL_BACKEND_OPENGL:    return "opengl";
-    case NGL_BACKEND_OPENGLES:  return "opengles";
-    case NGL_BACKEND_VULKAN:    return "vulkan";
+        case NGL_BACKEND_OPENGL:    return "opengl";
+        case NGL_BACKEND_OPENGLES:  return "opengles";
+        case NGL_BACKEND_VULKAN:    return "vulkan";
+        case NGL_BACKEND_D3D12:     return "d3d12";
     }
     ngli_assert(0);
 }
@@ -516,6 +523,9 @@ static const int backend_ids[] = {
 #endif
 #ifdef BACKEND_VK
     NGL_BACKEND_VULKAN,
+#endif
+#ifdef BACKEND_D3D12
+    NGL_BACKEND_D3D12,
 #endif
 };
 
