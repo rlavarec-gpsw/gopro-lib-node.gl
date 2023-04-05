@@ -57,6 +57,15 @@ jobs:
           .\VulkanRT-Installer.exe /S
 
           cd C:\vcpkg
+
+          # update vcpkg
+          git pull
+          bootstrap-vcpkg.bat
+          .\vcpkg.exe update
+          .\vcpkg.exe upgrade
+          .\vcpkg.exe upgrade --no-dry-run
+
+          # install dependencies inside vcpkg
           .\vcpkg.exe install --triplet ${{env.VCPKG_TRIPLET}} ${{env.VCPKG_INSTALL_PACKAGES}}
 
       - name: Build (${{matrix.build_backend}})
