@@ -22,6 +22,7 @@
 option('gbackend-gl', type: 'feature', value: 'auto')
 option('gbackend-gles', type: 'feature', value: 'auto')
 option('gbackend-vk', type: 'feature', value: 'auto')
+option('gbackend-d3d12', type: 'feature', value: 'auto')
 
 option('wayland', type: 'feature', value: 'auto',
        description: 'Wayland support')
@@ -38,7 +39,7 @@ option('tests', type: 'boolean', value: true)
 
 option('logtrace', type: 'boolean', value: false,
        description: 'log tracing (slow and verbose)')
-option('debug_opts', type: 'array', choices: ['gl', 'vk', 'mem', 'scene', 'gpu_capture'], value: [],
+option('debug_opts', type: 'array', choices: ['gl', 'vk', 'd3d12', 'mem', 'scene', 'gpu_capture'], value: [],
        description: 'debugging options for developers')
 
 option('renderdoc_dir', type: 'string',

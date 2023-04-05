@@ -64,13 +64,31 @@ _EXTERNAL_DEPS = dict(
         url="https://renderdoc.org/stable/@VERSION@/renderdoc_@VERSION@.tar.gz",
         sha256="c8ec16f7463266641e21b64f8e436a452a15105e4bd517bf114a9349d74cc02e",
     ),
+    json=dict(
+        version="3.11.2",
+        url="https://github.com/nlohmann/json/releases/download/v@VERSION@/json.hpp",
+        dst_dir="json",
+        sha256="665fa14b8af3837966949e8eb0052d583e2ac105d3438baba9951785512cf921",
+    ),
+    d3dx12=dict(
+        version="v10.0.17763.0",
+        url="https://raw.githubusercontent.com/microsoft/DirectX-Graphics-Samples/@VERSION@/Libraries/D3DX12/d3dx12.h",
+        dst_dir="d3dx12",
+        sha256="9d6961932474a83c11c5f43db8be3570624a2b72acb4c426f8312f0ecf04b1fa",
+    ),
 )
 
 
 def _get_external_deps(args):
     deps = ["sxplayer"]
+    if _SYSTEM == "Windows" or _SYSTEM == "Darwin":
+        deps.append("json")
+
     if _SYSTEM == "Windows":
         deps.append("pkgconf")
+        deps.append("d3dx12")
+
+
     if "gpu_capture" in args.debug_opts:
         if _SYSTEM not in {"Windows", "Linux"}:
             raise Exception(f"Renderdoc is not supported on {_SYSTEM}")
@@ -139,8 +157,13 @@ def _download_extract(dep_item):
     chksum = dep["sha256"]
     dst_file = dep.get("dst_file", op.basename(url)).replace("@VERSION@", version)
     dst_base = op.join(_ROOTDIR, "external")
+    if "dst_dir" in dep:
+        dst_base = op.join(dst_base, dep["dst_dir"])
+
     dst_path = op.join(dst_base, dst_file)
     os.makedirs(dst_base, exist_ok=True)
+
+    needCreateAlink = True
 
     # Download
     if not op.exists(dst_path) or not _file_chk(dst_path, chksum):
@@ -164,29 +187,33 @@ def _download_extract(dep_item):
             if not op.exists(extract_dir):
                 logging.info("extracting %s", dst_file)
                 zip_.extractall(dst_base)
+
     else:
-        assert False
+        extract_dir = op.join(dst_base, name)
+        target = op.join(dst_base, name)
+        needCreateAlink = False
 
-    # Remove previous link if needed
-    target = op.join(dst_base, name)
-    rel_extract_dir = op.basename(extract_dir)
-    if op.islink(target) and os.readlink(target) != rel_extract_dir:
-        logging.info("unlink %s target", target)
-        os.unlink(target)
-    elif op.exists(target) and not op.islink(target):
-        logging.info("remove previous %s copy", target)
-        _rmtree(target)
+    if needCreateAlink:
+        # Remove previous link if needed
+        target = op.join(dst_base, name)
+        rel_extract_dir = op.basename(extract_dir)
+        if op.islink(target) and os.readlink(target) != rel_extract_dir:
+            logging.info("unlink %s target", target)
+            os.unlink(target)
+        elif op.exists(target) and not op.islink(target):
+            logging.info("remove previous %s copy", target)
+            _rmtree(target)
 
-    # Link (or copy)
-    if not op.exists(target):
-        logging.info("symlink %s -> %s", target, rel_extract_dir)
-        try:
-            os.symlink(rel_extract_dir, target)
-        except OSError:
-            # This typically happens on Windows when Developer Mode is not
-            # available/enabled
-            logging.info("unable to symlink, fallback on copy (%s -> %s)", extract_dir, target)
-            shutil.copytree(extract_dir, target)
+        # Link (or copy)
+        if not op.exists(target):
+            logging.info("symlink %s -> %s", target, rel_extract_dir)
+            try:
+                os.symlink(rel_extract_dir, target)
+            except OSError:
+                # This typically happens on Windows when Developer Mode is not
+                # available/enabled
+                logging.info("unable to symlink, fallback on copy (%s -> %s)", extract_dir, target)
+                shutil.copytree(extract_dir, target)
 
     return name, target
 
@@ -264,6 +291,9 @@ def _nodegl_setup(cfg):
         extra_include_dirs += [
             op.join(cfg.prefix, "Include"),
             op.join(vcpkg_prefix, "include"),
+            op.join(os.path.abspath(os.path.dirname(__file__)), "external", "d3dx12"),
+            op.join(os.path.abspath(os.path.dirname(__file__)), "external", "json"),
+            op.join("src", "pch", "windows"),
         ]
     elif _SYSTEM == "Darwin":
         prefix = _get_brew_prefix()

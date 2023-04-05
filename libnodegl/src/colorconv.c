@@ -101,9 +101,9 @@ static int get_colormatrix_from_sxplayer(int color_space)
 static const struct k_constants {
     float r, g, b;
 } k_constants_infos[] = {
-    [COLORMATRIX_BT601]  = {.r = 0.2990, .g = 0.5870, .b = 0.1140},
-    [COLORMATRIX_BT709]  = {.r = 0.2126, .g = 0.7152, .b = 0.0722},
-    [COLORMATRIX_BT2020] = {.r = 0.2627, .g = 0.6780, .b = 0.0593},
+    [COLORMATRIX_BT601]  = {.r = 0.2990f, .g = 0.5870f, .b = 0.1140f},
+    [COLORMATRIX_BT709]  = {.r = 0.2126f, .g = 0.7152f, .b = 0.0722f},
+    [COLORMATRIX_BT2020] = {.r = 0.2627f, .g = 0.6780f, .b = 0.0593f},
 };
 
 NGLI_STATIC_ASSERT(colormatrix_size, NGLI_ARRAY_NB(k_constants_infos) == COLORMATRIX_NB);

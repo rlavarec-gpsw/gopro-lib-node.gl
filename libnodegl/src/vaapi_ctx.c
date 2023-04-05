@@ -31,6 +31,10 @@
 #include "backends/vk/gpu_ctx_vk.h"
 #endif
 
+#if defined(BACKEND_D3D12)
+#include "backends/vk/gpu_ctx_d3d12.h"
+#endif
+
 #if defined(HAVE_VAAPI_X11)
 #include <X11/Xlib.h>
 #include <va/va_x11.h>

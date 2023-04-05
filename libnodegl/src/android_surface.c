@@ -105,9 +105,9 @@ struct jni_android_surface_fields {
 };
 
 static const struct JniField jfields_mapping[] = {
-    {"android/view/Surface", NULL, NULL, NGLI_JNI_CLASS, offsetof(struct jni_android_surface_fields, surface_class), 1},
-        {"android/view/Surface", "<init>", "(Landroid/graphics/SurfaceTexture;)V", NGLI_JNI_METHOD, offsetof(struct jni_android_surface_fields, surface_init_id), 1},
-        {"android/view/Surface", "release", "()V", NGLI_JNI_METHOD, offsetof(struct jni_android_surface_fields, surface_release_id), 1},
+    {"android/view/D3DSurface", NULL, NULL, NGLI_JNI_CLASS, offsetof(struct jni_android_surface_fields, surface_class), 1},
+        {"android/view/D3DSurface", "<init>", "(Landroid/graphics/SurfaceTexture;)V", NGLI_JNI_METHOD, offsetof(struct jni_android_surface_fields, surface_init_id), 1},
+        {"android/view/D3DSurface", "release", "()V", NGLI_JNI_METHOD, offsetof(struct jni_android_surface_fields, surface_release_id), 1},
 
     {"android/graphics/SurfaceTexture", NULL, NULL, NGLI_JNI_CLASS, offsetof(struct jni_android_surface_fields, surface_texture_class), 1},
         {"android/graphics/SurfaceTexture", "<init>", "(I)V", NGLI_JNI_METHOD, offsetof(struct jni_android_surface_fields, surface_texture_init_id), 1},

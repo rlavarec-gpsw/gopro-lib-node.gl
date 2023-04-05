@@ -1368,22 +1368,43 @@ static void setup_glsl_info_gl(struct pgcraft *s)
 #endif
 
 #if defined(BACKEND_VK)
-static void setup_glsl_info_vk(struct pgcraft *s)
+static void setup_glsl_info_vk(struct pgcraft* s)
 {
     s->glsl_version = 450;
 
-    s->sym_vertex_index   = "gl_VertexIndex";
+    s->sym_vertex_index = "gl_VertexIndex";
     s->sym_instance_index = "gl_InstanceIndex";
 
-    s->has_explicit_bindings        = 1;
-    s->has_in_out_qualifiers        = 1;
+    s->has_explicit_bindings = 1;
+    s->has_in_out_qualifiers = 1;
     s->has_in_out_layout_qualifiers = 1;
-    s->has_precision_qualifiers     = 0;
-    s->has_modern_texture_picking   = 1;
-    s->compat_info.use_ublocks      = 1;
+    s->has_precision_qualifiers = 0;
+    s->has_modern_texture_picking = 1;
+    s->compat_info.use_ublocks = 1;
 
     /* Bindings are shared across stages and types */
-    for (int i = 0; i < NB_BINDINGS; i++)
+    for(int i = 0; i < NB_BINDINGS; i++)
+        s->next_bindings[i] = &s->bindings[0];
+}
+#endif
+
+#if defined(BACKEND_D3D12)
+static void setup_glsl_info_d3d12(struct pgcraft* s)
+{
+    s->glsl_version = 450;
+
+    s->sym_vertex_index = "gl_VertexIndex";
+    s->sym_instance_index = "gl_InstanceIndex";
+
+    s->has_explicit_bindings = 1;
+    s->has_in_out_qualifiers = 1;
+    s->has_in_out_layout_qualifiers = 1;
+    s->has_precision_qualifiers = 0;
+    s->has_modern_texture_picking = 1;
+    s->compat_info.use_ublocks = 1;
+
+    /* Bindings are shared across stages and types */
+    for(int i = 0; i < NB_BINDINGS; i++)
         s->next_bindings[i] = &s->bindings[0];
 }
 #endif
@@ -1404,8 +1425,17 @@ static void setup_glsl_info(struct pgcraft *s)
 #endif
 
 #if defined(BACKEND_VK)
-    if (config->backend == NGL_BACKEND_VULKAN) {
+    if(config->backend == NGL_BACKEND_VULKAN)
+    {
         setup_glsl_info_vk(s);
+        return;
+    }
+#endif
+
+#if defined(BACKEND_D3D12)
+    if(config->backend == NGL_BACKEND_D3D12)
+    {
+        setup_glsl_info_d3d12(s);
         return;
     }
 #endif

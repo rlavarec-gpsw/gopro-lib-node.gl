@@ -2,3 +2,5 @@
 builddir
 external
 venv/
+.vs
+.vscode
