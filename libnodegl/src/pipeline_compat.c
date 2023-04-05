@@ -224,9 +224,10 @@ void ngli_pipeline_compat_draw_indexed(struct pipeline_compat *s, const struct b
     ngli_pipeline_draw_indexed(s->pipeline, indices, indices_format, nb_indices, nb_instances);
 }
 
-void ngli_pipeline_compat_dispatch(struct pipeline_compat *s, int nb_group_x, int nb_group_y, int nb_group_z)
+void ngli_pipeline_compat_dispatch(struct pipeline_compat* s, int nb_group_x, int nb_group_y, int nb_group_z,
+                                   int threads_per_group_x, int threads_per_group_y, int threads_per_group_z)
 {
-    ngli_pipeline_dispatch(s->pipeline, nb_group_x, nb_group_y, nb_group_z);
+    ngli_pipeline_dispatch(s->pipeline, nb_group_x, nb_group_y, nb_group_z, threads_per_group_x, threads_per_group_y, threads_per_group_z);
 }
 
 void ngli_pipeline_compat_freep(struct pipeline_compat **sp)
