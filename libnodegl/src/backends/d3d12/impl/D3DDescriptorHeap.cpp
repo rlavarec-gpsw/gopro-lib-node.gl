@@ -1,0 +1,104 @@
+/*
+ * Copyright 2020 GoPro Inc.
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+#include <stdafx.h>
+#include "D3DDescriptorHeap.h"
+
+
+namespace ngli
+{
+
+void D3DDescriptorHeap::create(ID3D12Device* d3dDevice,
+							   D3D12_DESCRIPTOR_HEAP_TYPE type,
+							   UINT maxDescriptors,
+							   D3D12_DESCRIPTOR_HEAP_FLAGS flags)
+{
+	HRESULT hResult;
+	this->type = type;
+	this->maxDescriptors = maxDescriptors;
+	D3D12_DESCRIPTOR_HEAP_DESC desc = { type, maxDescriptors, flags, 0 };
+	V(d3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&mID3D12DescriptorHeap)));
+	head = std::make_unique<D3DDescriptorHandle>();
+	D3D_TRACE(head->cpuHandle = mID3D12DescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	D3D_TRACE(descriptorSize =
+				  d3dDevice->GetDescriptorHandleIncrementSize(type));
+	if(flags != D3D12_DESCRIPTOR_HEAP_FLAG_NONE)
+	{
+		D3D_TRACE(head->gpuHandle = mID3D12DescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+	}
+	else
+	{
+		head->gpuHandle.ptr = 0;
+	}
+
+	head->parent = this;
+	index = 0;
+	state.resize(maxDescriptors);
+	std::fill(state.begin(), state.end(), 0);
+}
+
+D3DDescriptorHeap::~D3DDescriptorHeap()
+{
+	head->parent = nullptr;
+}
+
+bool D3DDescriptorHeap::getHandle(D3DDescriptorHandle& handle)
+{
+	std::lock_guard lock(threadMutex);
+	if(state[index])
+	{
+		index = 0;
+		while(state[index])
+		{
+			index++;
+			if(index == state.size())
+			{
+				goto err;
+			}
+		}
+	}
+	handle.cpuHandle.ptr = head->cpuHandle.ptr + descriptorSize * index;
+	if(head->gpuHandle.ptr)
+		handle.gpuHandle.ptr = head->gpuHandle.ptr + descriptorSize * index;
+	else
+		handle.gpuHandle.ptr = 0;
+	handle.parent = this;
+	state[index] = 1;
+	numDescriptors++;
+	index++;
+	if(index == state.size())
+		index = 0;
+	return true;
+err:
+	NGLI_ERR("descriptor heap full");
+	return false;
+}
+
+void D3DDescriptorHeap::freeHandle(D3DDescriptorHandle* handle)
+{
+	std::lock_guard<std::mutex> lock(threadMutex);
+	if(handle->parent == nullptr)
+		return;
+	int handleIndex = (handle->cpuHandle.ptr - head->cpuHandle.ptr) / descriptorSize;
+	state[handleIndex] = 0;
+	numDescriptors--;
+}
+
+}

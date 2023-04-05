@@ -198,5 +198,6 @@ def get_backend(backend):
         "opengl": ngl.BACKEND_OPENGL,
         "opengles": ngl.BACKEND_OPENGLES,
         "vulkan": ngl.BACKEND_VULKAN,
+        "d3d12": ngl.BACKEND_D3D12,
     }
     return backend_map[backend]
