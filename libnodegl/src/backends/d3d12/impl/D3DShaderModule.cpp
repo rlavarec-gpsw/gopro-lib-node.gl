@@ -200,7 +200,11 @@ bool D3DShaderModule::compile(const std::string& filename)
 	std::filesystem::path tFilename = filename;
 	if(tFilename.is_relative())
 	{
-		tFilename = std::filesystem::absolute(filename);
+		wchar_t szPath[MAX_PATH];
+		GetModuleFileNameW(0, szPath, MAX_PATH);
+		std::filesystem::path tExe(szPath);
+		tExe = tExe.remove_filename();
+		tFilename = std::filesystem::absolute(tExe / std::filesystem::path(filename));
 	}
 
 	hResult = D3DCompileFromFile(tFilename.wstring().c_str(), nullptr,

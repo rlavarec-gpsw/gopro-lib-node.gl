@@ -23,6 +23,7 @@
 
 extern "C" {
 #include <log.h>
+#include <config.h>
 }
 
 #include <d3dx12.h>
@@ -52,7 +53,7 @@ struct Rect2D
 #ifndef __PRETTY_FUNCTION__
 #define __PRETTY_FUNCTION__ __FUNCTION__
 #endif
-//#define LOG_TO_DEBUG_CONSOLE
+#define LOG_TO_DEBUG_CONSOLE
 
 #if defined(_WIN32) && defined(LOG_TO_DEBUG_CONSOLE)
 #include <Windows.h>
@@ -97,10 +98,10 @@ struct DebugUtil
 
 
 /** Trace all Direct3D calls to log output */
-const bool D3D_ENABLE_TRACE = false;//true;
+const bool D3D_ENABLE_TRACE = DEBUG_D3D12>0?true:false;//true;
 const bool DEBUG_SHADERS = true;
 // Enabling GPU validation slows down performance but it's useful for debugging
-const bool ENABLE_GPU_VALIDATION = false;//true;
+const bool ENABLE_GPU_VALIDATION = DEBUG_D3D12_GPU_VALIDATION>0?true:false;
 
 #define D3D_TRACE(func)                                                        \
   {                                                                            \
