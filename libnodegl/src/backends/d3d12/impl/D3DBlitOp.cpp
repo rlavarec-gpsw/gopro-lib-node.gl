@@ -68,8 +68,8 @@ void D3DBlitOp::createPipeline()
 	auto device = ctx->device;
 	graphicsPipeline = (D3DGraphicsPipeline*)D3DGraphicsPipeline::newInstance(
 		ctx, state,
-		D3DVertexShaderModule::newInstance(device, NGLI_DATA_DIR "/d3dBlitOp.vert").get(),
-		D3DFragmentShaderModule::newInstance(device, NGLI_DATA_DIR "/d3dBlitOp.frag")
+		D3DVertexShaderModule::newInstance(device, NGLI_DATA_DIR_D3D12 "d3dBlitOp.vert").get(),
+		D3DFragmentShaderModule::newInstance(device, NGLI_DATA_DIR_D3D12 "d3dBlitOp.frag")
 			.get(),
 		dstTexture->format, ctx->depthStencilFormat);
 	ctx->d3dPipelineCache.add(key, graphicsPipeline);

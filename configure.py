@@ -567,7 +567,8 @@ def _get_make_vars(cfg):
         "--pkg-config-path",
         cfg.pkg_config_path,
         "--buildtype",
-        "debugoptimized" if debug else "release",
+        "debug" if debug else "release",
+        "--debug",
     ]
     if cfg.args.coverage:
         meson_setup += ["-Db_coverage=true"]
@@ -606,6 +607,11 @@ def _get_make_vars(cfg):
     # we need to fallback on Ninja
     ret["MESON_SETUP_TESTS"] = "$(MESON) " + _cmd_join(*meson_setup, "--backend=ninja")
 
+    ret["CMAKE_SETUP"] = "cmake " + _cmd_join(*cmake_setup)
+
+    if _SYSTEM == "Windows":
+        ret["CMAKE_SYSTEM_VERSION"] = cfg.cmake_system_version
+        ret["VCPKG_DIR"] = cfg.args.vcpkg_dir
     return ret
 
 

@@ -26,4 +26,4 @@
 #include <backends/d3d12/impl/D3DUtils.h>
 #include <backends/d3d12/impl/D3DGraphicsCore.h>
 
-#define NGLI_DATA_DIR
+#define NGLI_DATA_DIR_D3D12 "..\\share\\d3d12\\data\\"
