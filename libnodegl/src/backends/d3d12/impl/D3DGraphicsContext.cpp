@@ -175,8 +175,8 @@ void D3DGraphicsContext::setSurface(D3DSurface* surface)
 	if(surface && enableDepthStencil)
 	{
 		d3dDepthStencilView.reset(D3DTexture::newInstance(this, nullptr, nullptr, depthStencilFormat, surface->mW * surface->mH * 4,
-			surface->mW, surface->mH, 1, 1, 
-			IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT));
+														  surface->mW, surface->mH, 1, 1,
+														  IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT));
 		if(numSamples != 1)
 		{
 			NGLI_TODO("");
@@ -353,6 +353,7 @@ D3DCommandList* D3DGraphicsContext::computeCommandBuffer()
 void D3DGraphicsContext::createBindings()
 {
 	device = &d3dDevice;
+	queue = &d3dCommandQueue;
 	defaultRenderPass =
 		offscreen ? d3dDefaultOffscreenRenderPass : d3dDefaultRenderPass;
 	defaultOffscreenRenderPass = d3dDefaultOffscreenRenderPass;
