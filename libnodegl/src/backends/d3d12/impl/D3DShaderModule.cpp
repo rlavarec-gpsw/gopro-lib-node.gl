@@ -174,10 +174,10 @@ bool D3DShaderModule::initFromFile(const std::string& filename)
 		return false;
 	}
 	initFromByteCode(file.data.get(), file.size);
-#else
-	compile(filename + ".hlsl");
-#endif
 	return true;
+#else
+	return compile(filename + ".hlsl");
+#endif
 }
 
 bool D3DShaderModule::compile(const std::string& filename)
@@ -189,18 +189,26 @@ bool D3DShaderModule::compile(const std::string& filename)
 	ComPtr<ID3DBlob> byteCode;
 	ComPtr<ID3DBlob> errorBlob;
 	std::string target;
+
 	if(strstr(filename.c_str(), "vert"))
 		target = "vs_5_1";
 	else if(strstr(filename.c_str(), "frag"))
 		target = "ps_5_1";
 	else if(strstr(filename.c_str(), "comp"))
 		target = "cs_5_1";
-	hResult = D3DCompileFromFile(StringUtil::toWString(filename).c_str(), nullptr,
+
+	std::filesystem::path tFilename = filename;
+	if(tFilename.is_relative())
+	{
+		tFilename = std::filesystem::absolute(filename);
+	}
+
+	hResult = D3DCompileFromFile(tFilename.wstring().c_str(), nullptr,
 								 nullptr, "main", target.c_str(), compileFlags, 0,
 								 &byteCode, &errorBlob);
 	if(FAILED(hResult))
 	{
-		NGLI_LOG("%s %s", (char*)errorBlob->GetBufferPointer(), filename.c_str());
+		NGLI_LOG("%s %s", (char*)errorBlob->GetBufferPointer(), tFilename.c_str());
 		return false;
 	}
 	V0(hResult, "%s", filename.c_str());
