@@ -24,11 +24,15 @@
 
 #include "config.h"
 
-extern const struct hwmap_class ngli_hwmap_vaapi_d3d12_class;
+extern "C" {
 
-const struct hwmap_class *ngli_hwmap_d3d12_classes[] = {
-#if defined(HAVE_VAAPI)
-    &ngli_hwmap_vaapi_d3d12_class,
-#endif
-    NULL
-};
+    extern const struct hwmap_class ngli_hwmap_vaapi_d3d12_class;
+
+    const struct hwmap_class* ngli_hwmap_d3d12_classes[] = {
+    #if defined(HAVE_VAAPI)
+        &ngli_hwmap_vaapi_d3d12_class,
+    #endif
+        NULL
+    };
+
+}

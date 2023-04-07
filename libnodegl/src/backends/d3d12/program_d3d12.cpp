@@ -33,126 +33,125 @@ extern "C" {
 #include <backends/d3d12/impl/D3DShaderModule.h>
 
 
-namespace ngli
-{
 
 namespace fs = std::filesystem;
 
 enum { DEBUG_FLAG_VERBOSE = 1 };
 
 static int DEBUG_FLAGS = DEBUG_FLAG_VERBOSE;
-static ShaderTools shaderTools(DEBUG_FLAGS& DEBUG_FLAG_VERBOSE);
+static ngli::ShaderTools shaderTools(DEBUG_FLAGS& DEBUG_FLAG_VERBOSE);
 
-struct program* ngli_program_d3d12_create(struct gpu_ctx* gpu_ctx)
-{
-    program_d3d12* s = (program_d3d12*)ngli_calloc(1, sizeof(*s));
-    if(!s)
-        return NULL;
-    s->parent.gpu_ctx = gpu_ctx;
-    return (struct program*)s;
-}
+extern "C" {
 
-
-static char get_d3d12_backend_id()
-{
-    return 'd';
-}
-
-struct ShaderCompiler
-{
-    std::string compile(std::string src, const std::string& ext)
+    struct program* ngli_program_d3d12_create(struct gpu_ctx* gpu_ctx)
     {
-        size_t h1 = std::hash<std::string>{}(get_d3d12_backend_id() + src);
-        tmpDir = fs::path(FileUtil::tempDir() + "/" + "nodegl")
-            .make_preferred()
-            .string();
-        fs::create_directories(tmpDir);
-        std::string tmpFile = fs::path(tmpDir + "/" + "tmp_" + std::to_string(h1) + ext)
-            .make_preferred()
-            .string();
-        FileUtil::Lock lock(tmpFile);
-        if(!fs::exists(tmpFile))
+        program_d3d12* s = (program_d3d12*)ngli_calloc(1, sizeof(*s));
+        if(!s)
+            return NULL;
+        s->parent.gpu_ctx = gpu_ctx;
+        return (struct program*)s;
+    }
+
+
+    static char get_d3d12_backend_id()
+    {
+        return 'd';
+    }
+
+    struct ShaderCompiler
+    {
+        std::string compile(std::string src, const std::string& ext)
         {
-            FileUtil::writeFile(tmpFile, src);
+            size_t h1 = std::hash<std::string>{}(get_d3d12_backend_id() + src);
+            tmpDir = fs::path(ngli::FileUtil::tempDir() + "/" + "nodegl")
+                .make_preferred()
+                .string();
+            fs::create_directories(tmpDir);
+            std::string tmpFile = fs::path(tmpDir + "/" + "tmp_" + std::to_string(h1) + ext)
+                .make_preferred()
+                .string();
+            ngli::FileUtil::Lock lock(tmpFile);
+            if(!fs::exists(tmpFile))
+            {
+                ngli::FileUtil::writeFile(tmpFile, src);
+            }
+            std::string outDir = tmpDir;
+            glslFiles = { tmpFile };
+            int flags = ngli::ShaderTools::PATCH_SHADER_LAYOUTS_GLSL |
+                ngli::ShaderTools::REMOVE_UNUSED_VARIABLES;
+            flags |= ngli::ShaderTools::FLIP_VERT_Y;
+
+            spvFiles = shaderTools.compileShaders(
+                glslFiles, outDir, ngli::ShaderTools::FORMAT_GLSL, {}, flags);
+
+            hlslFiles = shaderTools.convertShaders(spvFiles, outDir, ngli::ShaderTools::FORMAT_HLSL);
+            dxcFiles = shaderTools.compileShaders(hlslFiles, outDir,
+                                                      ngli::ShaderTools::FORMAT_HLSL);
+            hlslMapFiles = shaderTools.generateShaderMaps(hlslFiles, outDir,
+                                                          ngli::ShaderTools::FORMAT_HLSL);
+
+            return ngli::FileUtil::splitExt(spvFiles[0])[0];
         }
-        std::string outDir = tmpDir;
-        glslFiles = { tmpFile };
-        int flags = ShaderTools::PATCH_SHADER_LAYOUTS_GLSL |
-            ShaderTools::REMOVE_UNUSED_VARIABLES;
-        flags |= ShaderTools::FLIP_VERT_Y;
 
-        spvFiles = shaderTools.compileShaders(
-            glslFiles, outDir, ShaderTools::FORMAT_GLSL, {}, flags);
+        // Cache compiled shader programs in temp folder
+        std::string tmpDir;
+        std::vector<std::string> glslFiles, spvFiles, glslMapFiles;
+        std::vector<std::string> hlslFiles, dxcFiles, hlslMapFiles;
+    };
 
-        hlslFiles = shaderTools.convertShaders(spvFiles, outDir, ShaderTools::FORMAT_HLSL);
-        dxcFiles = shaderTools.compileShaders(hlslFiles, outDir,
-                                                  ShaderTools::FORMAT_HLSL);
-        hlslMapFiles = shaderTools.generateShaderMaps(hlslFiles, outDir,
-                                                      ShaderTools::FORMAT_HLSL);
-
-        return FileUtil::splitExt(spvFiles[0])[0];
-    }
-
-    // Cache compiled shader programs in temp folder
-    std::string tmpDir;
-    std::vector<std::string> glslFiles, spvFiles, glslMapFiles;
-    std::vector<std::string> hlslFiles, dxcFiles, hlslMapFiles;
-};
-
-int ngli_program_d3d12_init(struct program* s, const program_params* p)
-{
-    gpu_ctx_d3d12* gpu_ctx = (gpu_ctx_d3d12*)s->gpu_ctx;
-    program_d3d12* program = (program_d3d12*)s;
-    try
+    int ngli_program_d3d12_init(struct program* s, const program_params* p)
     {
-        if(p->vertex)
+        gpu_ctx_d3d12* gpu_ctx = (gpu_ctx_d3d12*)s->gpu_ctx;
+        program_d3d12* program = (program_d3d12*)s;
+        try
         {
-            ShaderCompiler sc;
-            program->vs =
-                D3DVertexShaderModule::newInstance(gpu_ctx->graphics_context->device,
-                                           sc.compile(p->vertex, ".vert"))
-                .release();
+            if(p->vertex)
+            {
+                ShaderCompiler sc;
+                program->vs =
+                    ngli::D3DVertexShaderModule::newInstance(gpu_ctx->graphics_context->device,
+                                               sc.compile(p->vertex, ".vert"))
+                    .release();
+            }
+            if(p->fragment)
+            {
+                ShaderCompiler sc;
+                program->fs =
+                    ngli::D3DFragmentShaderModule::newInstance(gpu_ctx->graphics_context->device,
+                                                 sc.compile(p->fragment, ".frag"))
+                    .release();
+            }
+            if(p->compute)
+            {
+                ShaderCompiler sc;
+                program->cs =
+                    ngli::D3DComputeShaderModule::newInstance(gpu_ctx->graphics_context->device,
+                                                sc.compile(p->compute, ".comp"))
+                    .release();
+            }
         }
-        if(p->fragment)
+        catch(std::exception e)
         {
-            ShaderCompiler sc;
-            program->fs =
-                D3DFragmentShaderModule::newInstance(gpu_ctx->graphics_context->device,
-                                             sc.compile(p->fragment, ".frag"))
-                .release();
+            return NGL_ERROR_EXTERNAL;
         }
-        if(p->compute)
+        return 0;
+    }
+
+    void ngli_program_d3d12_freep(struct program** sp)
+    {
+        program_d3d12* program = (program_d3d12*)*sp;
+        if(program->vs)
         {
-            ShaderCompiler sc;
-            program->cs =
-                D3DComputeShaderModule::newInstance(gpu_ctx->graphics_context->device,
-                                            sc.compile(p->compute, ".comp"))
-                .release();
+            delete program->vs;
         }
+        if(program->fs)
+        {
+            delete program->fs;
+        }
+        if(program->cs)
+        {
+            delete program->cs;
+        }
+        ngli_freep(sp);
     }
-    catch(std::exception e)
-    {
-        return NGL_ERROR_EXTERNAL;
-    }
-    return 0;
-}
-
-void ngli_program_d3d12_freep(struct program** sp)
-{
-    program_d3d12* program = (program_d3d12*)*sp;
-    if(program->vs)
-    {
-        delete program->vs;
-    }
-    if(program->fs)
-    {
-        delete program->fs;
-    }
-    if(program->cs)
-    {
-        delete program->cs;
-    }
-    ngli_freep(sp);
-}
-
 }

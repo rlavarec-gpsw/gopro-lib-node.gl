@@ -26,12 +26,12 @@ extern "C" {
 #include "format.h"
 #include "math_utils.h"
 #include "memory.h"
+#include "surface_util_d3d12.h"
 }
 #include "buffer_d3d12.h"
 #include "pipeline_d3d12.h"
 #include "program_d3d12.h"
 #include "rendertarget_d3d12.h"
-#include "surface_util_d3d12.h"
 #include "swapchain_util_d3d12.h"
 #include "texture_d3d12.h"
 #include "util_d3d12.h"
@@ -345,7 +345,7 @@ static int d3d12_resize(struct gpu_ctx *s, int width, int height,
 
 static int d3d12_set_capture_buffer(struct gpu_ctx *s, void *capture_buffer)
 {
-    struct gpu_ctx_d3d12 *s_priv = (struct gpu_ctx_d3d12 *)s;
+ //   struct gpu_ctx_d3d12 *s_priv = (struct gpu_ctx_d3d12 *)s;
     if (!s->config.offscreen)
         return NGL_ERROR_INVALID_USAGE;
     s->config.capture_buffer = capture_buffer;
@@ -368,7 +368,7 @@ static int d3d12_begin_draw(struct gpu_ctx *s, double t)
     }
     s_priv->cur_command_buffer = s_priv->graphics_context->drawCommandBuffer();
     ngli::D3DCommandList *cmd_buf     = s_priv->cur_command_buffer;
-    const struct ngl_config *config = &s->config;
+//    const struct ngl_config *config = &s->config;
     cmd_buf->begin();
     if (s_priv->enable_profiling) {
         s_priv->graphics->beginProfile(cmd_buf);
@@ -442,7 +442,7 @@ static void d3d12_destroy(struct gpu_ctx *s)
         ((texture *)ctx->offscreen_resources.color_resolve_texture);
     auto output_depth__stencil_texture =
         ((texture *)ctx->offscreen_resources.depth_stencil_texture);
-    auto dummy_texture = ctx->dummy_texture;
+//    auto dummy_texture = ctx->dummy_texture;
     if (output_depth__stencil_texture)
         ngli_texture_freep(&output_depth__stencil_texture);
     if (output_color_texture)
