@@ -4,3 +4,7 @@ external
 venv/
 .vs
 .vscode
+/meson-private
+/meson-logs
+/meson-info
+/pynodegl/pynodegl/__pycache__

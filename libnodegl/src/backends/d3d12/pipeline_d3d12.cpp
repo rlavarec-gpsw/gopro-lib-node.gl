@@ -26,6 +26,7 @@ extern "C" {
 #include "format.h"
 #include "memory.h"
 #include "type.h"
+#include "buffer.h"
 }
 
 

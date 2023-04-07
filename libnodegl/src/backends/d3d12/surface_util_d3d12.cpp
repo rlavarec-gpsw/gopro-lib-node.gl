@@ -24,19 +24,23 @@
 #include "gpu_ctx_d3d12.h"
 #include <backends/d3d12/impl/D3DSurface.h>
 
-ngli::D3DSurface* surface_util_d3d12::create_offscreen_surface(int w, int h)
-{
-	return new ngli::D3DSurface(w, h, true);
-}
 
-ngli::D3DSurface* surface_util_d3d12::create_surface_from_window_handle(
-	ngli::D3DGraphicsContext* ctx, int platform, uintptr_t display,
-	uintptr_t window, uintptr_t width, uintptr_t height)
-{
-	ngli::D3DSurface* d3d_surface = new ngli::D3DSurface();
-	d3d_surface->mHwnd = HWND(window);
-	d3d_surface->mW = width;
-	d3d_surface->mH = height;
-	d3d_surface->mOffscreen = false;
-	return d3d_surface;
+extern "C" {
+
+	ngli::D3DSurface* surface_util_d3d12::create_offscreen_surface(int w, int h)
+	{
+		return new ngli::D3DSurface(w, h, true);
+	}
+
+	ngli::D3DSurface* surface_util_d3d12::create_surface_from_window_handle(
+		ngli::D3DGraphicsContext* ctx, int platform, uintptr_t display,
+		uintptr_t window, uintptr_t width, uintptr_t height)
+	{
+		ngli::D3DSurface* d3d_surface = new ngli::D3DSurface();
+		d3d_surface->mHwnd = HWND(window);
+		d3d_surface->mW = width;
+		d3d_surface->mH = height;
+		d3d_surface->mOffscreen = false;
+		return d3d_surface;
+	}
 }

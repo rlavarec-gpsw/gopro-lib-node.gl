@@ -33,6 +33,10 @@ struct program_d3d12
     ngli::D3DComputeShaderModule* cs = nullptr;
 };
 
-struct program* ngli_program_d3d12_create(struct gpu_ctx* gpu_ctx);
-int ngli_program_d3d12_init(struct program* s, const program_params* p);
-void ngli_program_d3d12_freep(struct program** sp);
+extern "C" {
+
+    struct program* ngli_program_d3d12_create(struct gpu_ctx* gpu_ctx);
+    int ngli_program_d3d12_init(struct program* s, const program_params* p);
+    void ngli_program_d3d12_freep(struct program** sp);
+
+}

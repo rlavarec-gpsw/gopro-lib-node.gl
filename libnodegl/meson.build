@@ -224,15 +224,6 @@ lib_src = files(
   'src/utils.c',
 )
 
-# backends common
-lib_src += files(
-  'src/backends/common/File.cpp',
-  'src/backends/common/FileUtil.cpp',
-  'src/backends/common/RegexUtil.cpp',
-  'src/backends/common/ShaderTools.cpp',
-  'src/backends/common/StringUtil.cpp',
-)
-
 # Add lib_src_asm for assembly, because of gen_specs which need to be native
 lib_src_asm = files()
 if host_machine.cpu_family() == 'aarch64'
@@ -351,6 +342,20 @@ endif
 #
 # Graphic backend dependencies
 #
+
+if host_system == 'windows'
+  opt_gbackend = get_option('gbackend-d3d12')
+  if not opt_gbackend.disabled()
+    # backends common
+    lib_src += files(
+      'src/backends/common/File.cpp',
+      'src/backends/common/FileUtil.cpp',
+      'src/backends/common/RegexUtil.cpp',
+      'src/backends/common/ShaderTools.cpp',
+      'src/backends/common/StringUtil.cpp',
+    )
+  endif
+endif
 
 gbackends_cfg = {
   'gl': {
@@ -475,7 +480,7 @@ gbackends_cfg = {
   },
   'd3d12': {
     'src': files(
-      'src/backends/d3d12/api_d3d12.cpp',
+      'src/backends/d3d12/api_d3d12.c',
       'src/backends/d3d12/buffer_d3d12.cpp',
       'src/backends/d3d12/format_d3d12.cpp',
       'src/backends/d3d12/gpu_ctx_d3d12.cpp',
@@ -518,7 +523,10 @@ gbackends_cfg = {
     'cfg': 'BACKEND_D3D12',
     'hosts_cfg': {
       'windows': {
-        'deps': ['glslang'],
+        'deps': ['glslang', 'd3d12', 'shaderc'],
+        'libs': ['shaderc', 'spirv-cross-c', 'spirv-cross-core',
+        'spirv-cross-cpp', 'spirv-cross-glsl', 'spirv-cross-hlsl', 'spirv-cross-msl',
+        'spirv-cross-reflect', 'spirv-cross-util'],
       },
     },
   },
@@ -582,8 +590,8 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
         {'name': 'GenericCodeGen',                  'required': false},
         {'name': 'SPVRemapper',                     'required': true},
         {'name': 'SPIRV',                           'required': true},
-        {'name': 'SPIRV-Tools-opt',                 'required': false},
-        {'name': 'SPIRV-Tools',                     'required': false},
+        {'name': 'SPIRV-Tools-opt',                 'required': host_system == 'windows'},
+        {'name': 'SPIRV-Tools',                     'required': host_system == 'windows'},
       ]
       foreach lib : glslang_libs
         libname = lib.get('name')
@@ -628,20 +636,39 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
           gbackend_deps += disabler()
         endif
       endif
+
+    elif dep == 'd3d12'
+      add_languages('cpp', native: true)
+      cxx = meson.get_compiler('cpp')
+      d3d12_libs = [
+        {'name': 'd3d12',                         'required': true},
+        {'name': 'dxgi',                          'required': true},
+        {'name': 'd3dcompiler',                   'required': true},
+      ]
+      foreach lib : d3d12_libs
+        libname = lib.get('name')
+        # Only require the library if the backend is explicitly enabled by the
+        # user. This makes meson bail out early if the required library can not
+        # be found.
+        dep = cxx.find_library(libname, required: lib.get('required'))
+        # Add the dependency if the library is marked as required or if it has
+        # been found so the backend can be disabled later on.
+        if lib.get('required') or dep.found()
+          gbackend_deps += dep
+        endif
+      endforeach
     else
       gbackend_deps += dependency(dep, required: opt_gbackend)
     endif
   endforeach
   foreach lib : host_backend_cfg.get('libs', [])
+    gbackend_deps += declare_dependency(include_directories: extra_include_dirs)
     # We need to call find_library() twice because specifying the dirs
     # parameter inhibits system library detection.
     # See: https://github.com/mesonbuild/meson/issues/10120
     dep = cc.find_library(lib, required: false)
     if not dep.found()
       dep = cc.find_library(lib, required: opt_gbackend, dirs: extra_library_dirs)
-      if dep.found()
-        gbackend_deps += declare_dependency(include_directories: extra_include_dirs)
-      endif
     endif
     gbackend_deps += dep
   endforeach
