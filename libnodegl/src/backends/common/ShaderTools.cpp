@@ -22,8 +22,6 @@
 #include <stdafx.h>
 #include "ShaderTools.h"
 
-//#include "ngfx/core/FileUtil.h"
-//#include "ngfx/core/DebugUtil.h"
 #include <backends/common/StringUtil.h>
 #include <backends/common/FileUtil.h>
 

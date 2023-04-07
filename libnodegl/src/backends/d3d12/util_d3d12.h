@@ -21,7 +21,10 @@
 
 #pragma once
 
+extern "C" {
 #include "format.h"
+}
+
 #include "format_d3d12.h"
 #include "rendertarget.h"
 

@@ -25,16 +25,19 @@ namespace ngli
 {
 class D3DGraphicsContext;
 class D3DSurface;
-
 }
 
-struct surface_util_d3d12
-{
-	static inline ngli::D3DSurface* create_offscreen_surface(int w, int h);
 
-	static ngli::D3DSurface*
-		create_surface_from_window_handle(ngli::D3DGraphicsContext* ctx, int platform,
-										  uintptr_t display, uintptr_t window,
-										  uintptr_t width, uintptr_t height);
-};
+extern "C" {
 
+	struct surface_util_d3d12
+	{
+		static ngli::D3DSurface* create_offscreen_surface(int w, int h);
+
+		static ngli::D3DSurface*
+			create_surface_from_window_handle(ngli::D3DGraphicsContext* ctx, int platform,
+											  uintptr_t display, uintptr_t window,
+											  uintptr_t width, uintptr_t height);
+	};
+
+}
