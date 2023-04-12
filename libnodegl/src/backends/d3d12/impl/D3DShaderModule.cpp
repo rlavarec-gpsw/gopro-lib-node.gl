@@ -119,7 +119,10 @@ static void parseBufferInfos(std::ifstream& in, std::string key,
 	std::string token;
 	in >> token;
 	if(token != key)
+	{
+		NGLI_ERR("Binding in map not found: %s", key.c_str());
 		return;
+	}
 	uint32_t numUniformBufferInfos;
 	in >> numUniformBufferInfos;
 	for(uint32_t j = 0; j < numUniformBufferInfos; j++)
@@ -212,7 +215,7 @@ bool D3DShaderModule::compile(const std::string& filename)
 								 &byteCode, &errorBlob);
 	if(FAILED(hResult))
 	{
-		NGLI_LOG("%s %s", (char*)errorBlob->GetBufferPointer(), tFilename.c_str());
+		LOG(INFO, "%s %s", (char*)errorBlob->GetBufferPointer(), tFilename.c_str());
 		return false;
 	}
 	V0(hResult, "%s", filename.c_str());

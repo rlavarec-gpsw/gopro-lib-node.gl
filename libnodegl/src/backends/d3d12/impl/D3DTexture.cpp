@@ -183,14 +183,9 @@ D3DTexture* D3DTexture::newInstance(D3DGraphicsContext* graphicsContext, D3DGrap
 {
 
 	D3DTexture* d3dTexture = new D3DTexture();
-	std::unique_ptr<D3DSamplerDesc> d3dSamplerDesc;
-	if(samplerDesc)
-	{
-		d3dSamplerDesc.reset(new D3DSamplerDesc(*samplerDesc));
-	}
 	d3dTexture->init(graphicsContext, graphics, data, size, w, h, d,
 		arrayLayers, DXGI_FORMAT(format), imageUsageFlags,
-		textureType, genMipmaps, numSamples, d3dSamplerDesc.get(), dataPitch);
+		textureType, genMipmaps, numSamples, samplerDesc, dataPitch);
 	return d3dTexture;
 }
 

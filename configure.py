@@ -745,7 +745,7 @@ def _run():
         "--debug-opts",
         nargs="+",
         default=[],
-        choices=("gl", "vk", "mem", "scene", "gpu_capture"),
+        choices=("gl", "vk", "d3d12", "mem", "scene", "gpu_capture", "d3d12_debug", "d3d12_validation"),
         help="Debug options",
     )
     parser.add_argument(

@@ -651,8 +651,7 @@ extern "C" const struct gpu_ctx_class ngli_gpu_ctx_d3d12 = {
     .get_scissor  = d3d12_get_scissor,
 
     .get_preferred_depth_format = d3d12_get_preferred_depth_format,
-    .get_preferred_depth_stencil_format =
-        d3d12_get_preferred_depth_stencil_format,
+    .get_preferred_depth_stencil_format = d3d12_get_preferred_depth_stencil_format,
 
     .buffer_create = ngli_buffer_d3d12_create,
     .buffer_init   = ngli_buffer_d3d12_init,

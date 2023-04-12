@@ -474,6 +474,7 @@ static int get_binding(pipeline_d3d12* s_priv, int set)
 #if defined(NGLI_GRAPHICS_BACKEND_METAL)
     return set;
 #else
+    // Binding graphic or compute shader
     return s_priv->gp ? s_priv->gp->descriptorBindings[set]
         : s_priv->cp->descriptorBindings[set];
 #endif
