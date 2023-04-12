@@ -63,7 +63,7 @@ protected:
 	D3DGraphicsPipeline* graphicsPipeline;
 	uint32_t numVerts;
 	uint32_t B_POS, B_TEXCOORD, U_UBO, U_TEXTURE;
-	D3DGraphicsContext* ctx;
+	D3DGraphicsContext* mCtx;
 };
 
 }; // namespace ngli

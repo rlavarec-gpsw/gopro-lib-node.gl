@@ -56,14 +56,13 @@ void D3DBuffer::init(D3DGraphicsContext* ctx, const void* data, uint32_t size,
 {
 	HRESULT hResult;
 	mCtx = ctx;
-	auto& device = mCtx->d3dDevice.mID3D12Device;
 	mSize = size;
 	mHeapType = heapType;
 	mInitialResourceState = initialResourceState;
 	CD3DX12_HEAP_PROPERTIES heapProperties(heapType);
 	CD3DX12_RESOURCE_DESC resourceDesc =
 		CD3DX12_RESOURCE_DESC::Buffer(size, resourceFlags);
-	V(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE,
+	V(mCtx->d3dDevice.mID3D12Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE,
 									  &resourceDesc, initialResourceState,
 									  nullptr, IID_PPV_ARGS(&mID3D12Resource)));
 	mCurrentResourceState = initialResourceState;

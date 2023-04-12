@@ -74,7 +74,7 @@ int ShaderTools::cmd(std::string str)
 {
 	if(verbose)
 	{
-		NGLI_LOG(">> %s", str.c_str());
+		LOG(INFO, ">> %s", str.c_str());
 	}
 	else
 		str += " >> /dev/null 2>&1";
@@ -287,7 +287,7 @@ int ShaderTools::compileShaderMSL(const std::string& file,
 					 "xcrun -sdk macosx metallib " +
 					 outDir + "/" + strippedFilename + ".air -o " + outFileName);
 	if(result == 0)
-		NGLI_LOG("compiled file: %s", file.c_str());
+		LOG(INFO, "compiled file: %s", file.c_str());
 	else
 		NGLI_ERR("cannot compile file: %s", file.c_str());
 	outFiles.push_back(outFileName);
@@ -332,7 +332,7 @@ int ShaderTools::compileShaderHLSL(const std::string& file,
 		fs::remove(inFileName);
 	}
 	if(result == 0)
-		NGLI_LOG("compiled file: %s", file.c_str());
+		LOG(INFO, "compiled file: %s", file.c_str());
 	else
 		NGLI_ERR("cannot compile file: %s", file.c_str());
 	outFiles.push_back(outFileName);
@@ -414,7 +414,7 @@ int ShaderTools::convertShader(const std::string& file, const std::string& extra
 	std::string args =
 		(fmt == FORMAT_MSL ? "--msl" : "--hlsl --shader-model 60") + extraArgs;
 	if(result == 0)
-		NGLI_LOG("converted file: %s to %s", inFileName.c_str(),
+		LOG(INFO, "converted file: %s to %s", inFileName.c_str(),
 				 outFileName.c_str());
 	else
 		NGLI_ERR("cannot convert file: %s", file.c_str());
@@ -895,12 +895,12 @@ void ShaderTools::applyPatches(const std::vector<std::string>& patchFiles,
 	for(const std::string& patchFile : patchFiles)
 	{
 		std::string filename = FileUtil::splitExt(fs::path(patchFile).string())[0];
-		NGLI_LOG("filename: %s", filename.c_str());
+		LOG(INFO, "filename: %s", filename.c_str());
 		std::string outFile =
 			fs::path(outDir + "/" + filename).make_preferred().string();
 		if(fs::exists(outFile))
 		{
-			NGLI_LOG("applying patch: {patchFile}");
+			LOG(INFO, "applying patch: {patchFile}");
 			std::string cmdStr = PATCH + " -N -u " + outFile + " -i " + patchFile;
 			cmd(cmdStr);
 		}

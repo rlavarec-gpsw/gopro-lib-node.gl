@@ -37,7 +37,7 @@ D3DBlitOp::D3DBlitOp(D3DGraphicsContext* ctx, D3DTexture* srcTexture,
 					 uint32_t dstLevel, Region srcRegion, Region dstRegion,
 					 uint32_t srcBaseLayer, uint32_t srcLayerCount,
 					 uint32_t dstBaseLayer, uint32_t dstLayerCount)
-	: ctx(ctx), srcTexture(srcTexture), srcLevel(srcLevel),
+	: mCtx(ctx), srcTexture(srcTexture), srcLevel(srcLevel),
 	dstTexture(dstTexture), dstLevel(dstLevel), srcRegion(srcRegion),
 	dstRegion(dstRegion), srcBaseLayer(srcBaseLayer),
 	srcLayerCount(srcLayerCount), dstBaseLayer(dstBaseLayer),
@@ -60,19 +60,18 @@ D3DBlitOp::D3DBlitOp(D3DGraphicsContext* ctx, D3DTexture* srcTexture,
 void D3DBlitOp::createPipeline()
 {
 	const std::string key = "d3dBlitOp";
-	graphicsPipeline = (D3DGraphicsPipeline*)ctx->d3dPipelineCache.get(key);
+	graphicsPipeline = dynamic_cast<D3DGraphicsPipeline*>(mCtx->d3dPipelineCache.get(key));
 	if(graphicsPipeline)
 		return;
 	D3DGraphicsPipeline::State state;
 	state.primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-	auto device = ctx->device;
-	graphicsPipeline = (D3DGraphicsPipeline*)D3DGraphicsPipeline::newInstance(
-		ctx, state,
-		D3DVertexShaderModule::newInstance(device, NGLI_DATA_DIR_D3D12 "d3dBlitOp.vert").get(),
-		D3DFragmentShaderModule::newInstance(device, NGLI_DATA_DIR_D3D12 "d3dBlitOp.frag")
+	graphicsPipeline = D3DGraphicsPipeline::newInstance(
+		mCtx, state,
+		D3DVertexShaderModule::newInstance(mCtx->device, NGLI_DATA_DIR_D3D12 "d3dBlitOp.vert").get(),
+		D3DFragmentShaderModule::newInstance(mCtx->device, NGLI_DATA_DIR_D3D12 "d3dBlitOp.frag")
 			.get(),
-		dstTexture->format, ctx->depthStencilFormat);
-	ctx->d3dPipelineCache.add(key, graphicsPipeline);
+		dstTexture->format, mCtx->depthStencilFormat);
+	mCtx->d3dPipelineCache.add(key, graphicsPipeline);
 }
 
 void D3DBlitOp::draw(D3DCommandList* cmdList, D3DGraphics* graphics)

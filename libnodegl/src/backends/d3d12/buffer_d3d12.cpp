@@ -60,8 +60,8 @@ int ngli_buffer_d3d12_upload(struct buffer *s, const void *data, int size, int o
 int ngli_buffer_d3d12_map(struct buffer *s, int size, int offset, void **data)
 {
     struct buffer_d3d12 *s_priv = (struct buffer_d3d12 *)s;
-    s_priv->mData = s_priv->mBuffer->map();
-    *data = s_priv->mData;
+    s->data = s_priv->mBuffer->map();
+    *data = s->data;
     return 0;
 }
 
@@ -69,7 +69,7 @@ void ngli_buffer_d3d12_unmap(struct buffer *s)
 {
     struct buffer_d3d12 *s_priv = (struct buffer_d3d12 *)s;
     s_priv->mBuffer->unmap();
-    s_priv->mData = nullptr;
+    s->data = nullptr;
 }
 
 void ngli_buffer_d3d12_freep(struct buffer **sp)

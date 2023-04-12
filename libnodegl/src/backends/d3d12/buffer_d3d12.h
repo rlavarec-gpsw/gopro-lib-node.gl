@@ -32,7 +32,6 @@ namespace ngli
 struct buffer_d3d12 {
     struct buffer parent;
     ngli::D3DBuffer* mBuffer=0;
-    void* mData;
 };
 
 struct buffer *ngli_buffer_d3d12_create(struct gpu_ctx *gpu_ctx);
