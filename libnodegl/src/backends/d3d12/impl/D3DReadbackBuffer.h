@@ -32,8 +32,6 @@ public:
 	virtual ~D3DReadbackBuffer() {}
 	D3D12_CPU_DESCRIPTOR_HANDLE descriptor;
 
-private:
-	D3DGraphicsContext* ctx;
 };
 
 }; // namespace ngli

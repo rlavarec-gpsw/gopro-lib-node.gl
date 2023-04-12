@@ -35,7 +35,7 @@ D3DGraphicsContext* D3DGraphicsContext::newInstance(const char* appName,
 										 bool enableDepthStencil, bool debug,
 										 OnSelectDepthStencilFormats onSelectDepthStencilFormats)
 {
-	NGLI_LOG("debug: %s", (debug) ? "true" : "false");
+	LOG(INFO, "debug: %s", (debug) ? "true" : "false");
 	auto d3dGraphicsContext = new D3DGraphicsContext();
 	d3dGraphicsContext->init(appName, enableDepthStencil, debug, onSelectDepthStencilFormats);
 	return d3dGraphicsContext;

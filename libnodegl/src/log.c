@@ -77,7 +77,17 @@ static void default_callback(void *arg, int level, const char *filename, int ln,
         color_end = "\033[0m";
     }
 #endif
+#ifdef _WIN32
+    size_t logbufWindowsSize = strlen(log_strs[level]) + strlen(filename) + strlen(fn) + strlen(logp) + 40;
+    char* logbufWindows = ngli_malloc(logbufWindowsSize);
 
+    snprintf(logbufWindows, logbufWindowsSize-1, "[%s] %s:%d %s: %s\n",
+             log_strs[level], filename, ln, fn, logp);
+
+    OutputDebugStringA(logbufWindows);
+    ngli_free(logbufWindows);
+
+#endif
     printf("%s[%s] %s:%d %s: %s%s\n", color_start,
            log_strs[level], filename, ln, fn, logp,
            color_end);

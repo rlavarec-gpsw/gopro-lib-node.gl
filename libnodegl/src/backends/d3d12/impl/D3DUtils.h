@@ -53,40 +53,19 @@ struct Rect2D
 #ifndef __PRETTY_FUNCTION__
 #define __PRETTY_FUNCTION__ __FUNCTION__
 #endif
-#define LOG_TO_DEBUG_CONSOLE
 
-#if defined(_WIN32) && defined(LOG_TO_DEBUG_CONSOLE)
-#include <Windows.h>
-inline void debugMessage(FILE* filenum, const char* fmt, ...)
-{
-    char buffer[1024];
-    va_list args;
-    va_start(args, fmt);
-    vsprintf(buffer, fmt, args);
-    va_end(args);
-    OutputDebugStringA((buffer));
-}
-#define LOG_FN debugMessage
-#else
-#define LOG_FN fprintf
-#endif
-
-#define NGLI_LOG(fmt, ...) LOG_FN(stderr, fmt "\n", ##__VA_ARGS__)
 #define NGLI_ERR(fmt, ...) \
 { \
     char buffer[4096]; \
     snprintf(buffer, sizeof(buffer), "ERROR: [%s][%s][%d] " fmt "\n", __FILE__, \
         __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__); \
-    LOG_FN(stderr, "%s", buffer); \
+    LOG(ERROR, fmt, ##__VA_ARGS__); \
     throw std::runtime_error(buffer); \
 }
-#define NGLI_LOG_TRACE(fmt, ...)                                               \
-  NGLI_LOG("[%s][%s][%d] " fmt, __FILE__, __PRETTY_FUNCTION__, __LINE__,       \
-           ##__VA_ARGS__)
 
-#define NGLI_TODO(fmt, ...)                                                    \
-  NGLI_LOG("[%s][%s][%d] TODO: " fmt, __FILE__, __FUNCTION__, __LINE__,        \
-           ##__VA_ARGS__)
+#define NGLI_TODO(fmt, ...) LOG(WARNING, " TODO: " fmt,##__VA_ARGS__)
+  
+           
 
 struct DebugUtil
 {
@@ -106,14 +85,14 @@ const bool ENABLE_GPU_VALIDATION = DEBUG_D3D12_GPU_VALIDATION>0?true:false;
 #define D3D_TRACE(func)                                                        \
   {                                                                            \
     if (D3D_ENABLE_TRACE)                                                      \
-      NGLI_LOG("%s", #func);                                                   \
+      LOG(INFO, "%s", #func);                                                   \
     func;                                                                      \
   }
 
 #define V0(func, fmt, ...)                                                     \
   {                                                                            \
     if (D3D_ENABLE_TRACE)                                                      \
-      NGLI_LOG("%s", #func);                                                   \
+      LOG(INFO, "%s", #func);                                                   \
     hResult = func;                                                            \
     if (FAILED(hResult)) {                                                     \
       NGLI_ERR("%s failed: 0x%08X %s " fmt, #func, hResult,                    \
