@@ -54,5 +54,7 @@ public:
 
 	static bool exists(const std::filesystem::path& path);
 	static void remove(const std::filesystem::path& path);
+
+	static std::filesystem::path getAbsolutePath(const std::string& path);
 };
 }; // namespace ngli
