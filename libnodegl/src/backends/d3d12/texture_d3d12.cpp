@@ -111,6 +111,11 @@ void ngli_texture_d3d12_freep(struct texture** sp)
     if(!sp)
         return;
     texture* s = *sp;
+
+    // Wait until the texture has been upload by ExecuteCommandLists to the gpu before releasing it.
+    struct gpu_ctx* ctx = (struct gpu_ctx*)s->gpu_ctx;
+    ctx->cls->wait_idle(ctx);
+
     texture_d3d12* s_priv = (struct texture_d3d12*)s;
     delete s_priv->v;
     ngli_freep(sp);
