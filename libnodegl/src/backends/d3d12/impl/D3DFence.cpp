@@ -38,6 +38,10 @@ void D3DFence::create(ID3D12Device* device, Value flag)
     V(device->CreateFence(flag, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&mID3D12Fence)));
     mID3D12Fence->SetName(L"D3DFence");
     mFenceHandle = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    if(mFenceHandle == nullptr)
+    {
+        ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+    }
 }
 
 void D3DFence::wait()
