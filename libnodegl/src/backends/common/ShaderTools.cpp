@@ -244,10 +244,11 @@ int ShaderTools::compileShaderGLSL(std::string filename,
 	src = FileUtil::readFile(inFileName);
 	std::string ext = FileUtil::splitExt(inFileName)[1];
 	shaderc_shader_kind shaderKind = toShaderKind(ext);
+	shaderc_optimization_level optimization_level = flags & REMOVE_UNUSED_VARIABLES ? shaderc_optimization_level_performance: shaderc_optimization_level_zero;
 	if((flags & REMOVE_UNUSED_VARIABLES) || (flags & FLIP_VERT_Y))
 	{
 		std::string spv;
-		VShader(compileShaderGLSL(src, shaderKind, defines, spv, false));
+		VShader(compileShaderGLSL(src, shaderKind, defines, spv, false, optimization_level));
 		VShader(convertSPVToGLSL(spv, shaderKind, dst, flags));
 		src = move(dst);
 	}
@@ -256,7 +257,7 @@ int ShaderTools::compileShaderGLSL(std::string filename,
 		VShader(patchShaderLayoutsGLSL(src, dst));
 		src = move(dst);
 	}
-	VShader(compileShaderGLSL(src, shaderKind, defines, dst));
+	VShader(compileShaderGLSL(src, shaderKind, defines, dst, true, optimization_level));
 	writeFile(outFileName, dst);
 	outFiles.push_back(outFileName);
 	return 0;
