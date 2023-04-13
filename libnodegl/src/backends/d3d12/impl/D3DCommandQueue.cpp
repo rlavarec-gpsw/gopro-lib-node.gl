@@ -35,6 +35,7 @@ void D3DCommandQueue::create(D3DGraphicsContext* ctx)
 										  D3D12_COMMAND_QUEUE_FLAG_NONE,
 										  D3D12_COMMAND_LIST_TYPE_DIRECT };
 	V(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&mID3D12CommandQueue)));
+	mID3D12CommandQueue->SetName(L"D3DCommandQueue");
 }
 
 void D3DCommandQueue::present()

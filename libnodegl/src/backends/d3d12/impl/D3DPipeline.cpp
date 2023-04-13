@@ -51,6 +51,7 @@ void D3DPipeline::createRootSignature(
 	V(d3dDevice->CreateRootSignature(0, signature->GetBufferPointer(),
 									 signature->GetBufferSize(),
 									 IID_PPV_ARGS(&d3dRootSignature)));
+	d3dRootSignature->SetName(L"D3DPipeline");
 }
 
 }

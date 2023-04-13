@@ -130,6 +130,7 @@ void D3DGraphicsPipeline::create(
 
 	V(d3dDevice->CreateGraphicsPipelineState(&desc,
 											 IID_PPV_ARGS(&d3dPipelineState)));
+	d3dPipelineState->SetName(L"D3DGraphicsPipeline");
 }
 
 D3DGraphicsPipeline*
