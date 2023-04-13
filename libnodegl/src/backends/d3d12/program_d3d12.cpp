@@ -77,8 +77,8 @@ extern "C" {
             }
             std::string outDir = tmpDir;
             glslFiles = { tmpFile };
-            int flags = ngli::ShaderTools::PATCH_SHADER_LAYOUTS_GLSL |
-                ngli::ShaderTools::REMOVE_UNUSED_VARIABLES;
+            int flags = ngli::ShaderTools::PATCH_SHADER_LAYOUTS_GLSL/* |
+                ngli::ShaderTools::REMOVE_UNUSED_VARIABLES*/;
             flags |= ngli::ShaderTools::FLIP_VERT_Y;
 
             spvFiles = shaderTools.compileShaders(
