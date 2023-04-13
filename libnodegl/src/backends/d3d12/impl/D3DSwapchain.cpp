@@ -69,6 +69,7 @@ void D3DSwapchain::getSwapchainRenderTargets()
 	for(UINT j = 0; j < numImages; j++)
 	{
 		V(v->GetBuffer(j, IID_PPV_ARGS(&renderTargets[j])));
+		renderTargets[j]->SetName(L"D3DSwapchain-RenderTarget");
 	}
 }
 
@@ -81,6 +82,7 @@ void D3DSwapchain::createSwapchainRenderTargetViews(uint32_t w, uint32_t h)
 	for(UINT n = 0; n < numImages; n++)
 	{
 		V(v->GetBuffer(n, IID_PPV_ARGS(&renderTargets[n])));
+		renderTargets[n]->SetName(L"D3DSwapchain-RenderTargetViews");
 		auto& handle = renderTargetDescriptors[n];
 		handle = std::make_unique<D3DDescriptorHandle>();
 		rtvDescriptorHeap->getHandle(*handle);

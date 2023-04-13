@@ -37,7 +37,9 @@ void D3DCommandList::create(ID3D12Device* device,
 {
     HRESULT hResult;
     V(device->CreateCommandAllocator(type, IID_PPV_ARGS(&mCmdAllocator)));
+    mCmdAllocator->SetName(L"D3DCommandList:mCmdAllocator");
     V(device->CreateCommandList(0, type, mCmdAllocator.Get(), nullptr, IID_PPV_ARGS(&mGraphicsCommandList)));
+    mGraphicsCommandList->SetName(L"D3DCommandList:mGraphicsCommandList");
     V(mGraphicsCommandList->Close());
 }
 

@@ -31,6 +31,7 @@ void D3DQueryHeap::create(ID3D12Device* device, D3D12_QUERY_HEAP_TYPE queryType,
 	desc.Type = queryType;
 	desc.Count = queryCount;
 	V(device->CreateQueryHeap(&desc, IID_PPV_ARGS(&v)));
+	v->SetName(L"D3DQueryHeap");
 }
 
 }
