@@ -65,6 +65,7 @@ void D3DBuffer::init(D3DGraphicsContext* ctx, const void* data, uint32_t size,
 	V(mCtx->d3dDevice.mID3D12Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE,
 									  &resourceDesc, initialResourceState,
 									  nullptr, IID_PPV_ARGS(&mID3D12Resource)));
+	mID3D12Resource->SetName(L"D3DBuffer");
 	mCurrentResourceState = initialResourceState;
 	if(data)
 		upload(data, size, 0);

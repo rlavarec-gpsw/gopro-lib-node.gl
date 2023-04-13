@@ -49,6 +49,7 @@ void D3DComputePipeline::create(
 	desc.CS.BytecodeLength = shaderByteCode.BytecodeLength;
 	V(d3dDevice->CreateComputePipelineState(&desc,
 											IID_PPV_ARGS(&d3dPipelineState)));
+	d3dPipelineState->SetName(L"d3dPipelineState");
 }
 
 D3DComputePipeline* D3DComputePipeline::newInstance(D3DGraphicsContext* graphicsContext,
