@@ -21,8 +21,9 @@
 #include <stdafx.h>
 #include "D3DShaderModule.h"
 
+#include <backends/common/FileUtil.h>
 #include <d3dcompiler.h>
-#include <memory>
+#
 
 
 namespace ngli
@@ -148,16 +149,18 @@ void D3DShaderModule::initBindings(std::ifstream& in,
 void D3DShaderModule::initBindings(const std::string& filename,
 								ShaderStageFlags shaderStages)
 {
-	std::ifstream in(filename);
+	std::filesystem::path tFilename = FileUtil::getAbsolutePath(filename);
+	std::ifstream in(tFilename.string());
 	if(!in.is_open())
-		NGLI_ERR("cannot open file: %s", filename.c_str());
+		NGLI_ERR("cannot open file: %s", tFilename.string().c_str());
 	initBindings(in, shaderStages);
 	in.close();
 }
 
 void D3DVertexShaderModule::initBindings(const std::string& filename)
 {
-	std::ifstream in(filename);
+	std::filesystem::path tFilename = FileUtil::getAbsolutePath(filename);
+	std::ifstream in(tFilename.string());
 	if(!in.is_open())
 		NGLI_ERR("cannot open file: %s", filename.c_str());
 	parseAttributes(in, attributes);
@@ -200,15 +203,7 @@ bool D3DShaderModule::compile(const std::string& filename)
 	else if(strstr(filename.c_str(), "comp"))
 		target = "cs_5_1";
 
-	std::filesystem::path tFilename = filename;
-	if(tFilename.is_relative())
-	{
-		wchar_t szPath[MAX_PATH];
-		GetModuleFileNameW(0, szPath, MAX_PATH);
-		std::filesystem::path tExe(szPath);
-		tExe = tExe.remove_filename();
-		tFilename = std::filesystem::absolute(tExe / std::filesystem::path(filename));
-	}
+	std::filesystem::path tFilename = FileUtil::getAbsolutePath(filename);
 
 	hResult = D3DCompileFromFile(tFilename.wstring().c_str(), nullptr,
 								 nullptr, "main", target.c_str(), compileFlags, 0,

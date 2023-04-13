@@ -21,18 +21,20 @@
 
 #include <stdafx.h>
 #include "File.h"
-//#include "ngfx/core/DebugUtil.h"
+
+#include <backends/common/FileUtil.h>
 
 namespace ngli
 {
 
 bool File::read(const std::string& filename)
 {
-	std::ifstream in(filename.c_str(),
+	std::filesystem::path tFilename = FileUtil::getAbsolutePath(filename);
+	std::ifstream in(tFilename.string(),
 					 std::ios::binary | std::ios::in | std::ios::ate);
 	if(!in.is_open())
 	{
-//NGFX_LOG("cannot open file: %s", filename.c_str());
+		NGLI_ERR("cannot open file: %s", filename.c_str());
 		return false;
 	}
 	size = int(in.tellg());

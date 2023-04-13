@@ -89,6 +89,20 @@ void FileUtil::remove(const fs::path& path)
 	RETRY_WITH_TIMEOUT(fs::remove(path), 3000);
 }
 
+std::filesystem::path FileUtil::getAbsolutePath(const std::string& path)
+{
+	std::filesystem::path tFilename = path;
+	if(tFilename.is_relative())
+	{
+		wchar_t szPath[MAX_PATH];
+		GetModuleFileNameW(0, szPath, MAX_PATH);
+		std::filesystem::path tExe(szPath);
+		tExe = tExe.remove_filename();
+		tFilename = std::filesystem::absolute(tExe / tFilename);
+	}
+	return tFilename;
+}
+
 FileUtil::Lock::Lock(const std::string& path, uint32_t timeoutMs)
 	: lockPath(path + ".lock"), timeoutMs(timeoutMs)
 {
