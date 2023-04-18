@@ -15,7 +15,7 @@ public:
     /// @param offscreen true if offscreen
     D3DSurface(uint32_t w, uint32_t h, bool offscreen = false);
 
-    /// @brief 
+    /// @brief Create D3DSurface from HWND handle
     /// @param w 
     /// @param h 
     /// @param handle 

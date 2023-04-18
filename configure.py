@@ -76,13 +76,19 @@ _EXTERNAL_DEPS = dict(
         dst_dir="d3dx12",
         sha256="9d6961932474a83c11c5f43db8be3570624a2b72acb4c426f8312f0ecf04b1fa",
     ),
+    d3dx12_ShaderCompiler=dict(
+        version="1.7.2212.1",
+        url="https://github.com/microsoft/DirectXShaderCompiler/releases/download/v@VERSION@/dxc_2023_03_01.zip",
+        uncompress_dir="d3dx12_ShaderCompiler-@VERSION@",
+        dst_file="d3dx12_ShaderCompiler-@VERSION@.zip",
+        sha256="e4e8cb7326ff7e8a791acda6dfb0cb78cc96309098bfdb0ab1e465dc29162422",
+    ),
     shaderc=dict(
         version="2023.3",
         url="https://github.com/google/shaderc/archive/refs/tags/v@VERSION@.zip",
         dst_file="shaderc-@VERSION@.zip",
         sha256="9609a7591362e6648e78c2a4b0adce95527d0b411ff45ff7f3e5151e2966a1d3",
     ),
-
 )
 
 
@@ -95,6 +101,7 @@ def _get_external_deps(args):
     if _SYSTEM == "Windows":
         deps.append("pkgconf")
         deps.append("d3dx12")
+        deps.append("d3dx12_ShaderCompiler")
 
 
     if "gpu_capture" in args.debug_opts:
@@ -167,6 +174,9 @@ def _download_extract(dep_item):
     dst_base = op.join(_ROOTDIR, "external")
     if "dst_dir" in dep:
         dst_base = op.join(dst_base, dep["dst_dir"])
+    uncompress_dir = ''
+    if "uncompress_dir" in dep:
+        uncompress_dir = op.join(dst_base, dep["uncompress_dir"]).replace("@VERSION@", version)
 
     dst_path = op.join(dst_base, dst_file)
     os.makedirs(dst_base, exist_ok=True)
@@ -190,11 +200,17 @@ def _download_extract(dep_item):
 
     elif zipfile.is_zipfile(dst_path):
         with zipfile.ZipFile(dst_path) as zip_:
-            dirs = {op.dirname(f) for f in zip_.namelist()}
-            extract_dir = op.join(dst_base, _guess_base_dir(dirs))
-            if not op.exists(extract_dir):
-                logging.info("extracting %s", dst_file)
-                zip_.extractall(dst_base)
+            if uncompress_dir != '':
+                extract_dir = uncompress_dir
+                if not op.exists(extract_dir):
+                    logging.info("extracting %s", dst_file)
+                    zip_.extractall(extract_dir)
+            else:
+                dirs = {op.dirname(f) for f in zip_.namelist()}
+                extract_dir = op.join(dst_base, _guess_base_dir(dirs))
+                if not op.exists(extract_dir):
+                    logging.info("extracting %s", dst_file)
+                    zip_.extractall(dst_base)
 
     else:
         extract_dir = op.join(dst_base, name)
@@ -310,6 +326,11 @@ def _shaderc_install(cfg):
             cmd += [f"install_name_tool -id @rpath/{shaderc_lib_filename} $(PREFIX)/lib/{shaderc_lib_filename}"]
     return cmd
 
+@_block("d3dx12_ShaderCompiler-install")
+def _d3dx12_ShaderCompiler_install(cfg):
+    d3d12_list_bin = op.join(os.path.abspath(os.path.dirname(__file__)), "external", "d3dx12_ShaderCompiler" , "bin/x64/*.*")
+    return [f"xcopy /Y \"{d3d12_list_bin}\" \"{cfg.bin_path}\""]
+
 
 @_block("sxplayer-setup")
 def _sxplayer_setup(cfg):
@@ -328,7 +349,7 @@ def _renderdoc_install(cfg):
     return [f"copy {renderdoc_dll} {cfg.bin_path}"]
 
 
-@_block("nodegl-setup", [_sxplayer_install, _shaderc_install])
+@_block("nodegl-setup", [_sxplayer_install, _shaderc_install, _d3dx12_ShaderCompiler_install])
 def _nodegl_setup(cfg):
     nodegl_opts = []
     if cfg.args.debug_opts:
@@ -346,12 +367,13 @@ def _nodegl_setup(cfg):
         extra_library_dirs += [
             op.join(cfg.prefix, "Lib"),
             op.join(vcpkg_prefix, "lib"),
+            op.join(os.path.abspath(os.path.dirname(__file__)), "external", "d3dx12_ShaderCompiler/lib/x64"),
         ]
         extra_include_dirs += [
             op.join(cfg.prefix, "Include"),
             op.join(vcpkg_prefix, "include"),
-#            op.join(os.path.abspath(os.path.dirname(__file__)), "external", "shaderc", "libshaderc", "include"),
             op.join(os.path.abspath(os.path.dirname(__file__)), "external", "d3dx12"),
+            op.join(os.path.abspath(os.path.dirname(__file__)), "external", "d3dx12_ShaderCompiler/inc"),
             op.join(os.path.abspath(os.path.dirname(__file__)), "external", "json"),
             op.join("src", "pch", "windows"),
         ]

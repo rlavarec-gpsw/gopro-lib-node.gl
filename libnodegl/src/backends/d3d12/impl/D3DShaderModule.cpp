@@ -23,8 +23,10 @@
 
 #include <backends/common/FileUtil.h>
 #include <d3dcompiler.h>
-#
+#include <dxcapi.h>
 
+
+using Microsoft::WRL::ComPtr;
 
 namespace ngli
 {
@@ -33,6 +35,7 @@ namespace ngli
   {                                                                            \
 #s, { s, count, elementSize }                                              \
   }
+
 struct VertexFormatInfo
 {
 	VertexFormat format;
@@ -186,8 +189,10 @@ bool D3DShaderModule::initFromFile(const std::string& filename)
 #endif
 }
 
+//#define COMPILE_5_1_SHADER
 bool D3DShaderModule::compile(const std::string& filename)
 {
+ #ifdef COMPILE_5_1_SHADER
 	HRESULT hResult;
 	UINT compileFlags = 0;
 	if(DEBUG_SHADERS)
@@ -210,10 +215,83 @@ bool D3DShaderModule::compile(const std::string& filename)
 								 &byteCode, &errorBlob);
 	if(FAILED(hResult))
 	{
-		LOG(INFO, "%s %s", (char*)errorBlob->GetBufferPointer(), tFilename.c_str());
+		if(errorBlob)
+			LOG(INFO, "%s %s", (char*)errorBlob->GetBufferPointer(), tFilename.c_str());
+		else
+			LOG(INFO, "%s", tFilename.c_str());
 		return false;
 	}
 	V0(hResult, "%s", filename.c_str());
+#else
+	std::filesystem::path tPathFilename = FileUtil::getAbsolutePath(filename);
+	std::wstring tFilename = tPathFilename.wstring();
+
+	ComPtr<IDxcLibrary> library;
+	HRESULT hr = DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
+	if(FAILED(hr))
+	{
+		LOG(ERROR, "DxcCreateInstance CLSID_DxcLibrary: %s", tFilename.c_str());
+		return false;
+	}
+
+	ComPtr<IDxcCompiler> compiler;
+	hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
+	if(FAILED(hr))
+	{
+		LOG(ERROR, "DxcCreateInstance CLSID_DxcCompiler: %s", tFilename.c_str());
+		return false;
+	}
+
+	uint32_t codePage = CP_UTF8;
+	ComPtr<IDxcBlobEncoding> sourceBlob;
+	hr = library->CreateBlobFromFile(tFilename.c_str(), &codePage, &sourceBlob);
+	if(FAILED(hr))
+	{
+		LOG(ERROR, "CreateBlobFromFile: %s", tFilename.c_str());
+		return false;
+	}
+
+	std::wstring target;
+
+	if(strstr(filename.c_str(), "vert"))
+		target = L"vs_6_0";
+	else if(strstr(filename.c_str(), "frag"))
+		target = L"ps_6_0";
+	else if(strstr(filename.c_str(), "comp"))
+		target = L"cs_6_0";
+
+	ComPtr<IDxcOperationResult> result;
+	hr = compiler->Compile(
+		sourceBlob.Get(), // pSource
+		tFilename.c_str(), // pSourceName
+		L"main", // pEntryPoint
+		target.c_str(), // pTargetProfile
+		NULL, 0, // pArguments, argCount
+		NULL, 0, // pDefines, defineCount
+		NULL, // pIncludeHandler
+		&result); // ppResult
+	if(SUCCEEDED(hr))
+		result->GetStatus(&hr);
+	if(FAILED(hr))
+	{
+		if(result)
+		{
+			ComPtr<IDxcBlobEncoding> errorsBlob;
+			hr = result->GetErrorBuffer(&errorsBlob);
+			if(SUCCEEDED(hr))
+			{
+				if(errorsBlob)
+					LOG(INFO, "Compilation failed with errors: %s %s", (char*)errorsBlob->GetBufferPointer(), tFilename.c_str());
+				else
+					LOG(INFO, "Compilation failed with errors: %s", tFilename.c_str());
+			}
+		}
+		// Handle compilation error...
+	}
+	ComPtr<IDxcBlob> byteCode;
+	result->GetResult(&byteCode);
+
+#endif
 	initFromByteCode(byteCode->GetBufferPointer(),
 					 uint32_t(byteCode->GetBufferSize()));
 	return true;
