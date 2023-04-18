@@ -85,10 +85,8 @@ extern "C" {
                 glslFiles, outDir, ngli::ShaderTools::FORMAT_GLSL, {}, flags);
 
             hlslFiles = shaderTools.convertShaders(spvFiles, outDir, ngli::ShaderTools::FORMAT_HLSL);
-            dxcFiles = shaderTools.compileShaders(hlslFiles, outDir,
-                                                      ngli::ShaderTools::FORMAT_HLSL);
-            hlslMapFiles = shaderTools.generateShaderMaps(hlslFiles, outDir,
-                                                          ngli::ShaderTools::FORMAT_HLSL);
+            dxcFiles = shaderTools.compileShaders(hlslFiles, outDir, ngli::ShaderTools::FORMAT_HLSL);
+            hlslMapFiles = shaderTools.generateShaderMaps(hlslFiles, outDir, ngli::ShaderTools::FORMAT_HLSL);
 
             return ngli::FileUtil::splitExt(spvFiles[0])[0];
         }

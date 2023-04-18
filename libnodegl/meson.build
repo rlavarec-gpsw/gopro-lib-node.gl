@@ -518,8 +518,9 @@ gbackends_cfg = {
       'src/backends/d3d12/impl/D3DSampler.cpp',
       'src/backends/d3d12/impl/D3DSamplerDesc.cpp',
       'src/backends/d3d12/impl/D3DShaderModule.cpp',
-      'src/backends/d3d12/impl/D3DTexture.cpp',
+      'src/backends/d3d12/impl/D3DShaderCross.cpp',
       'src/backends/d3d12/impl/D3DSwapchain.cpp',
+      'src/backends/d3d12/impl/D3DTexture.cpp',
       'src/backends/d3d12/impl/D3DUtils.cpp',
     ),
     'cfg': 'BACKEND_D3D12',
@@ -646,6 +647,7 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
         {'name': 'd3d12',                         'required': true},
         {'name': 'dxgi',                          'required': true},
         {'name': 'd3dcompiler',                   'required': true},
+        {'name': 'dxcompiler',                    'required': true},
       ]
       foreach lib : d3d12_libs
         libname = lib.get('name')

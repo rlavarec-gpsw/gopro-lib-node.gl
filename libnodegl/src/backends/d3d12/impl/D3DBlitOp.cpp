@@ -27,10 +27,10 @@
 #include <backends/d3d12/impl/D3DGraphicsPipeline.h>
 #include <backends/d3d12/impl/D3DShaderModule.h>
 #include <backends/d3d12/impl/D3DSampler.h>
+#include <backends/d3d12/impl/D3DShaderCross.h>
 
 namespace ngli
 {
-
 
 D3DBlitOp::D3DBlitOp(D3DGraphicsContext* ctx, D3DTexture* srcTexture,
 					 uint32_t srcLevel, D3DTexture* dstTexture,
@@ -59,6 +59,9 @@ D3DBlitOp::D3DBlitOp(D3DGraphicsContext* ctx, D3DTexture* srcTexture,
 
 void D3DBlitOp::createPipeline()
 {
+	// Compile shader if doesn't exist (once) before to use it
+	static D3DShaderCross gD3DShaderCross(NGLI_DATA_DIR_D3D12, "d3dBlitOp.vert", "d3dBlitOp.frag");
+
 	const std::string key = "d3dBlitOp";
 	graphicsPipeline = dynamic_cast<D3DGraphicsPipeline*>(mCtx->d3dPipelineCache.get(key));
 	if(graphicsPipeline)
