@@ -61,7 +61,7 @@ void D3DGraphicsContext::init(const char* appName, bool enableDepthStencil, bool
 	if(debug)
 	{
 		ComPtr<ID3D12Debug1> debugController;
-		V(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)));
+		D3D_TRACE_CALL(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)));
 		debugController->EnableDebugLayer();
 		if(ENABLE_GPU_VALIDATION)
 			debugController->SetEnableGPUBasedValidation(true);
@@ -69,7 +69,7 @@ void D3DGraphicsContext::init(const char* appName, bool enableDepthStencil, bool
 		// Enable additional debug layers.
 		dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 	}
-	V(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&d3dFactory)));
+	D3D_TRACE_CALL(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&d3dFactory)));
 	d3dDevice.create(this);
 	if(debug)
 	{
@@ -123,7 +123,7 @@ DXGI_FORMAT D3DGraphicsContext::findSupportedFormat(const std::vector<DXGI_FORMA
 	{
 		DXGI_FORMAT dxgiFormat = format;
 		D3D12_FEATURE_DATA_FORMAT_SUPPORT formatSupport = { dxgiFormat };
-		V(d3dDevice.mID3D12Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &formatSupport, sizeof(formatSupport)));
+		D3D_TRACE_CALL(d3dDevice.mID3D12Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &formatSupport, sizeof(formatSupport)));
 		if(formatSupport.Support1 & formatSupport1)
 			return dxgiFormat;
 	}

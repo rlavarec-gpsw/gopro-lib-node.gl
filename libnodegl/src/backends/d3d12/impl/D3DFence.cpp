@@ -35,7 +35,7 @@ D3DFence* D3DFence::newInstance(D3DDevice* device, Value flag)
 void D3DFence::create(ID3D12Device* device, Value flag)
 {
     HRESULT hResult;
-    V(device->CreateFence(flag, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&mID3D12Fence)));
+    D3D_TRACE_CALL(device->CreateFence(flag, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&mID3D12Fence)));
     mID3D12Fence->SetName(L"D3DFence");
     mFenceHandle = CreateEvent(nullptr, FALSE, FALSE, nullptr);
     if(mFenceHandle == nullptr)
@@ -49,7 +49,7 @@ void D3DFence::wait()
     HRESULT hResult;
     if(mID3D12Fence->GetCompletedValue() == SIGNALED)
         return;
-    V(mID3D12Fence->SetEventOnCompletion(SIGNALED, mFenceHandle));
+    D3D_TRACE_CALL(mID3D12Fence->SetEventOnCompletion(SIGNALED, mFenceHandle));
     D3D_TRACE(WaitForSingleObjectEx(mFenceHandle, INFINITE, FALSE));
 }
 
@@ -61,7 +61,7 @@ bool D3DFence::isSignaled()
 void D3DFence::reset()
 {
     HRESULT hResult;
-    V(mID3D12Fence->Signal(UNSIGNALED));
+    D3D_TRACE_CALL(mID3D12Fence->Signal(UNSIGNALED));
 }
 
 }

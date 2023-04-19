@@ -73,7 +73,8 @@ conf_data.set10('DEBUG_VK', 'vk' in debug_opts)
 conf_data.set10('DEBUG_MEM', 'mem' in debug_opts)
 conf_data.set10('DEBUG_SCENE', 'scene' in debug_opts)
 conf_data.set10('DEBUG_GPU_CAPTURE', 'gpu_capture' in debug_opts)
-conf_data.set10('DEBUG_D3D12', 'd3d12_debug' in debug_opts)
+conf_data.set10('DEBUG_D3D12', 'd3d12_debug_all' in debug_opts)
+conf_data.set10('DEBUG_D3D12_TRACE', 'd3d12_debug_trace' in debug_opts)
 conf_data.set10('DEBUG_D3D12_GPU_VALIDATION', 'd3d12_validation' in debug_opts)
 
 if host_system == 'windows'

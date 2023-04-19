@@ -49,10 +49,10 @@ void D3DSwapchain::create(D3DGraphicsContext* ctx, D3DSurface* surface)
 										   DXGI_ALPHA_MODE_UNSPECIFIED,
 										   0 };
 	ComPtr<IDXGISwapChain1> swapchain;
-	V(d3dFactory->CreateSwapChainForHwnd(d3dCommandQueue, surface->mHwnd,
+	D3D_TRACE_CALL(d3dFactory->CreateSwapChainForHwnd(d3dCommandQueue, surface->mHwnd,
 										 &swapChainDesc, nullptr, nullptr,
 										 &swapchain));
-	V(swapchain.As(&v));
+	D3D_TRACE_CALL(swapchain.As(&v));
 	getSwapchainRenderTargets();
 	createSwapchainRenderTargetViews(mW, mH);
 }
@@ -68,7 +68,7 @@ void D3DSwapchain::getSwapchainRenderTargets()
 	renderTargets.resize(numImages);
 	for(UINT j = 0; j < numImages; j++)
 	{
-		V(v->GetBuffer(j, IID_PPV_ARGS(&renderTargets[j])));
+		D3D_TRACE_CALL(v->GetBuffer(j, IID_PPV_ARGS(&renderTargets[j])));
 		renderTargets[j]->SetName(L"D3DSwapchain-RenderTarget");
 	}
 }
@@ -81,7 +81,7 @@ void D3DSwapchain::createSwapchainRenderTargetViews(uint32_t w, uint32_t h)
 	renderTargetDescriptors.resize(numImages);
 	for(UINT n = 0; n < numImages; n++)
 	{
-		V(v->GetBuffer(n, IID_PPV_ARGS(&renderTargets[n])));
+		D3D_TRACE_CALL(v->GetBuffer(n, IID_PPV_ARGS(&renderTargets[n])));
 		renderTargets[n]->SetName(L"D3DSwapchain-RenderTargetViews");
 		auto& handle = renderTargetDescriptors[n];
 		handle = std::make_unique<D3DDescriptorHandle>();
@@ -102,7 +102,7 @@ void D3DSwapchain::acquireNextImage()
 void D3DSwapchain::present()
 {
 	HRESULT hResult;
-	V(v->Present(1, 0));
+	D3D_TRACE_CALL(v->Present(1, 0));
 	mCtx->currentImageIndex = -1;
 }
 

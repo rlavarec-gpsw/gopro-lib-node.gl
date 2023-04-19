@@ -128,7 +128,7 @@ void D3DGraphicsPipeline::create(
 		desc.RTVFormats[j] = colorFormat;
 	desc.SampleDesc.Count = state.numSamples;
 
-	V(d3dDevice->CreateGraphicsPipelineState(&desc,
+	D3D_TRACE_CALL(d3dDevice->CreateGraphicsPipelineState(&desc,
 											 IID_PPV_ARGS(&d3dPipelineState)));
 	d3dPipelineState->SetName(L"D3DGraphicsPipeline");
 }

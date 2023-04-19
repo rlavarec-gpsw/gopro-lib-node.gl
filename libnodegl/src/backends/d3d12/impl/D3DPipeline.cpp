@@ -46,9 +46,9 @@ void D3DPipeline::createRootSignature(
 	{
 		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 	}
-	V(D3DX12SerializeVersionedRootSignature(
+	D3D_TRACE_CALL(D3DX12SerializeVersionedRootSignature(
 		&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-	V(d3dDevice->CreateRootSignature(0, signature->GetBufferPointer(),
+	D3D_TRACE_CALL(d3dDevice->CreateRootSignature(0, signature->GetBufferPointer(),
 									 signature->GetBufferSize(),
 									 IID_PPV_ARGS(&d3dRootSignature)));
 	d3dRootSignature->SetName(L"D3DPipeline");
