@@ -73,7 +73,7 @@ void D3DTexture::createResource()
 	HRESULT hResult;
 	D3D12_CLEAR_VALUE clearValue = { DXGI_FORMAT(format), {0.0f, 0.0f, 0.0f, 0.0f} };
 	CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
-	V(d3dDevice->CreateCommittedResource(
+	D3D_TRACE_CALL(d3dDevice->CreateCommittedResource(
 		&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
 		D3D12_RESOURCE_STATE_COPY_DEST, isRenderTarget ? &clearValue : nullptr,
 		IID_PPV_ARGS(&mID3D12Resource)));

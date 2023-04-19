@@ -47,7 +47,7 @@ void D3DComputePipeline::create(
 	desc.pRootSignature = d3dRootSignature.Get();
 	desc.CS.pShaderBytecode = shaderByteCode.pShaderBytecode;
 	desc.CS.BytecodeLength = shaderByteCode.BytecodeLength;
-	V(d3dDevice->CreateComputePipelineState(&desc,
+	D3D_TRACE_CALL(d3dDevice->CreateComputePipelineState(&desc,
 											IID_PPV_ARGS(&d3dPipelineState)));
 	d3dPipelineState->SetName(L"d3dPipelineState");
 }

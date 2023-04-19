@@ -34,7 +34,7 @@ void D3DDescriptorHeap::create(ID3D12Device* d3dDevice,
 	this->type = type;
 	this->maxDescriptors = maxDescriptors;
 	D3D12_DESCRIPTOR_HEAP_DESC desc = { type, maxDescriptors, flags, 0 };
-	V(d3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&mID3D12DescriptorHeap)));
+	D3D_TRACE_CALL(d3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&mID3D12DescriptorHeap)));
 	mID3D12DescriptorHeap->SetName(L"D3DDescriptorHeap");
 	head = std::make_unique<D3DDescriptorHandle>();
 	D3D_TRACE(head->cpuHandle = mID3D12DescriptorHeap->GetCPUDescriptorHandleForHeapStart());

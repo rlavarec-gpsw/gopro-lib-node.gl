@@ -52,7 +52,7 @@ void D3DDevice::create(D3DGraphicsContext* ctx)
 									   _uuidof(ID3D12Device), nullptr)))
 			break;
 	}
-	V(D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0,
+	D3D_TRACE_CALL(D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0,
 						IID_PPV_ARGS(&mID3D12Device)));
 	mID3D12Device->SetName(L"D3DDevice");
 }

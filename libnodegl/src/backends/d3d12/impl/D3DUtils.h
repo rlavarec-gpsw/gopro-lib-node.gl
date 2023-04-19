@@ -77,10 +77,10 @@ struct DebugUtil
 
 
 /** Trace all Direct3D calls to log output */
-const bool D3D_ENABLE_TRACE = DEBUG_D3D12>0?true:false;//true;
+const bool D3D_ENABLE_TRACE = false; // (DEBUG_D3D12 || DEBUG_D3D12_TRACE) > 0?true:false;
+const bool ENABLE_GPU_VALIDATION = false; //(DEBUG_D3D12 || DEBUG_D3D12_GPU_VALIDATION) > 0?true:false;
 const bool DEBUG_SHADERS = true;
 // Enabling GPU validation slows down performance but it's useful for debugging
-const bool ENABLE_GPU_VALIDATION = DEBUG_D3D12_GPU_VALIDATION>0?true:false;
 
 #define D3D_TRACE(func)                                                        \
   {                                                                            \
@@ -89,7 +89,7 @@ const bool ENABLE_GPU_VALIDATION = DEBUG_D3D12_GPU_VALIDATION>0?true:false;
     func;                                                                      \
   }
 
-#define V0(func, fmt, ...)                                                     \
+#define D3D_TRACE_ARG(func, fmt, ...)                                                     \
   {                                                                            \
     if (D3D_ENABLE_TRACE)                                                      \
       LOG(INFO, "%s", #func);                                                   \
@@ -101,7 +101,7 @@ const bool ENABLE_GPU_VALIDATION = DEBUG_D3D12_GPU_VALIDATION>0?true:false;
     }                                                                          \
   }
 
-#define V(func) V0(func, "")
+#define D3D_TRACE_CALL(func) D3D_TRACE_ARG(func, "")
 
 inline std::string HrToString(HRESULT hr)
 {

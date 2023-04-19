@@ -34,7 +34,7 @@ void D3DCommandQueue::create(D3DGraphicsContext* ctx)
 	D3D12_COMMAND_QUEUE_DESC queueDesc = { D3D12_COMMAND_LIST_TYPE_DIRECT, 0,
 										  D3D12_COMMAND_QUEUE_FLAG_NONE,
 										  D3D12_COMMAND_LIST_TYPE_DIRECT };
-	V(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&mID3D12CommandQueue)));
+	D3D_TRACE_CALL(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&mID3D12CommandQueue)));
 	mID3D12CommandQueue->SetName(L"D3DCommandQueue");
 }
 
@@ -70,13 +70,13 @@ void D3DCommandQueue::submit(ID3D12CommandList* commandList, ID3D12Fence* fence)
 	HRESULT hResult;
 	D3D_TRACE(mID3D12CommandQueue->ExecuteCommandLists(1, &commandList));
 	if(fence)
-		V(mID3D12CommandQueue->Signal(fence, D3DFence::SIGNALED));
+		D3D_TRACE_CALL(mID3D12CommandQueue->Signal(fence, D3DFence::SIGNALED));
 }
 
 void D3DCommandQueue::signal(D3DFence* fence, D3DFence::Value value)
 {
 	HRESULT hResult;
-	V(mID3D12CommandQueue->Signal(fence->mID3D12Fence.Get(), value));
+	D3D_TRACE_CALL(mID3D12CommandQueue->Signal(fence->mID3D12Fence.Get(), value));
 }
 
 void D3DCommandQueue::waitIdle()
@@ -85,7 +85,7 @@ void D3DCommandQueue::waitIdle()
 	D3DFence fence;
 	fence.create(ctx->d3dDevice.mID3D12Device.Get());
 	// Schedule a Signal command in the queue.
-	V(mID3D12CommandQueue->Signal(fence.mID3D12Fence.Get(), D3DFence::SIGNALED));
+	D3D_TRACE_CALL(mID3D12CommandQueue->Signal(fence.mID3D12Fence.Get(), D3DFence::SIGNALED));
 	fence.wait();
 	fence.reset();
 }

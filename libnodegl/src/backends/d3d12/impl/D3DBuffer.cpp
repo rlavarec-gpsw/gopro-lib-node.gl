@@ -62,16 +62,19 @@ void D3DBuffer::init(D3DGraphicsContext* ctx, const void* data, uint32_t size,
 	CD3DX12_HEAP_PROPERTIES heapProperties(heapType);
 	CD3DX12_RESOURCE_DESC resourceDesc =
 		CD3DX12_RESOURCE_DESC::Buffer(size, resourceFlags);
-	V(mCtx->d3dDevice.mID3D12Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE,
+	D3D_TRACE_CALL(mCtx->d3dDevice.mID3D12Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE,
 									  &resourceDesc, initialResourceState,
 									  nullptr, IID_PPV_ARGS(&mID3D12Resource)));
-	mID3D12Resource->SetName(L"D3DBuffer");
+	if(mID3D12Resource)
+		mID3D12Resource->SetName(L"D3DBuffer");
 	mCurrentResourceState = initialResourceState;
 	if(data)
 		upload(data, size, 0);
 }
 
-D3DBuffer::~D3DBuffer() {}
+D3DBuffer::~D3DBuffer() {
+
+}
 
 // TODO: add read/write flags for map
 // current this maps for reading (readback buffer)
@@ -106,7 +109,7 @@ void* D3DBuffer::map()
 	{
 		UINT8* ptr;
 		HRESULT hResult;
-		V(mID3D12Resource->Map(0, nullptr, reinterpret_cast<void**>(&ptr)));
+		D3D_TRACE_CALL(mID3D12Resource->Map(0, nullptr, reinterpret_cast<void**>(&ptr)));
 		return ptr;
 	}
 }
@@ -138,7 +141,11 @@ void D3DBuffer::upload(const void* data, uint32_t size, uint32_t offset)
 		if(data)
 		{
 			stagingBuffer.init(mCtx, data, size, D3D12_HEAP_TYPE_UPLOAD);
-			stagingBuffer.mID3D12Resource->SetName(L"StagingBuffer");
+			if(stagingBuffer.mID3D12Resource)
+			{
+				stagingBuffer.mID3D12Resource->SetName(L"StagingBuffer");
+			}
+
 			if(mCurrentResourceState != D3D12_RESOURCE_STATE_COPY_DEST)
 			{
 				CD3DX12_RESOURCE_BARRIER resourceBarrier =

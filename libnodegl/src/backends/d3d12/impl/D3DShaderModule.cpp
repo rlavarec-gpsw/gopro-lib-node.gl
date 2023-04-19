@@ -221,7 +221,7 @@ bool D3DShaderModule::compile(const std::string& filename)
 			LOG(INFO, "%s", tFilename.c_str());
 		return false;
 	}
-	V0(hResult, "%s", filename.c_str());
+	D3D_TRACE_ARG(hResult, "%s", filename.c_str());
 #else
 	std::filesystem::path tPathFilename = FileUtil::getAbsolutePath(filename);
 	std::wstring tFilename = tPathFilename.wstring();

@@ -36,24 +36,24 @@ void D3DCommandList::create(ID3D12Device* device,
                             D3D12_COMMAND_LIST_TYPE type)
 {
     HRESULT hResult;
-    V(device->CreateCommandAllocator(type, IID_PPV_ARGS(&mCmdAllocator)));
+    D3D_TRACE_CALL(device->CreateCommandAllocator(type, IID_PPV_ARGS(&mCmdAllocator)));
     mCmdAllocator->SetName(L"D3DCommandList:mCmdAllocator");
-    V(device->CreateCommandList(0, type, mCmdAllocator.Get(), nullptr, IID_PPV_ARGS(&mGraphicsCommandList)));
+    D3D_TRACE_CALL(device->CreateCommandList(0, type, mCmdAllocator.Get(), nullptr, IID_PPV_ARGS(&mGraphicsCommandList)));
     mGraphicsCommandList->SetName(L"D3DCommandList:mGraphicsCommandList");
-    V(mGraphicsCommandList->Close());
+    D3D_TRACE_CALL(mGraphicsCommandList->Close());
 }
 
 void D3DCommandList::begin()
 {
     HRESULT hResult;
-    V(mCmdAllocator->Reset());
-    V(mGraphicsCommandList->Reset(mCmdAllocator.Get(), nullptr));
+    D3D_TRACE_CALL(mCmdAllocator->Reset());
+    D3D_TRACE_CALL(mGraphicsCommandList->Reset(mCmdAllocator.Get(), nullptr));
 }
 
 void D3DCommandList::end()
 {
     HRESULT hResult;
-    V(mGraphicsCommandList->Close());
+    D3D_TRACE_CALL(mGraphicsCommandList->Close());
 }
 
 }
