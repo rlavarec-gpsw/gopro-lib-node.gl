@@ -83,6 +83,14 @@ _EXTERNAL_DEPS = dict(
         dst_file="d3dx12_ShaderCompiler-@VERSION@.zip",
         sha256="e4e8cb7326ff7e8a791acda6dfb0cb78cc96309098bfdb0ab1e465dc29162422",
     ),
+    d3dx12_AgilitySDK=dict(
+        version="1.610.0",
+        url="https://globalcdn.nuget.org/packages/microsoft.direct3d.d3d12.@VERSION@.nupkg",
+        uncompress_dir="d3dx12_AgilitySDK-@VERSION@",
+        dst_file="d3dx12_AgilitySDK-@VERSION@.zip",
+        sha256="e7b04d428637cb02e36e79a40c27d0a7df192b5ee45685cd4e7dd4ed48e84b1d",
+    ),
+
     shaderc=dict(
         version="2023.3",
         url="https://github.com/google/shaderc/archive/refs/tags/v@VERSION@.zip",
@@ -102,6 +110,7 @@ def _get_external_deps(args):
         deps.append("pkgconf")
         deps.append("d3dx12")
         deps.append("d3dx12_ShaderCompiler")
+        deps.append("d3dx12_AgilitySDK")
 
 
     if "gpu_capture" in args.debug_opts:
@@ -307,6 +316,7 @@ def _pkgconf_install(cfg):
     pkgconfig_exe = op.join(cfg.bin_path, "pkg-config.exe")
     return ret + [f"copy {pkgconf_exe} {pkgconfig_exe}"]
 
+
 @_block("shaderc-install")
 def _shaderc_install(cfg):
     shaderc_cmake_setup_options = _get_cmake_setup_options(cfg, build_type="Release", generator="Ninja")
@@ -326,10 +336,22 @@ def _shaderc_install(cfg):
             cmd += [f"install_name_tool -id @rpath/{shaderc_lib_filename} $(PREFIX)/lib/{shaderc_lib_filename}"]
     return cmd
 
+
 @_block("d3dx12_ShaderCompiler-install")
 def _d3dx12_ShaderCompiler_install(cfg):
-    d3d12_list_bin = op.join(os.path.abspath(os.path.dirname(__file__)), "external", "d3dx12_ShaderCompiler" , "bin/x64/*.*")
-    return [f"xcopy /Y \"{d3d12_list_bin}\" \"{cfg.bin_path}\""]
+    if _SYSTEM == "Windows":
+        d3d12_list_bin = op.join(_ROOTDIR, "external", "d3dx12_ShaderCompiler" , "bin", "x64", "*.*")
+        return [f"xcopy /Y \"{d3d12_list_bin}\" \"{cfg.bin_path}\""]
+    return []
+
+
+@_block("d3dx12_AgilitySDK-install")
+def _d3dx12_AgilitySDK_install(cfg):
+    if _SYSTEM == "Windows":
+        d3d12_list_bin = op.join(_ROOTDIR, "external", "d3dx12_AgilitySDK" , "build", "native", "bin", "x64", "*.*")
+        d3d12_output = op.join(cfg.bin_path, "D3D12")  # Need to ouput inside D3D12 related to "d3d12_declare_agility_SDK.c"
+        return [f"xcopy /Y /I \"{d3d12_list_bin}\" \"{d3d12_output}\""]
+    return []
 
 
 @_block("sxplayer-setup")
@@ -349,7 +371,7 @@ def _renderdoc_install(cfg):
     return [f"copy {renderdoc_dll} {cfg.bin_path}"]
 
 
-@_block("nodegl-setup", [_sxplayer_install, _shaderc_install, _d3dx12_ShaderCompiler_install])
+@_block("nodegl-setup", [_sxplayer_install, _shaderc_install, _d3dx12_ShaderCompiler_install, _d3dx12_AgilitySDK_install])
 def _nodegl_setup(cfg):
     nodegl_opts = []
     if cfg.args.debug_opts:
@@ -367,14 +389,15 @@ def _nodegl_setup(cfg):
         extra_library_dirs += [
             op.join(cfg.prefix, "Lib"),
             op.join(vcpkg_prefix, "lib"),
-            op.join(os.path.abspath(os.path.dirname(__file__)), "external", "d3dx12_ShaderCompiler/lib/x64"),
+            op.join(_ROOTDIR, "external", "d3dx12_ShaderCompiler/lib/x64"),
         ]
         extra_include_dirs += [
             op.join(cfg.prefix, "Include"),
             op.join(vcpkg_prefix, "include"),
-            op.join(os.path.abspath(os.path.dirname(__file__)), "external", "d3dx12"),
-            op.join(os.path.abspath(os.path.dirname(__file__)), "external", "d3dx12_ShaderCompiler/inc"),
-            op.join(os.path.abspath(os.path.dirname(__file__)), "external", "json"),
+            op.join(_ROOTDIR, "external", "d3dx12"),
+            op.join(_ROOTDIR, "external", "d3dx12_ShaderCompiler/inc"),
+            op.join(_ROOTDIR, "external", "d3dx12_AgilitySDK/build/native/include"),
+            op.join(_ROOTDIR, "external", "json"),
             op.join("src", "pch", "windows"),
         ]
     elif _SYSTEM == "Darwin":
@@ -767,7 +790,7 @@ def _run():
         "--debug-opts",
         nargs="+",
         default=[],
-        choices=("gl", "vk", "d3d12", "mem", "scene", "gpu_capture", "d3d12_debug", "d3d12_validation"),
+        choices=("gl", "vk", "d3d12", "mem", "scene", "gpu_capture", "d3d12_debug_all", "d3d12_debug_trace", "d3d12_validation"),
         help="Debug options",
     )
     parser.add_argument(
@@ -797,6 +820,8 @@ def _run():
     ]
     if _SYSTEM == "Darwin" or _SYSTEM == "Windows" :
         blocks += [_shaderc_install]
+    if _SYSTEM == "Windows" :
+        blocks += [_d3dx12_ShaderCompiler_install, _d3dx12_AgilitySDK_install]
     if args.coverage:
         blocks += [_coverage_html, _coverage_xml]
     makefile = _get_makefile(cfg, blocks)
