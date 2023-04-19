@@ -644,21 +644,24 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
     elif dep == 'd3d12'
       add_languages('cpp', native: true)
       cxx = meson.get_compiler('cpp')
-      d3d12_libs = [
-        {'name': 'd3d12',                         'required': true},
-        {'name': 'dxgi',                          'required': true},
-        {'name': 'd3dcompiler',                   'required': true},
-        {'name': 'dxcompiler',                    'required': true},
-      ]
-      foreach lib : d3d12_libs
-        libname = lib.get('name')
+      d3d12_libs = {
+        'd3d12':        {                  'required': true},
+        'dxgi':         {                  'required': true},
+        'd3dcompiler':  {                  'required': true},
+        'dxcompiler':   {                  'required': true, 'inside_extra_library_dir': true},
+      }
+      foreach libname, lib : d3d12_libs
         # Only require the library if the backend is explicitly enabled by the
         # user. This makes meson bail out early if the required library can not
         # be found.
-        dep = cxx.find_library(libname, required: lib.get('required'))
+        if 'inside_extra_library_dir' in lib
+          dep = cxx.find_library(libname, required: lib['required'], dirs: extra_library_dirs)
+        else
+          dep = cxx.find_library(libname, required: lib['required'])
+        endif
         # Add the dependency if the library is marked as required or if it has
         # been found so the backend can be disabled later on.
-        if lib.get('required') or dep.found()
+        if lib['required'] or dep.found()
           gbackend_deps += dep
         endif
       endforeach

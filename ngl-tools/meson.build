@@ -83,7 +83,7 @@ python_dep = python_ins.dependency(embed: true, required: get_option('python'))
 wsi_src_system = {
   'linux': files('wsi_linux.c'),
   'darwin': files('wsi_cocoa.m'),
-  'windows': files('wsi_windows.c'),
+  'windows': files('wsi_windows.c', '../libnodegl/src/backends/d3d12/d3d12_declare_agility_SDK.c'),
 }
 wsi_src = files('wsi.c') + wsi_src_system.get(host_system, [])
 sdl_dep = dependency('sdl2', required: get_option('sdl'))
