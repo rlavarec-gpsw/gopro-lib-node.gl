@@ -40,7 +40,7 @@ void D3DFramebuffer::D3DAttachment::create(D3DTexture* texture, uint32_t level, 
 	this->layerCount = layerCount;
 	resource = texture->mID3D12Resource.Get();
 	bool depthStencilAttachment =
-		texture->imageUsageFlags & IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		texture->imageUsageFlags & NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	cpuDescriptor = depthStencilAttachment
 		? texture->dsvDescriptor->cpuHandle
 		: texture->getRtvDescriptor(level, baseLayer, layerCount)->cpuHandle;
@@ -60,7 +60,7 @@ void D3DFramebuffer::create(std::vector<D3DFramebuffer::D3DAttachment>& d3dAttac
 	auto it = this->d3dAttachments.begin();
 	while(it != this->d3dAttachments.end())
 	{
-		if(it->imageUsageFlags & IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+		if(it->imageUsageFlags & NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT)
 		{
 			if(it->numSamples > 1)
 			{
@@ -72,7 +72,7 @@ void D3DFramebuffer::create(std::vector<D3DFramebuffer::D3DAttachment>& d3dAttac
 				colorAttachments.push_back(&(*it++));
 			}
 		}
-		else if(it->imageUsageFlags & IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+		else if(it->imageUsageFlags & NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
 		{
 			if(it->numSamples > 1)
 			{
@@ -93,7 +93,7 @@ void D3DFramebuffer::D3DAttachment::createFromSwapchainImage(D3DSwapchain* d3dSw
 	resource = d3dSwapchain->renderTargets[index].Get();
 	cpuDescriptor = d3dSwapchain->renderTargetDescriptors[index]->cpuHandle;
 	subresourceIndex = 0;
-	imageUsageFlags = IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	imageUsageFlags = NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
 	numSamples = 1;
 	format = DXGI_FORMAT(d3dSwapchain->mFormat);
 }
@@ -103,7 +103,7 @@ void D3DFramebuffer::D3DAttachment::createFromDepthStencilAttachment(D3DTexture*
 	resource = d3dDepthStencilAttachment->mID3D12Resource.Get();
 	cpuDescriptor = d3dDepthStencilAttachment->dsvDescriptor->cpuHandle;
 	subresourceIndex = 0;
-	imageUsageFlags = IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	imageUsageFlags = NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	numSamples = 1;
 	format = DXGI_FORMAT(d3dDepthStencilAttachment->format);
 	texture = d3dDepthStencilAttachment;
@@ -122,7 +122,7 @@ D3DFramebuffer* D3DFramebuffer::newInstance(D3DDevice* device, D3DRenderPass* re
 		auto& d3dAttachment = d3dAttachments[j];
 		auto d3dTexture = attachment.texture;
 		bool depthStencilAttachment =
-			d3dTexture->imageUsageFlags & IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			d3dTexture->imageUsageFlags & NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 		d3dAttachment = {
 			d3dTexture->mID3D12Resource.Get(),
 			depthStencilAttachment

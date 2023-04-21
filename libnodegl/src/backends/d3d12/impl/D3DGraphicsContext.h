@@ -125,13 +125,13 @@ public:
 		AttachmentStoreOp storeOp;
 	};
 
-	/** \struct RenderPassConfig
+	/** \struct D3DRenderPassConfig
 	 *
 	 *  This struct defines a render pass configuration including the color attachments,
 	 *  depth stencil attachment (optional), and number of samples when using multisampling */
-	struct RenderPassConfig
+	struct D3DRenderPassConfig
 	{
-		bool operator==(const RenderPassConfig& rhs) const
+		bool operator==(const D3DRenderPassConfig& rhs) const
 		{
 			return rhs.colorAttachmentDescriptions == colorAttachmentDescriptions &&
 				rhs.depthStencilAttachmentDescription ==
@@ -154,7 +154,7 @@ public:
 		uint32_t numSamples = 1;
 	};
 	/** Get a render pass object that supports a given configuration */
-	virtual D3DRenderPass* getRenderPass(RenderPassConfig config);
+	virtual D3DRenderPass* getRenderPass(D3DRenderPassConfig config);
 
 	D3DDevice* device = nullptr;
 	uint32_t numDrawCommandBuffers = 0;
@@ -182,7 +182,7 @@ public:
 
 	struct D3DRenderPassData
 	{
-		RenderPassConfig config;
+		D3DRenderPassConfig config;
 		D3DRenderPass d3dRenderPass;
 	};
 	std::vector<std::unique_ptr<D3DRenderPassData>> d3dRenderPassCache;
@@ -215,7 +215,7 @@ protected:
 private:
 	void createBindings();
 	void createDescriptorHeaps();
-	void createRenderPass(const RenderPassConfig& config,
+	void createRenderPass(const D3DRenderPassConfig& config,
 						  D3DRenderPass& renderPass);
 	void createFences(ID3D12Device* device);
 	void createSwapchainFramebuffers(int w, int h);

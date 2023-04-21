@@ -27,13 +27,15 @@
 
 #define NGLI_MAX_COLOR_ATTACHMENTS 8
 
-enum {
+enum AttachmentLoadOp
+{
     NGLI_LOAD_OP_LOAD,
     NGLI_LOAD_OP_CLEAR,
     NGLI_LOAD_OP_DONT_CARE,
 };
 
-enum {
+enum AttachmentStoreOp
+{
     NGLI_STORE_OP_STORE,
     NGLI_STORE_OP_DONT_CARE,
 };

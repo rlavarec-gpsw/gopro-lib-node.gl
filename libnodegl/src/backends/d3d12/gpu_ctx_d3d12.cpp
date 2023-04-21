@@ -123,23 +123,42 @@ static int create_rendertarget(struct gpu_ctx *s, texture *color,
     params.width               = config->width;
     params.height              = config->height;
     params.nb_colors           = 1;
+
+    // Colors 0
     auto &p0                   = params.colors[0];
     p0.attachment              = color;
     p0.resolve_target          = resolve_color;
     p0.load_op                 = color_load_op;
-    memcpy(p0.clear_value, config->clear_color, sizeof(config->clear_color));
+    p0.clear_value[0]          = config->clear_color[0];
+    p0.clear_value[1]          = config->clear_color[1];
+    p0.clear_value[2]          = config->clear_color[2];
+    p0.clear_value[3]          = config->clear_color[3];
     p0.store_op   = color_store_op;
+
+    // depth stencil
     auto &p1      = params.depth_stencil;
     p1.attachment = depth_stencil;
     p1.load_op    = color_load_op;
     p1.store_op   = depth_stencil_store_op;
 
-    int res = ngli_rendertarget_init(rt, &params);
-    if (res < 0) {
-        ngli_rendertarget_freep(&rt);
-        return res;
-    }
+    int ret;
 
+  /*  if(color)
+    {*/
+        ret = ngli_rendertarget_init(rt, &params);
+   /* }
+    else
+    {
+        const GLuint default_fbo_id = ngli_glcontext_get_default_framebuffer(gl);
+        const GLuint fbo_id = default_fbo_id;
+        ret = ngli_rendertarget_gl_wrap(rt, &params, fbo_id);
+    }*/
+
+    if(ret < 0)
+    {
+        ngli_rendertarget_freep(&rt);
+        return ret;
+    }
     *rendertargetp = rt;
 
     return 0;
@@ -157,31 +176,24 @@ static int create_offscreen_resources(struct gpu_ctx *s)
 {
     gpu_ctx_d3d12 *s_priv     = (gpu_ctx_d3d12 *)s;
     const ngl_config *config = &s->config;
+    gpu_ctx_d3d12::offscreen& offscreen_resources = s_priv->offscreen_resources;
 
     int usage = NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT |
                 NGLI_TEXTURE_USAGE_TRANSFER_SRC_BIT;
-    if (config->samples == 1)
+    if (config->samples > 0)
         usage |= NGLI_TEXTURE_USAGE_SAMPLED_BIT;
-    auto &color_texture = s_priv->offscreen_resources.color_texture;
-    int res =
-        create_texture(s, NGLI_FORMAT_R8G8B8A8_UNORM, config->width,
+
+    auto &color_texture = offscreen_resources.color_texture;
+
+    int res = create_texture(s, NGLI_FORMAT_R8G8B8A8_UNORM, config->width,
                        config->height, config->samples, usage, &color_texture);
     if (res < 0)
         return res;
 
-    auto &depth_stencil_texture =
-        s_priv->offscreen_resources.depth_stencil_texture;
-    res = create_texture(
-        s, to_ngli_format(s_priv->graphics_context->depthStencilFormat),
-        config->width, config->height, config->samples,
-        NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-        &depth_stencil_texture);
-    if (res < 0)
-        return res;
 
-    auto &color_resolve_texture =
-        s_priv->offscreen_resources.color_resolve_texture;
-    if (config->samples) {
+    auto &color_resolve_texture = offscreen_resources.color_resolve_texture;
+    if (config->samples)
+    {
         res = create_texture(s, NGLI_FORMAT_R8G8B8A8_UNORM, config->width,
                              config->height, 1,
                              NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT |
@@ -192,17 +204,32 @@ static int create_offscreen_resources(struct gpu_ctx *s)
             return res;
     }
 
-    auto &rt = s_priv->offscreen_resources.rt;
+    // Depth stencil
+    auto& depth_stencil_texture =
+        offscreen_resources.depth_stencil_texture;
+    res = create_texture(
+        s, to_ngli_format(s_priv->graphics_context->depthStencilFormat),
+        config->width, config->height, config->samples,
+        NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        &depth_stencil_texture);
+    if(res < 0)
+        return res;
+
+
+    struct texture* color = color_resolve_texture ? color_resolve_texture : color_texture;
+    struct texture* resolve_color = color_resolve_texture ? color_texture    : NULL;
+
+    auto &rt = offscreen_resources.rt;
     // TODO: use STORE_OP_DONT_CARE for depth buffer?
-    res = create_rendertarget(s, color_texture, color_resolve_texture,
+    res = create_rendertarget(s, color, resolve_color,
                               depth_stencil_texture, NGLI_LOAD_OP_CLEAR,
                               NGLI_STORE_OP_STORE, NGLI_LOAD_OP_CLEAR,
                               NGLI_STORE_OP_STORE, &rt);
     if (res < 0)
         return res;
 
-    auto &rt_load = s_priv->offscreen_resources.rt_load;
-    res           = create_rendertarget(s, color_texture, color_resolve_texture,
+    auto &rt_load = offscreen_resources.rt_load;
+    res           = create_rendertarget(s, color, resolve_color,
                                         depth_stencil_texture, NGLI_LOAD_OP_LOAD,
                                         NGLI_STORE_OP_STORE, NGLI_LOAD_OP_LOAD,
                                         NGLI_STORE_OP_STORE, &rt_load);
@@ -221,11 +248,24 @@ static void d3d12_set_clear_color(struct gpu_ctx *s, const float *color);
 static int d3d12_init(struct gpu_ctx *s)
 {
     const ngl_config *config = &s->config;
-    if (config->width == 0 || config->height == 0) {
-        LOG(ERROR, "invalid config: width = %d height = %d", config->width,
-            config->height);
-        return NGL_ERROR_INVALID_ARG;
+    if(config->offscreen)
+    {
+        if(config->width <= 0 || config->height <= 0)
+        {
+            LOG(ERROR, "could not create offscreen context with invalid dimensions (%dx%d)",
+                config->width, config->height);
+            return NGL_ERROR_INVALID_ARG;
+        }
     }
+    else
+    {
+        if(config->capture_buffer)
+        {
+            LOG(ERROR, "capture_buffer is not supported by onscreen context");
+            return NGL_ERROR_INVALID_ARG;
+        }
+    }
+
     gpu_ctx_d3d12 *ctx = (gpu_ctx_d3d12 *)s;
 #if DEBUG_GPU_CAPTURE
     const char *var = getenv("NGL_GPU_CAPTURE");
@@ -246,29 +286,36 @@ static int d3d12_init(struct gpu_ctx *s)
 #endif
     /* FIXME */
     s->features            = -1;
-    ctx->graphics_context  = ngli::D3DGraphicsContext::newInstance("NGLApplication", true);
+    ctx->graphics_context  = ngli::D3DGraphicsContext::newInstance("NGLApplication", false);
+    if(!ctx->graphics_context)
+        return NGL_ERROR_MEMORY;
+
     auto &graphics_context = ctx->graphics_context;
 #if DEBUG_GPU_CAPTURE
     if (s->gpu_capture)
         ngli_gpu_capture_begin(s->gpu_capture_ctx);
 #endif
-    if (config->offscreen) {
-        ctx->surface = surface_util_d3d12::create_offscreen_surface(
-            config->width, config->height);
-    } else {
+    if (config->offscreen)
+    {
+        ctx->surface = surface_util_d3d12::create_offscreen_surface( config->width, config->height);
+    }
+    else
+    {
         ctx->surface = surface_util_d3d12::create_surface_from_window_handle(
             graphics_context, config->platform, config->display, config->window,
             config->width, config->height);
-        ctx->swapchain_util =
-            swapchain_util_d3d12::newInstance(graphics_context, config->window);
+        ctx->swapchain_util =  swapchain_util_d3d12::newInstance(graphics_context, config->window);
     }
     graphics_context->setSurface(ctx->surface);
     ctx->graphics = ngli::D3DGraphics::newInstance(graphics_context);
 
-    if (!config->offscreen) {
+    if (config->offscreen)
+    {
+        create_offscreen_resources(s); 
+    }
+    else
+    {
         create_onscreen_resources(s);
-    } else {
-        create_offscreen_resources(s);
     }
 
     create_dummy_texture(s);
@@ -397,15 +444,12 @@ static int d3d12_end_draw(struct gpu_ctx *s, double t)
         ctx->submit(s_priv->cur_command_buffer);
         if (s->config.capture_buffer) {
             uint32_t size = s->config.width * s->config.height * 4;
-            auto &output_color_resolve_texture =
-                s_priv->offscreen_resources.color_resolve_texture;
-            auto &output_color_texture =
-                s_priv->offscreen_resources.color_texture;
+            auto &output_color_resolve_texture = s_priv->offscreen_resources.color_resolve_texture;
+            auto &output_color_texture = s_priv->offscreen_resources.color_texture;
             auto &output_texture =
                 ((texture_d3d12 *)(output_color_resolve_texture
                                       ? output_color_resolve_texture
-                                      : output_color_texture))
-                    ->v;
+                                      : output_color_texture))->v;
             output_texture->download(s->config.capture_buffer, size);
         } else {
             if (ctx->queue)
@@ -517,8 +561,8 @@ static void begin_render_pass(struct gpu_ctx_d3d12 *s_priv,
 
     ngli::D3DFramebuffer *framebuffer = rt_priv->output_framebuffer;
     auto &color_attachments  = rt_priv->parent.params.colors;
-    graphics->beginRenderPass(cmd_buf, render_pass, framebuffer,
-                              glm::make_vec4(color_attachments[0].clear_value));
+    glm::vec4 clearColor = glm::make_vec4(color_attachments[0].clear_value);
+    graphics->beginRenderPass(cmd_buf, render_pass, framebuffer, clearColor);
 }
 
 static void end_render_pass(struct gpu_ctx_d3d12 *s_priv, rendertarget_d3d12 *)
@@ -533,18 +577,21 @@ static void d3d12_begin_render_pass(struct gpu_ctx *s, struct rendertarget *rt)
 {
     gpu_ctx_d3d12 *s_priv       = (gpu_ctx_d3d12 *)s;
     rendertarget_d3d12 *rt_priv = (rendertarget_d3d12 *)rt;
-    if (rt_priv) {
+    if (rt_priv)
+    {
         const auto &attachments = rt_priv->output_framebuffer->attachments;
 
-        for (uint32_t j = 0; j < attachments.size(); j++) {
+        for (uint32_t j = 0; j < attachments.size(); j++)
+        {
             auto output_texture = attachments[j].texture;
-            if (output_texture->imageUsageFlags &
-                ngli::IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+            if (output_texture->imageUsageFlags & NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT)
+            {
                 output_texture->changeLayout(
                     s_priv->cur_command_buffer,
                     ngli::IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-            } else if (output_texture->imageUsageFlags &
-                       ngli::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+            }
+            else if (output_texture->imageUsageFlags & NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+            {
                 output_texture->changeLayout(
                     s_priv->cur_command_buffer,
                     ngli::IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
@@ -554,13 +601,13 @@ static void d3d12_begin_render_pass(struct gpu_ctx *s, struct rendertarget *rt)
 
     begin_render_pass(s_priv, rt_priv);
 
-    s_priv->cur_rendertarget = rt;
+    s_priv->current_rendertarget = rt;
 }
 
 static void d3d12_end_render_pass(struct gpu_ctx *s)
 {
     gpu_ctx_d3d12 *s_priv       = (gpu_ctx_d3d12 *)s;
-    rendertarget_d3d12 *rt_priv = (rendertarget_d3d12 *)s_priv->cur_rendertarget;
+    rendertarget_d3d12 *rt_priv = (rendertarget_d3d12 *)s_priv->current_rendertarget;
 
     end_render_pass(s_priv, rt_priv);
 
@@ -568,7 +615,7 @@ static void d3d12_end_render_pass(struct gpu_ctx *s)
         const auto &attachments = rt_priv->output_framebuffer->attachments;
         for (uint32_t j = 0; j < attachments.size(); j++) {
             auto output_texture = attachments[j].texture;
-            if (output_texture->imageUsageFlags & ngli::IMAGE_USAGE_SAMPLED_BIT) {
+            if (output_texture->imageUsageFlags & NGLI_TEXTURE_USAGE_SAMPLED_BIT) {
                 ngli_assert(output_texture->numSamples == 1);
                 output_texture->changeLayout(
                     s_priv->cur_command_buffer,
@@ -576,7 +623,7 @@ static void d3d12_end_render_pass(struct gpu_ctx *s)
             }
         }
     }
-    s_priv->cur_rendertarget = NULL;
+    s_priv->current_rendertarget = NULL;
 }
 
 static void d3d12_set_viewport(struct gpu_ctx *s, const int *vp)

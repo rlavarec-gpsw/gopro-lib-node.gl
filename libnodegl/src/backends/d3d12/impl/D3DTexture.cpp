@@ -38,14 +38,14 @@ DXGI_FORMAT D3DTexture::getViewFormat(DXGI_FORMAT resourceFormat, uint32_t plane
 void D3DTexture::getResourceDesc()
 {
 	resourceFlags = D3D12_RESOURCE_FLAG_NONE;
-	if(imageUsageFlags & IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+	if(imageUsageFlags & NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT)
 		resourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-	if(imageUsageFlags & IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+	if(imageUsageFlags & NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
 		resourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-	if(imageUsageFlags & IMAGE_USAGE_STORAGE_BIT)
+	if(imageUsageFlags & NGLI_TEXTURE_USAGE_STORAGE_BIT)
 		resourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 //	auto d3dDevice = ctx->d3dDevice.mID3D12Device.Get();
-	bool isSampled = (imageUsageFlags & IMAGE_USAGE_SAMPLED_BIT);
+	bool isSampled = (imageUsageFlags & NGLI_TEXTURE_USAGE_SAMPLED_BIT);
 	if(textureType == TEXTURE_TYPE_3D)
 	{
 		resourceDesc =
@@ -113,7 +113,7 @@ void D3DTexture::init(D3DGraphicsContext* ctx, D3DGraphics* graphics, void* data
 	this->mipLevels =
 		genMipmaps ? uint32_t(floor(log2(float(std::min(w, h))))) + 1 : 1;
 	if(genMipmaps)
-		usageFlags |= IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		usageFlags |= NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
 	this->imageUsageFlags = usageFlags;
 	this->numSamples = numSamples;
 	d3dDevice = ctx->d3dDevice.mID3D12Device.Get();
@@ -144,7 +144,7 @@ void D3DTexture::init(D3DGraphicsContext* ctx, D3DGraphics* graphics, void* data
 	for(auto& s : mCurrentResourceState)
 		s = D3D12_RESOURCE_STATE_COPY_DEST;
 
-	bool isSampled = (imageUsageFlags & IMAGE_USAGE_SAMPLED_BIT);
+	bool isSampled = (imageUsageFlags & NGLI_TEXTURE_USAGE_SAMPLED_BIT);
 	if(isSampled)
 	{
 		for(uint32_t j = 0; j < numPlanes; j++)
@@ -154,7 +154,7 @@ void D3DTexture::init(D3DGraphicsContext* ctx, D3DGraphics* graphics, void* data
 		if(samplerDesc)
 			defaultSampler = getSampler(samplerDesc->Filter);
 	}
-	if(imageUsageFlags & IMAGE_USAGE_STORAGE_BIT)
+	if(imageUsageFlags & NGLI_TEXTURE_USAGE_STORAGE_BIT)
 	{
 		for(uint32_t j = 0; j < numPlanes; j++)
 		{
@@ -168,7 +168,7 @@ void D3DTexture::init(D3DGraphicsContext* ctx, D3DGraphics* graphics, void* data
 			defaultRtvDescriptor[j] = getRtvDescriptor(0, 0, 1, j);
 	}
 
-	if(imageUsageFlags & IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+	if(imageUsageFlags & NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
 	{
 		createDepthStencilView();
 	}
@@ -226,7 +226,7 @@ void D3DTexture::createFromHandle(D3DGraphicsContext* ctx, D3DGraphics* graphics
 	isRenderTarget =
 		(resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 
-	if(imageUsageFlags & IMAGE_USAGE_SAMPLED_BIT)
+	if(imageUsageFlags & NGLI_TEXTURE_USAGE_SAMPLED_BIT)
 	{
 		if(samplerDesc)
 			defaultSampler = getSampler(samplerDesc->Filter);
@@ -247,7 +247,7 @@ void D3DTexture::updateFromHandle(void* handle)
 
 	resourceBarrierTransition(commandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
-	if(imageUsageFlags & IMAGE_USAGE_SAMPLED_BIT)
+	if(imageUsageFlags & NGLI_TEXTURE_USAGE_SAMPLED_BIT)
 	{
 		for(uint32_t j = 0; j < numPlanes; j++)
 		{
@@ -520,7 +520,7 @@ void D3DTexture::upload(void* data, uint32_t size, uint32_t x, uint32_t y,
 			arrayLayers, numPlanes, dataPitch);
 	}
 	D3D12_RESOURCE_STATES resourceState =
-		(imageUsageFlags & IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+		(imageUsageFlags & NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
 		? D3D12_RESOURCE_STATE_DEPTH_WRITE
 		: D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE; //TODO: optimize
 	resourceBarrierTransition(&copyCommandList, resourceState);
@@ -656,7 +656,7 @@ void D3DTexture::downloadFn(D3DCommandList* cmdList,
 	D3D_TRACE(cmdList->mGraphicsCommandList->CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation,
 											&srcRegion));
 	D3D12_RESOURCE_STATES resourceState =
-		(imageUsageFlags & IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+		(imageUsageFlags & NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
 		? D3D12_RESOURCE_STATE_DEPTH_WRITE
 		: D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
 	resourceBarrierTransition(cmdList, resourceState, subresourceIndex);
