@@ -176,7 +176,7 @@ void D3DGraphicsContext::setSurface(D3DSurface* surface)
 	{
 		d3dDepthStencilView.reset(D3DTexture::newInstance(this, nullptr, nullptr, depthStencilFormat, surface->mW * surface->mH * 4,
 														  surface->mW, surface->mH, 1, 1,
-														  IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT));
+														  NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT));
 		if(numSamples != 1)
 		{
 			NGLI_TODO("");
@@ -184,13 +184,13 @@ void D3DGraphicsContext::setSurface(D3DSurface* surface)
 	}
 	std::optional<AttachmentDescription> depthAttachmentDescription;
 	if(enableDepthStencil)
-		depthAttachmentDescription = { depthStencilFormat, std::nullopt, std::nullopt, ATTACHMENT_LOAD_OP_CLEAR, ATTACHMENT_STORE_OP_DONT_CARE };
+		depthAttachmentDescription = { depthStencilFormat, std::nullopt, std::nullopt, NGLI_LOAD_OP_CLEAR, NGLI_STORE_OP_DONT_CARE };
 	else
 		depthAttachmentDescription = std::nullopt;
 	if(surface && !surface->mOffscreen)
 	{
-		RenderPassConfig onscreenRenderPassConfig = {
-			{{surfaceFormat, IMAGE_LAYOUT_UNDEFINED, IMAGE_LAYOUT_PRESENT_SRC, ATTACHMENT_LOAD_OP_CLEAR, ATTACHMENT_STORE_OP_STORE }},
+		D3DRenderPassConfig onscreenRenderPassConfig = {
+			{{surfaceFormat, IMAGE_LAYOUT_UNDEFINED, IMAGE_LAYOUT_PRESENT_SRC, NGLI_LOAD_OP_CLEAR, NGLI_STORE_OP_STORE }},
 			depthAttachmentDescription,
 			false,
 			numSamples };
@@ -198,8 +198,8 @@ void D3DGraphicsContext::setSurface(D3DSurface* surface)
 			(D3DRenderPass*)getRenderPass(onscreenRenderPassConfig);
 	}
 	defaultOffscreenSurfaceFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-	RenderPassConfig offscreenRenderPassConfig = {
-		{{defaultOffscreenSurfaceFormat, std::nullopt, std::nullopt, ATTACHMENT_LOAD_OP_CLEAR, ATTACHMENT_STORE_OP_STORE }},
+	D3DRenderPassConfig offscreenRenderPassConfig = {
+		{{defaultOffscreenSurfaceFormat, std::nullopt, std::nullopt, NGLI_LOAD_OP_CLEAR, NGLI_STORE_OP_STORE }},
 		depthAttachmentDescription,
 		false,
 		numSamples };
@@ -222,11 +222,10 @@ void D3DGraphicsContext::setSurface(D3DSurface* surface)
 inline void D3DGraphicsContext::beginRenderPass(D3DCommandList* commandBuffer, D3DGraphics* graphics)
 {
 	auto framebuffer = swapchainFramebuffers[currentImageIndex];
-	uint32_t w = framebuffer->w, h = framebuffer->h;
-	graphics->beginRenderPass(commandBuffer, defaultRenderPass, framebuffer,
-							  clearColor);
-	graphics->setViewport(commandBuffer, { 0, 0, static_cast<int32_t>(w), static_cast<int32_t>(h) });
-	graphics->setScissor(commandBuffer, { 0, 0, static_cast<int32_t>(w), static_cast<int32_t>(h) });
+	// Do not clear the target view if default
+	graphics->beginRenderPass(commandBuffer, defaultRenderPass, framebuffer, clearColor, 1.0f, 0, false);
+	graphics->setViewport(commandBuffer, { 0, 0, static_cast<int32_t>(framebuffer->w), static_cast<int32_t>(framebuffer->h) });
+	graphics->setScissor(commandBuffer, { 0, 0, static_cast<int32_t>(framebuffer->w), static_cast<int32_t>(framebuffer->h) });
 }
 
 /** Begin an offscreen render pass.
@@ -239,12 +238,9 @@ one or more attachments via a framebuffer object.
 
 inline void D3DGraphicsContext::beginOffscreenRenderPass(D3DCommandList* commandBuffer, D3DGraphics* graphics, D3DFramebuffer* outputFramebuffer)
 {
-	graphics->beginRenderPass(commandBuffer, defaultOffscreenRenderPass,
-							  outputFramebuffer, clearColor);
-	graphics->setViewport(commandBuffer,
-						  { 0, 0, static_cast<int32_t>(outputFramebuffer->w), static_cast<int32_t>(outputFramebuffer->h) });
-	graphics->setScissor(commandBuffer,
-						 { 0, 0, static_cast<int32_t>(outputFramebuffer->w), static_cast<int32_t>(outputFramebuffer->h) });
+	graphics->beginRenderPass(commandBuffer, defaultOffscreenRenderPass, outputFramebuffer, clearColor);
+	graphics->setViewport(commandBuffer, { 0, 0, static_cast<int32_t>(outputFramebuffer->w), static_cast<int32_t>(outputFramebuffer->h) });
+	graphics->setScissor(commandBuffer,  { 0, 0, static_cast<int32_t>(outputFramebuffer->w), static_cast<int32_t>(outputFramebuffer->h) });
 }
 
 /** End render pass.  Every call to beginRenderPass should be accompanied by endRenderPass.
@@ -268,7 +264,7 @@ inline void D3DGraphicsContext::submit(D3DCommandList* commandBuffer)
 	queue->submit(commandBuffer);
 }
 
-D3DRenderPass* D3DGraphicsContext::getRenderPass(RenderPassConfig config)
+D3DRenderPass* D3DGraphicsContext::getRenderPass(D3DRenderPassConfig config)
 {
 	for(auto& r : d3dRenderPassCache)
 	{
@@ -282,7 +278,7 @@ D3DRenderPass* D3DGraphicsContext::getRenderPass(RenderPassConfig config)
 	return result;
 }
 
-void D3DGraphicsContext::createRenderPass(const RenderPassConfig& config,
+void D3DGraphicsContext::createRenderPass(const D3DRenderPassConfig& config,
 										  D3DRenderPass& renderPass)
 {
 	D3D12_RESOURCE_STATES
@@ -298,8 +294,8 @@ void D3DGraphicsContext::createRenderPass(const RenderPassConfig& config,
 		nullptr;
 	renderPass.create(this, initialResourceState, finalResourceState,
 		colorAttachment->loadOp, colorAttachment->storeOp,
-		depthAttachment ? depthAttachment->loadOp : ATTACHMENT_LOAD_OP_CLEAR,
-		depthAttachment ? depthAttachment->storeOp : ATTACHMENT_STORE_OP_DONT_CARE);
+		depthAttachment ? depthAttachment->loadOp : NGLI_LOAD_OP_CLEAR,
+		depthAttachment ? depthAttachment->storeOp : NGLI_STORE_OP_DONT_CARE);
 }
 
 void D3DGraphicsContext::createFences(ID3D12Device* device)
