@@ -46,7 +46,8 @@ enum {
     NGLI_NB_WRAP
 };
 
-enum {
+enum ImageUsageFlags
+{
     NGLI_TEXTURE_USAGE_TRANSFER_SRC_BIT             = 1 << 0,
     NGLI_TEXTURE_USAGE_TRANSFER_DST_BIT             = 1 << 1,
     NGLI_TEXTURE_USAGE_SAMPLED_BIT                  = 1 << 2,

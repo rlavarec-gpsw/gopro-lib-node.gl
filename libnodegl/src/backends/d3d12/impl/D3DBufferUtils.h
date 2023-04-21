@@ -21,6 +21,11 @@
 #pragma once
 #include <backends/d3d12/impl/D3DBuffer.h>
 
+extern "C" {
+#include "Buffer.h"
+}
+
+
 /** \class BufferUtil
  * 
  *  This utility module provides helper functions for creating various types of 
@@ -35,7 +40,7 @@ namespace ngli {
    */
   static D3DBuffer *createVertexBuffer(D3DGraphicsContext *ctx, const void *data, uint32_t size)
   {
-    return D3DBuffer::newInstance(ctx, data, size, BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    return D3DBuffer::newInstance(ctx, data, size, NGLI_BUFFER_USAGE_VERTEX_BUFFER_BIT);
   }
   /** Create a vertex buffer
    *  @param ctx The graphics context
@@ -56,7 +61,7 @@ namespace ngli {
                                    uint32_t size,
                                    uint32_t stride = sizeof(uint32_t))
   {
-    return D3DBuffer::newInstance(ctx, data, size, BUFFER_USAGE_INDEX_BUFFER_BIT);
+    return D3DBuffer::newInstance(ctx, data, size, NGLI_BUFFER_USAGE_INDEX_BUFFER_BIT);
   }
   /** Create an index buffer
    *  @param ctx The graphics context
@@ -77,7 +82,7 @@ namespace ngli {
    */
   static D3DBuffer *createUniformBuffer(D3DGraphicsContext *ctx, const void *data, uint32_t size)
   {
-    return D3DBuffer::newInstance(ctx, data, size, BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    return D3DBuffer::newInstance(ctx, data, size, NGLI_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
   }
   /** Create a storage buffer
    *  @param ctx The graphics context
@@ -86,6 +91,6 @@ namespace ngli {
    */
   static D3DBuffer *createStorageBuffer(D3DGraphicsContext *ctx, const void *data, uint32_t size)
   {
-    return D3DBuffer::newInstance(ctx, data, size, BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    return D3DBuffer::newInstance(ctx, data, size, NGLI_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   }
 }; // namespace ngli

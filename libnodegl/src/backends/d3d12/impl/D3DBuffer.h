@@ -30,15 +30,15 @@ class D3DFence;
 class D3DBuffer
 {
 public:
-	static D3DBuffer* newInstance(D3DGraphicsContext* ctx, const void* data, uint32_t size, BufferUsageFlags usageFlags);
+	static D3DBuffer* newInstance(D3DGraphicsContext* ctx, const void* data, uint32_t size, int usageFlags);
 
-	void init(D3DGraphicsContext* ctx, const void* data, uint32_t size, BufferUsageFlags bufferUsageFlags);
+	void init(D3DGraphicsContext* ctx, const void* data, uint32_t size, int bufferUsageFlags);
 
 	void init(D3DGraphicsContext* ctx, const void* data, uint32_t size,
 				D3D12_HEAP_TYPE heapType = D3D12_HEAP_TYPE_DEFAULT,
+				D3D12_HEAP_FLAGS heapFlag = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES,
 				D3D12_RESOURCE_FLAGS resourceFlags = D3D12_RESOURCE_FLAG_NONE,
-				D3D12_RESOURCE_STATES initialResourceState =
-				D3D12_RESOURCE_STATE_GENERIC_READ);
+				D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_GENERIC_READ);
 	virtual ~D3DBuffer();
 	void* map();
 	void unmap();
@@ -54,11 +54,14 @@ public:
 protected:
 
 	D3DGraphicsContext* mCtx = nullptr;
-	D3D12_HEAP_TYPE mHeapType;
-	D3D12_RESOURCE_STATES mInitialResourceState;
-	D3D12_RESOURCE_STATES mCurrentResourceState;
+	D3D12_HEAP_TYPE mHeapType = D3D12_HEAP_TYPE_DEFAULT;
+	D3D12_HEAP_FLAGS mHeapFlag = D3D12_HEAP_FLAG_NONE;
+	D3D12_RESOURCE_FLAGS mResourceFlags = D3D12_RESOURCE_FLAG_NONE;
+	D3D12_RESOURCE_STATES mInitialResourceState = D3D12_RESOURCE_STATE_COMMON;
+	D3D12_RESOURCE_STATES mCurrentResourceState = D3D12_RESOURCE_STATE_COMMON;
 	D3DReadbackBuffer* d3dReadbackBuffer = nullptr;
 	void* d3dReadBackBufferPtr = nullptr;
+	int mBufferUsageFlags = 0;
 };
 
 } // namespace ngli

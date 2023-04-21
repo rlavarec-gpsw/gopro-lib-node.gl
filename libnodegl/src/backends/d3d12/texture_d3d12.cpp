@@ -50,7 +50,6 @@ int ngli_texture_d3d12_init(struct texture* s, const struct texture_params* p)
     s->params = *p;
     s_priv->bytes_per_pixel = get_bpp(p->format);
     bool gen_mipmaps = p->mipmap_filter != NGLI_MIPMAP_FILTER_NONE;
-    uint32_t image_usage_flags = to_d3d12_image_usage_flags(p->usage);
 
     uint32_t depth = (p->type == NGLI_TEXTURE_TYPE_3D) ? p->depth : 1;
     s->params.depth = depth;
@@ -70,7 +69,7 @@ int ngli_texture_d3d12_init(struct texture* s, const struct texture_params* p)
 
     s_priv->v = ngli::D3DTexture::newInstance(
         gpu_ctx, ctx->graphics, nullptr, to_d3d12_format(p->format), size,
-        p->width, p->height, depth, array_layers, image_usage_flags,
+        p->width, p->height, depth, array_layers, p->usage,
         to_d3d12_texture_type(p->type), gen_mipmaps,
         p->samples == 0 ? 1 : p->samples, &samplerDesc);
 
@@ -98,7 +97,7 @@ int ngli_texture_d3d12_generate_mipmap(struct texture* s)
     gpu_ctx_d3d12* gpu_ctx = (gpu_ctx_d3d12*)s->gpu_ctx;
     ngli::D3DCommandList* cmd_buffer = gpu_ctx->cur_command_buffer;
     texture->v->generateMipmaps(cmd_buffer);
-    if(texture->v->imageUsageFlags & ngli::IMAGE_USAGE_SAMPLED_BIT)
+    if(texture->v->imageUsageFlags & NGLI_TEXTURE_USAGE_SAMPLED_BIT)
     {
         texture->v->changeLayout(cmd_buffer,
                                  ngli::IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

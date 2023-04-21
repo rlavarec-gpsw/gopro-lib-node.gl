@@ -42,13 +42,13 @@ struct gpu_ctx_d3d12
     struct rendertarget* default_rendertarget = nullptr;
     struct rendertarget* default_rendertarget_load = nullptr;
     struct rendertarget_desc default_rendertarget_desc;
-    rendertarget* cur_rendertarget = nullptr;
+    rendertarget* current_rendertarget = nullptr;
 
     int viewport[4];
     int scissor[4];
     float clear_color[4];
 
-    struct
+    struct offscreen
     {
         texture* color_texture = nullptr;
         texture* depth_stencil_texture = nullptr;

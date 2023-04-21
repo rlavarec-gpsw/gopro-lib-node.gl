@@ -26,7 +26,7 @@ namespace ngli
 {
 
 void D3DReadbackBuffer::create(D3DGraphicsContext *ctx, uint32_t size) {
-  D3DBuffer::init(ctx, nullptr, size, D3D12_HEAP_TYPE_READBACK,
+  D3DBuffer::init(ctx, nullptr, size, D3D12_HEAP_TYPE_READBACK, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES,
                     D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST);
 
   mID3D12Resource->SetName(L"D3DReadbackBuffer");

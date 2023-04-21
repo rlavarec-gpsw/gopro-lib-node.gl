@@ -20,6 +20,10 @@
  */
 #pragma once
 
+extern "C" {
+#include "texture.h"
+}
+
 namespace ngli
 {
 class D3DBuffer;
@@ -56,9 +60,7 @@ public:
 		newInstance(D3DGraphicsContext* graphicsContext, D3DGraphics* graphics, void* data,
 			   DXGI_FORMAT format, uint32_t size, uint32_t w, uint32_t h, uint32_t d,
 			   uint32_t arrayLayers,
-			   ImageUsageFlags imageUsageFlags = ImageUsageFlags(
-				   IMAGE_USAGE_SAMPLED_BIT | IMAGE_USAGE_TRANSFER_SRC_BIT |
-				   IMAGE_USAGE_TRANSFER_DST_BIT),
+			   ImageUsageFlags imageUsageFlags = (NGLI_TEXTURE_USAGE_SAMPLED_BIT | NGLI_TEXTURE_USAGE_TRANSFER_SRC_BIT | NGLI_TEXTURE_USAGE_TRANSFER_DST_BIT),
 			   TextureType textureType = TEXTURE_TYPE_2D, bool genMipmaps = false,
 			   uint32_t numSamples = 1, const D3DSamplerDesc* samplerDesc = nullptr, int32_t dataPitch = -1);
 

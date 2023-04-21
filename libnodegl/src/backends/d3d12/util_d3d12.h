@@ -45,9 +45,8 @@ D3D12_COMPARISON_FUNC to_d3d12_compare_op(int compare_op);
 D3D12_STENCIL_OP to_d3d12_stencil_op(int stencil_op);
 ngli::ColorComponentFlags to_d3d12_color_mask(int color_write_mask);
 D3D12_CULL_MODE to_d3d12_cull_mode(int cull_mode);
-ngli::ImageUsageFlags to_d3d12_image_usage_flags(int usage_flags);
-ngli::AttachmentLoadOp to_d3d12_load_op(int op);
-ngli::AttachmentStoreOp to_d3d12_store_op(int op);
+AttachmentLoadOp to_d3d12_load_op(int op);
+AttachmentStoreOp to_d3d12_store_op(int op);
 ngli::D3DRenderPass* get_render_pass(ngli::D3DGraphicsContext* ctx,
 								  const struct rendertarget_params* params);
 ngli::D3DRenderPass* get_compat_render_pass(ngli::D3DGraphicsContext* ctx,

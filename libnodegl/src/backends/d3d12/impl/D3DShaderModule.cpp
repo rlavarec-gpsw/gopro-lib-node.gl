@@ -39,7 +39,8 @@ namespace ngli
 struct VertexFormatInfo
 {
 	VertexFormat format;
-	uint32_t count, elementSize;
+	uint32_t count = 0;
+	uint32_t elementSize=0;
 };
 static const std::map<std::string, VertexFormatInfo> vertexFormatMap = {
 	VF_ITEM(VERTEXFORMAT_FLOAT, 1, 4),

@@ -19,6 +19,9 @@
  * under the License.
  */
 #pragma once
+extern "C" {
+#include "rendertarget.h"
+}
 
 namespace ngli {
 class D3DGraphicsContext;
@@ -39,10 +42,10 @@ public:
   void create(D3DGraphicsContext *ctx,
               D3D12_RESOURCE_STATES initialResourceState,
               D3D12_RESOURCE_STATES finalResourceState,
-              AttachmentLoadOp colorLoadOp = ATTACHMENT_LOAD_OP_CLEAR,
-              AttachmentStoreOp colorStoreOp = ATTACHMENT_STORE_OP_STORE,
-              AttachmentLoadOp depthLoadOp = ATTACHMENT_LOAD_OP_CLEAR,
-              AttachmentStoreOp depthStoreOp = ATTACHMENT_STORE_OP_DONT_CARE);
+              AttachmentLoadOp colorLoadOp = NGLI_LOAD_OP_CLEAR,
+              AttachmentStoreOp colorStoreOp = NGLI_STORE_OP_STORE,
+              AttachmentLoadOp depthLoadOp = NGLI_LOAD_OP_CLEAR,
+              AttachmentStoreOp depthStoreOp = NGLI_STORE_OP_DONT_CARE);
   virtual ~D3DRenderPass() {}
   D3D12_RESOURCE_STATES initialResourceState, finalResourceState;
   AttachmentLoadOp colorLoadOp, depthLoadOp;

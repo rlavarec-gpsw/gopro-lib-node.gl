@@ -44,9 +44,7 @@ int ngli_buffer_d3d12_init(struct buffer* buffer, int size, int bufferUsageFlags
     // TODO: pass usage flags (e.g. vertex buffer, index buffer, uniform buffer,
     // etc
     s_priv->mBuffer = ngli::D3DBuffer::newInstance(
-        ctx->graphics_context, NULL, size,
-        ngli::BUFFER_USAGE_VERTEX_BUFFER_BIT | ngli::BUFFER_USAGE_INDEX_BUFFER_BIT |
-            ngli::BUFFER_USAGE_UNIFORM_BUFFER_BIT | ngli::BUFFER_USAGE_STORAGE_BUFFER_BIT);
+        ctx->graphics_context, NULL, size, bufferUsageFlags);
     return 0;
 }
 

@@ -579,7 +579,7 @@ static void set_viewport(ngli::D3DCommandList* cmd_buf, gpu_ctx_d3d12* gpu_ctx)
 static void set_scissor(ngli::D3DCommandList* cmd_buf, gpu_ctx_d3d12* gpu_ctx)
 {
     int* sr = gpu_ctx->scissor;
-    const struct rendertarget* rt = gpu_ctx->cur_rendertarget;
+    const struct rendertarget* rt = gpu_ctx->current_rendertarget;
     if(!rt)
         return;
     gpu_ctx->graphics->setScissor(

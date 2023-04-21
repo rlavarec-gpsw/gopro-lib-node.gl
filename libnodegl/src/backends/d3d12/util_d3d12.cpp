@@ -158,43 +158,15 @@ D3D12_CULL_MODE to_d3d12_cull_mode(int cull_mode)
 	return cull_mode_map.at(cull_mode);
 }
 
-ngli::ImageUsageFlags to_d3d12_image_usage_flags(int usage_flags)
+
+AttachmentLoadOp to_d3d12_load_op(int op)
 {
-	static std::map<int, ngli::ImageUsageFlags> usage_flags_map = {
-		{NGLI_TEXTURE_USAGE_TRANSFER_SRC_BIT,             ngli::IMAGE_USAGE_TRANSFER_SRC_BIT },
-		{NGLI_TEXTURE_USAGE_TRANSFER_DST_BIT,             ngli::IMAGE_USAGE_TRANSFER_DST_BIT },
-		{NGLI_TEXTURE_USAGE_SAMPLED_BIT,                  ngli::IMAGE_USAGE_SAMPLED_BIT      },
-		{NGLI_TEXTURE_USAGE_STORAGE_BIT,                  ngli::IMAGE_USAGE_STORAGE_BIT      },
-		{NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT,		  ngli::IMAGE_USAGE_COLOR_ATTACHMENT_BIT },
-		{NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, ngli::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT },
-		{NGLI_TEXTURE_USAGE_TRANSIENT_ATTACHMENT_BIT,     ngli::IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT },
-	};
-	int image_usage_flags = 0;
-	for(auto& flag : usage_flags_map)
-	{
-		if(usage_flags & flag.first)
-			image_usage_flags |= flag.second;
-	}
-	return image_usage_flags;
+	return (AttachmentLoadOp)op;
 }
 
-ngli::AttachmentLoadOp to_d3d12_load_op(int op)
+AttachmentStoreOp to_d3d12_store_op(int op)
 {
-	static std::map<int, ngli::AttachmentLoadOp> load_op_map = {
-		{NGLI_LOAD_OP_LOAD,      ngli::ATTACHMENT_LOAD_OP_LOAD     },
-		{NGLI_LOAD_OP_CLEAR,     ngli::ATTACHMENT_LOAD_OP_CLEAR    },
-		{NGLI_LOAD_OP_DONT_CARE, ngli::ATTACHMENT_LOAD_OP_DONT_CARE}
-	};
-	return load_op_map.at(op);
-}
-
-ngli::AttachmentStoreOp to_d3d12_store_op(int op)
-{
-	static std::map<int, ngli::AttachmentStoreOp> store_op_map = {
-		{NGLI_STORE_OP_DONT_CARE, ngli::ATTACHMENT_STORE_OP_DONT_CARE},
-		{NGLI_STORE_OP_STORE,     ngli::ATTACHMENT_STORE_OP_STORE    }
-	};
-	return store_op_map.at(op);
+	return (AttachmentStoreOp)op;
 }
 
 ngli::D3DRenderPass* get_render_pass(ngli::D3DGraphicsContext* ctx,
@@ -202,13 +174,13 @@ ngli::D3DRenderPass* get_render_pass(ngli::D3DGraphicsContext* ctx,
 {
 	bool hasDepthStencilAttachment =
 		params->depth_stencil.attachment != nullptr;
-	ngli::D3DGraphicsContext::RenderPassConfig rp_config;
-	auto& colorAttachmentDescs = rp_config.colorAttachmentDescriptions;
-	colorAttachmentDescs.resize(params->nb_colors);
+	ngli::D3DGraphicsContext::D3DRenderPassConfig rp_config;
+	rp_config.colorAttachmentDescriptions.resize(params->nb_colors);
+
 	for(int j = 0; j < params->nb_colors; j++)
 	{
 		auto& v0 = params->colors[j];
-		auto& v1 = colorAttachmentDescs[j];
+		auto& v1 = rp_config.colorAttachmentDescriptions[j];
 		v1.format = to_d3d12_format(v0.attachment->params.format);
 		v1.loadOp = to_d3d12_load_op(v0.load_op);
 		v1.storeOp = to_d3d12_store_op(v0.store_op);
@@ -232,7 +204,7 @@ ngli::D3DRenderPass* get_compat_render_pass(ngli::D3DGraphicsContext* ctx,
 {
 	bool hasDepthStencilAttachment =
 		desc.depth_stencil.format != NGLI_FORMAT_UNDEFINED;
-	ngli::D3DGraphicsContext::RenderPassConfig rp_config;
+	ngli::D3DGraphicsContext::D3DRenderPassConfig rp_config;
 	auto& colorAttachmentDescs = rp_config.colorAttachmentDescriptions;
 	colorAttachmentDescs.resize(desc.nb_colors);
 	for(int j = 0; j < desc.nb_colors; j++)
@@ -240,13 +212,13 @@ ngli::D3DRenderPass* get_compat_render_pass(ngli::D3DGraphicsContext* ctx,
 		auto& v0 = desc.colors[j];
 		auto& v1 = colorAttachmentDescs[j];
 		v1.format = to_d3d12_format(v0.format);
-		v1.loadOp = ngli::ATTACHMENT_LOAD_OP_DONT_CARE;
-		v1.storeOp = ngli::ATTACHMENT_STORE_OP_DONT_CARE;
+		v1.loadOp = NGLI_LOAD_OP_DONT_CARE;
+		v1.storeOp = NGLI_STORE_OP_DONT_CARE;
 	}
 	if(hasDepthStencilAttachment)
 		rp_config.depthStencilAttachmentDescription = {
 			to_d3d12_format(desc.depth_stencil.format), std::nullopt, std::nullopt,
-			ngli::ATTACHMENT_LOAD_OP_DONT_CARE, ngli::ATTACHMENT_STORE_OP_DONT_CARE };
+			NGLI_LOAD_OP_DONT_CARE, NGLI_STORE_OP_DONT_CARE };
 	else
 		rp_config.depthStencilAttachmentDescription = std::nullopt;
 	rp_config.enableDepthStencilResolve = desc.colors[0].resolve;
