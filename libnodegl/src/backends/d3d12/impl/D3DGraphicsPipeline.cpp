@@ -255,10 +255,8 @@ D3DGraphicsPipeline::newInstance(D3DGraphicsContext* graphicsContext, const D3DG
 									  d3dRootParams, d3dDescriptorRanges,
 									  D3DPipelineUtil::PIPELINE_TYPE_GRAPHICS, isReadOnly);
 
-	std::vector<D3D12_INPUT_ELEMENT_DESC> d3dVertexInputAttributes(
-		vs->attributes.size());
+	std::vector<D3D12_INPUT_ELEMENT_DESC> d3dVertexInputAttributes;
 	auto& vertexAttributeBindings = d3dGraphicsPipeline->vertexAttributeBindings;
-	vertexAttributeBindings.resize(vs->attributes.size());
 	struct SemanticData
 	{
 		std::string name;
@@ -268,16 +266,17 @@ D3DGraphicsPipeline::newInstance(D3DGraphicsContext* graphicsContext, const D3DG
 	for(int j = 0; j < vs->attributes.size(); j++)
 	{
 		const auto& va = vs->attributes[j];
-		uint32_t binding = va.location,  // TODO: va.count
-			offset = vertexAttributes.empty() ? 0 : vertexAttributes[j].offset;
-		D3D12_INPUT_CLASSIFICATION inputRate =
-			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+		uint32_t binding = va.location;  // TODO: va.count
+		uint32_t offset = vertexAttributes.empty() ? 0 : vertexAttributes[j].offset;
+
+		D3D12_INPUT_CLASSIFICATION inputRate = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 		if(instanceAttributes.find(va.name) != instanceAttributes.end())
 			inputRate = D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
-		int32_t semanticIndexOffset =
-			va.semantic.find_first_of("0123456789");
+
+		int32_t semanticIndexOffset = va.semantic.find_first_of("0123456789");
 		std::string& semanticName = semanticData[j].name;
 		uint32_t& semanticIndex = semanticData[j].index;
+
 		if(semanticIndexOffset != std::string::npos)
 		{
 			semanticName = va.semantic.substr(0, semanticIndexOffset);
@@ -289,16 +288,21 @@ D3DGraphicsPipeline::newInstance(D3DGraphicsContext* graphicsContext, const D3DG
 			semanticName = va.semantic;
 			semanticIndex = 0;
 		}
-		d3dVertexInputAttributes[j] = {
-			semanticName.c_str(),
-			semanticIndex,
-			DXGI_FORMAT(va.format),
-			binding,
-			offset,
-			inputRate,
-			(inputRate == D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA) ? UINT(0)
-																	  : UINT(1) };
-		vertexAttributeBindings[j] = j;
+
+		// If this is a matrix need to link VERTEXFORMAT_MAT4 with TEXCOORDX+0, TEXCOORDX+1, TEXCOORDX+2, TEXCOORDX+3
+		for(int i = 0; i < va.count; i++)
+		{
+			d3dVertexInputAttributes.push_back({
+				semanticName.c_str(),
+				semanticIndex + i,
+				DXGI_FORMAT(va.format),
+				binding+i,
+				offset,
+				inputRate,
+				(inputRate == D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA) ? UINT(0)
+																		  : UINT(1) });
+			vertexAttributeBindings.push_back(d3dVertexInputAttributes.size()-1);
+		}
 	}
 
 	D3DGraphicsPipeline::Shaders shaders;
