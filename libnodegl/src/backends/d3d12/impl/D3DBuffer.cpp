@@ -24,33 +24,73 @@
 #include <backends/d3d12/impl/D3DReadbackBuffer.h>
 #include <backends/d3d12/impl/D3DDevice.h>
 
+extern "C" {
+	#include "Buffer.h"
+}
+
 namespace ngli
 {
 
-D3DBuffer* D3DBuffer::newInstance(D3DGraphicsContext* ctx, const void* data, uint32_t size, BufferUsageFlags usageFlags)
+D3DBuffer* D3DBuffer::newInstance(D3DGraphicsContext* ctx, const void* data, uint32_t size, int usageFlags)
 {
 	D3DBuffer* d3dBuffer = new D3DBuffer();
 	d3dBuffer->init(ctx, data, size, usageFlags);
 	return d3dBuffer;
 }
 
-void D3DBuffer::init(D3DGraphicsContext* ctx, const void* data, uint32_t size, BufferUsageFlags bufferUsageFlags)
+void D3DBuffer::init(D3DGraphicsContext* ctx, const void* data, uint32_t size, int bufferUsageFlags)
 {
+	mBufferUsageFlags = bufferUsageFlags;
 	D3D12_HEAP_TYPE heapType = D3D12_HEAP_TYPE_DEFAULT;
-	if(bufferUsageFlags & BUFFER_USAGE_TRANSFER_SRC_BIT)
+
+	if(bufferUsageFlags & NGLI_BUFFER_USAGE_TRANSFER_SRC_BIT)
 		heapType = D3D12_HEAP_TYPE_UPLOAD;
-		
+	/*
+	if(bufferUsageFlags & NGLI_BUFFER_USAGE_MAP_READ)
+		heapType = D3D12_HEAP_TYPE_READBACK;*/
+
+	// Cannot upload and readback
+//	ngli_assert((bufferUsageFlags & NGLI_BUFFER_USAGE_TRANSFER_SRC_BIT) &&
+//				!(bufferUsageFlags & NGLI_BUFFER_USAGE_MAP_READ));
+
+	
+	D3D12_HEAP_FLAGS heapFlag = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES;
+
+	/*
+		NGLI_BUFFER_USAGE_DYNAMIC_BIT = 1 << 0,
+//		NGLI_BUFFER_USAGE_TRANSFER_SRC_BIT = 1 << 1,
+		NGLI_BUFFER_USAGE_TRANSFER_DST_BIT = 1 << 2,
+		NGLI_BUFFER_USAGE_UNIFORM_BUFFER_BIT = 1 << 3,
+//		NGLI_BUFFER_USAGE_STORAGE_BUFFER_BIT = 1 << 4,
+//		NGLI_BUFFER_USAGE_INDEX_BUFFER_BIT = 1 << 5,
+//		NGLI_BUFFER_USAGE_VERTEX_BUFFER_BIT = 1 << 6,
+		NGLI_BUFFER_USAGE_MAP_READ = 1 << 7,
+		NGLI_BUFFER_USAGE_MAP_WRITE = 1 << 8,*/
+
 	D3D12_RESOURCE_FLAGS resourceFlags = D3D12_RESOURCE_FLAG_NONE;
-	if(bufferUsageFlags & BUFFER_USAGE_STORAGE_BUFFER_BIT)
+	if(bufferUsageFlags & NGLI_BUFFER_USAGE_STORAGE_BUFFER_BIT)
 		resourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	
+	if((bufferUsageFlags & NGLI_BUFFER_USAGE_MAP_WRITE) || (bufferUsageFlags & NGLI_BUFFER_USAGE_MAP_READ))
+	{
+		resourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		resourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	}
+
 	D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
-	//if (bufferUsageFlags & BUFFER_USAGE_VERTEX_BUFFER_BIT || bufferUsageFlags & BUFFER_USAGE_UNIFORM_BUFFER_BIT)
-	//    initialResourceState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-	init(ctx, data, size, heapType, resourceFlags, initialResourceState);
+
+	if(bufferUsageFlags & NGLI_BUFFER_USAGE_INDEX_BUFFER_BIT)
+		initialResourceState |= D3D12_RESOURCE_STATE_INDEX_BUFFER;
+
+	if(bufferUsageFlags & NGLI_BUFFER_USAGE_VERTEX_BUFFER_BIT)
+		initialResourceState |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+
+	init(ctx, data, size, heapType, heapFlag, resourceFlags, initialResourceState);
 }
 
 void D3DBuffer::init(D3DGraphicsContext* ctx, const void* data, uint32_t size,
 					   D3D12_HEAP_TYPE heapType,
+					   D3D12_HEAP_FLAGS heapFlag,
 					   D3D12_RESOURCE_FLAGS resourceFlags,
 					   D3D12_RESOURCE_STATES initialResourceState)
 {
@@ -58,11 +98,13 @@ void D3DBuffer::init(D3DGraphicsContext* ctx, const void* data, uint32_t size,
 	mCtx = ctx;
 	mSize = size;
 	mHeapType = heapType;
+	mHeapFlag = heapFlag;
+	mResourceFlags = resourceFlags;
 	mInitialResourceState = initialResourceState;
 	CD3DX12_HEAP_PROPERTIES heapProperties(heapType);
 	CD3DX12_RESOURCE_DESC resourceDesc =
 		CD3DX12_RESOURCE_DESC::Buffer(size, resourceFlags);
-	D3D_TRACE_CALL(mCtx->d3dDevice.mID3D12Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE,
+	D3D_TRACE_CALL(mCtx->d3dDevice.mID3D12Device->CreateCommittedResource(&heapProperties, heapFlag,
 									  &resourceDesc, initialResourceState,
 									  nullptr, IID_PPV_ARGS(&mID3D12Resource)));
 	if(mID3D12Resource)
@@ -80,7 +122,8 @@ D3DBuffer::~D3DBuffer() {
 // current this maps for reading (readback buffer)
 void* D3DBuffer::map()
 {
-	if(mHeapType == D3D12_HEAP_TYPE_DEFAULT)
+	if((mBufferUsageFlags & NGLI_BUFFER_USAGE_MAP_READ) || (mBufferUsageFlags & NGLI_BUFFER_USAGE_MAP_WRITE))
+//	if(mHeapType == D3D12_HEAP_TYPE_READBACK)
 	{
 		assert(d3dReadbackBuffer == nullptr);
 		auto& copyCommandList = mCtx->d3dCopyCommandList;

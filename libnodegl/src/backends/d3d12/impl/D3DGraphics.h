@@ -60,7 +60,7 @@ public:
 						 D3DFramebuffer* framebuffer,
 						 glm::vec4 clearColor = glm::vec4(0.0f),
 						 float clearDepth = 1.0f,
-						 uint32_t clearStencil = 0);
+						 uint32_t clearStencil = 0, bool needClear=true);
 	void setRenderTargets(D3DCommandList* d3dCommandList,
 		const std::vector<D3DFramebuffer::D3DAttachment*>& colorAttachments,
 		const D3DFramebuffer::D3DAttachment* depthStencilAttachment);
