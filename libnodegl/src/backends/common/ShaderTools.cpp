@@ -376,6 +376,19 @@ int ShaderTools::convertSPVToHLSL(const std::string& spv,
 	auto compilerHLSL = std::make_unique<spirv_cross::CompilerHLSL>(
 		(const uint32_t*)spv.data(), spv.size() / sizeof(uint32_t));
 	auto options = compilerHLSL->get_hlsl_options();
+	
+	// options.flatten_matrix_vertex_input_semantics=true -> Instead of having TEXCOORDN_X
+	// eg: TEXCOORD3_0
+	//     TEXCOORD3_1
+	//     TEXCOORD3_2
+	//     TEXCOORD3_3
+	//
+	// It enable to do 
+	// eg: TEXCOORD3
+	//     TEXCOORD4
+	//     TEXCOORD5
+	//     TEXCOORD6
+	options.flatten_matrix_vertex_input_semantics = true;
 	options.shader_model = shaderModel;
 	compilerHLSL->set_hlsl_options(options);
 	hlsl = compilerHLSL->compile();
@@ -549,7 +562,11 @@ int ShaderTools::patchShaderReflectionDataHLSL(const std::string& glslReflect,
 		if(inputs)
 			for(json& input : *inputs)
 			{
-				std::regex p(input["name"].get<std::string>() + "\\s*:\\s*([^;]*);");
+				// Look for a parameter of type
+				// var_name : UPPERCASE_FIRST_LETTER semnatic word ;
+				// or 
+				// var_name_0 : UPPERCASE_FIRST_LETTER semnatic word ;
+				std::regex p(input["name"].get<std::string>() + "[_0]*\\s*:\\s*([A-Z]+[^;]*);");
 				std::vector<RegexUtil::Match> hlslReflectData = RegexUtil::findAll(p, hlsl);
 				input["semantic"] = hlslReflectData[0].s[1];
 			}
@@ -727,16 +744,19 @@ std::string ShaderTools::parseReflectionData(const json& reflectData, std::strin
 		{"samplerCube", "DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER"},
 		{"image2D", "DESCRIPTOR_TYPE_STORAGE_IMAGE"},
 		{"uniformBuffer", "DESCRIPTOR_TYPE_UNIFORM_BUFFER"},
-		{"shaderStorageBuffer", "DESCRIPTOR_TYPE_STORAGE_BUFFER"} };
+		{"shaderStorageBuffer", "DESCRIPTOR_TYPE_STORAGE_BUFFER"},
+		{"image2DArray", "DESCRIPTOR_TYPE_STORAGE_IMAGE"} };
 	for(auto& [key, val] : textureDescriptors.items())
 	{
 		std::string descriptorType = descriptorTypeMap[val["type"]];
+		ngli_assert(!descriptorType.empty());
 		contents += "\t" + val["name"].get<std::string>() + " " + descriptorType + " " +
 			std::to_string(val["set"].get<int>()) + "\n";
 	}
 	for(auto& [key, val] : bufferDescriptors.items())
 	{
 		std::string descriptorType = descriptorTypeMap[val["type"]];
+		ngli_assert(!descriptorType.empty());
 		contents += "\t" + val["name"].get<std::string>() + " " + descriptorType + " " +
 			std::to_string(val["set"].get<int>()) + "\n";
 	}
