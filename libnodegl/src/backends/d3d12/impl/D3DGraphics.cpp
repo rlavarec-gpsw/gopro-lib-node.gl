@@ -176,12 +176,11 @@ void D3DGraphics::bindTexture(D3DCommandList* commandBuffer, D3DTexture* texture
 	//TODO: pass current image usage as param
 	//imageUsageFlags defines all the possible usage scenarios, not the current usage scenario
 	int imageUsageFlags = d3dTexture->imageUsageFlags;
-	if(imageUsageFlags & IMAGE_USAGE_STORAGE_BIT)
-		imageUsageFlags &= ~IMAGE_USAGE_SAMPLED_BIT;
-	if(D3DGraphicsPipeline* graphicsPipeline =
-		dynamic_cast<D3DGraphicsPipeline*>(currentPipeline))
+	if(imageUsageFlags & NGLI_TEXTURE_USAGE_STORAGE_BIT)
+		imageUsageFlags &= ~NGLI_TEXTURE_USAGE_SAMPLED_BIT;
+	if(dynamic_cast<D3DGraphicsPipeline*>(currentPipeline))
 	{
-		if(imageUsageFlags & IMAGE_USAGE_STORAGE_BIT)
+		if(imageUsageFlags & NGLI_TEXTURE_USAGE_STORAGE_BIT)
 		{
 			for(uint32_t j = 0; j < numPlanes; j++)
 			{
@@ -189,7 +188,7 @@ void D3DGraphics::bindTexture(D3DCommandList* commandBuffer, D3DTexture* texture
 					set + j, d3dTexture->defaultUavDescriptor[j]->gpuHandle));
 			}
 		}
-		else if(imageUsageFlags & IMAGE_USAGE_SAMPLED_BIT)
+		else if(imageUsageFlags & NGLI_TEXTURE_USAGE_SAMPLED_BIT)
 		{
 			for(uint32_t j = 0; j < numPlanes; j++)
 			{
@@ -198,10 +197,9 @@ void D3DGraphics::bindTexture(D3DCommandList* commandBuffer, D3DTexture* texture
 			}
 		}
 	}
-	else if(D3DComputePipeline* computePipeline =
-		dynamic_cast<D3DComputePipeline*>(currentPipeline))
+	else if(dynamic_cast<D3DComputePipeline*>(currentPipeline))
 	{
-		if(imageUsageFlags & IMAGE_USAGE_STORAGE_BIT)
+		if(imageUsageFlags & NGLI_TEXTURE_USAGE_STORAGE_BIT)
 		{
 			for(uint32_t j = 0; j < numPlanes; j++)
 			{
@@ -209,7 +207,7 @@ void D3DGraphics::bindTexture(D3DCommandList* commandBuffer, D3DTexture* texture
 					set + j, d3dTexture->defaultUavDescriptor[j]->gpuHandle));
 			}
 		}
-		else if(imageUsageFlags & IMAGE_USAGE_SAMPLED_BIT)
+		else if(imageUsageFlags & NGLI_TEXTURE_USAGE_SAMPLED_BIT)
 		{
 			for(uint32_t j = 0; j < numPlanes; j++)
 			{
@@ -218,7 +216,7 @@ void D3DGraphics::bindTexture(D3DCommandList* commandBuffer, D3DTexture* texture
 			}
 		}
 	}
-	if((imageUsageFlags & IMAGE_USAGE_SAMPLED_BIT) && d3dTexture->defaultSampler)
+	if((imageUsageFlags & NGLI_TEXTURE_USAGE_SAMPLED_BIT) && d3dTexture->defaultSampler)
 	{
 		bindSampler(commandBuffer, d3dTexture->defaultSampler, set + numPlanes);
 	}
@@ -275,20 +273,16 @@ void D3DGraphics::beginRenderPass(D3DCommandList* commandBuffer,
 								  D3DRenderPass* renderPass,
 								  D3DFramebuffer* framebuffer,
 								  glm::vec4 clearColor, float clearDepth,
-								  uint32_t clearStencil)
+								  uint32_t clearStencil, bool needClear)
 {
-	auto d3dCtx = mCtx;
-	auto d3dRenderPass = renderPass;
-	auto d3dCommandList = commandBuffer;
-	auto d3dFramebuffer = framebuffer;
-	auto& colorAttachments = d3dFramebuffer->colorAttachments;
-	auto& resolveAttachments = d3dFramebuffer->resolveAttachments;
-	auto depthStencilAttachment = d3dFramebuffer->depthStencilAttachment;
+	auto& colorAttachments = framebuffer->colorAttachments;
+	auto& resolveAttachments = framebuffer->resolveAttachments;
+	auto depthStencilAttachment = framebuffer->depthStencilAttachment;
 	if(!resolveAttachments.empty())
 	{
 		for(auto& colorAttachment : colorAttachments)
 		{
-			resourceBarrier(d3dCommandList, colorAttachment,
+			resourceBarrier(commandBuffer, colorAttachment,
 							D3D12_RESOURCE_STATE_RESOLVE_SOURCE,
 							D3D12_RESOURCE_STATE_RENDER_TARGET,
 							colorAttachment->subresourceIndex);
@@ -298,37 +292,37 @@ void D3DGraphics::beginRenderPass(D3DCommandList* commandBuffer,
 	{
 		for(auto& colorAttachment : colorAttachments)
 		{
-			resourceBarrier(d3dCommandList, colorAttachment,
-							d3dRenderPass->finalResourceState,
-							d3dRenderPass->initialResourceState,
+			resourceBarrier(commandBuffer, colorAttachment,
+							renderPass->finalResourceState,
+							renderPass->initialResourceState,
 							colorAttachment->subresourceIndex);
 		}
 	}
-	auto cbvSrvUavHeap = d3dCtx->d3dCbvSrvUavDescriptorHeap.mID3D12DescriptorHeap.Get();
-	auto samplerDescriptorHeap = d3dCtx->d3dSamplerDescriptorHeap.mID3D12DescriptorHeap.Get();
+	auto cbvSrvUavHeap = mCtx->d3dCbvSrvUavDescriptorHeap.mID3D12DescriptorHeap.Get();
+	auto samplerDescriptorHeap = mCtx->d3dSamplerDescriptorHeap.mID3D12DescriptorHeap.Get();
 	std::vector<ID3D12DescriptorHeap*> descriptorHeaps = { cbvSrvUavHeap,
 														   samplerDescriptorHeap };
-	D3D_TRACE(d3dCommandList->mGraphicsCommandList->SetDescriptorHeaps(UINT(descriptorHeaps.size()),
+	D3D_TRACE(commandBuffer->mGraphicsCommandList->SetDescriptorHeaps(UINT(descriptorHeaps.size()),
 													descriptorHeaps.data()));
-	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> colorAttachmentHandles(
-		colorAttachments.size());
-	setRenderTargets(d3dCommandList, d3dFramebuffer->colorAttachments,
-		d3dFramebuffer->depthStencilAttachment);
-	if(d3dRenderPass->colorLoadOp == ATTACHMENT_LOAD_OP_CLEAR)
+//	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> colorAttachmentHandles( colorAttachments.size());
+	setRenderTargets(commandBuffer, framebuffer->colorAttachments, framebuffer->depthStencilAttachment);
+	if(needClear)
 	{
-		for(auto& colorAttachment : colorAttachments)
+		if(renderPass->colorLoadOp == NGLI_LOAD_OP_CLEAR)
 		{
-			D3D_TRACE(d3dCommandList->mGraphicsCommandList->ClearRenderTargetView(
-				colorAttachment->cpuDescriptor, glm::value_ptr(clearColor), 0,
-				nullptr));
+			for(auto& colorAttachment : colorAttachments)
+			{
+				D3D_TRACE(commandBuffer->mGraphicsCommandList->ClearRenderTargetView(
+					colorAttachment->cpuDescriptor, glm::value_ptr(clearColor), 0, nullptr));
+			}
 		}
-	}
-	if(depthStencilAttachment && d3dRenderPass->depthLoadOp == ATTACHMENT_LOAD_OP_CLEAR)
-	{
-		D3D_TRACE(d3dCommandList->mGraphicsCommandList->ClearDepthStencilView(
-			depthStencilAttachment->cpuDescriptor,
-			D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, clearDepth,
-			clearStencil, 0, nullptr));
+		if(depthStencilAttachment && renderPass->depthLoadOp == NGLI_LOAD_OP_CLEAR)
+		{
+			D3D_TRACE(commandBuffer->mGraphicsCommandList->ClearDepthStencilView(
+				depthStencilAttachment->cpuDescriptor,
+				D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, clearDepth,
+				clearStencil, 0, nullptr));
+		}
 	}
 	currentRenderPass = renderPass;
 	currentFramebuffer = framebuffer;
@@ -425,10 +419,9 @@ void D3DGraphics::beginProfile(D3DCommandList* commandBuffer)
 
 uint64_t D3DGraphics::endProfile(D3DCommandList* commandBuffer)
 {
-	auto d3dCtx = mCtx;
 	auto d3dCommandList = commandBuffer->mGraphicsCommandList;
-	auto queryHeap = d3dCtx->d3dQueryTimestampHeap.v.Get();
-	auto timestampResultBuffer = d3dCtx->d3dTimestampResultBuffer;
+	auto queryHeap = mCtx->d3dQueryTimestampHeap.v.Get();
+	auto timestampResultBuffer = mCtx->d3dTimestampResultBuffer;
 	d3dCommandList->EndQuery(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, 1);
 	d3dCommandList->ResolveQueryData(queryHeap, D3D12_QUERY_TYPE_TIMESTAMP, 0, 2, timestampResultBuffer.mID3D12Resource.Get(), 0);
 	uint64_t* t = (uint64_t*)timestampResultBuffer.map();
