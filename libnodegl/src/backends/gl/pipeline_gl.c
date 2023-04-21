@@ -210,6 +210,7 @@ static int build_texture_bindings(struct pipeline *s, const struct pipeline_para
 
         if (texture_desc->type == NGLI_TYPE_IMAGE_2D ||
             texture_desc->type == NGLI_TYPE_IMAGE_2D_ARRAY ||
+            texture_desc->type == NGLI_TYPE_IMAGE_CUBE ||
             texture_desc->type == NGLI_TYPE_IMAGE_3D) {
             struct gpu_ctx_gl *gpu_ctx_gl = (struct gpu_ctx_gl *)s->gpu_ctx;
             struct glcontext *gl = gpu_ctx_gl->glcontext;
@@ -280,6 +281,7 @@ static void set_textures(struct pipeline *s, struct glcontext *gl)
 
         if (texture_binding->desc.type == NGLI_TYPE_IMAGE_2D ||
             texture_binding->desc.type == NGLI_TYPE_IMAGE_2D_ARRAY ||
+            texture_binding->desc.type == NGLI_TYPE_IMAGE_CUBE ||
             texture_binding->desc.type == NGLI_TYPE_IMAGE_3D) {
             GLuint texture_id = 0;
             const GLenum access = get_gl_access(texture_binding->desc.access);
@@ -289,6 +291,7 @@ static void set_textures(struct pipeline *s, struct glcontext *gl)
                 internal_format = texture_gl->internal_format;
             }
             GLboolean is_layered = texture_binding->desc.type == NGLI_TYPE_IMAGE_2D_ARRAY ||
+                                   texture_binding->desc.type == NGLI_TYPE_IMAGE_CUBE ||
                                    texture_binding->desc.type == NGLI_TYPE_IMAGE_3D;
             ngli_glBindImageTexture(gl, texture_binding->desc.binding, texture_id, 0, is_layered, 0, access, internal_format);
         } else {

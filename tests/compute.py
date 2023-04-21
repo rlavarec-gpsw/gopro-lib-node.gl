@@ -375,7 +375,58 @@ void main()
 """
 
 
-_LAYERED_LOAD_COMPUTE = """
+_LAYERED_LOAD_COMPUTE_CUBEMAP = """
+void main()
+{
+    ivec3 pos_load;
+
+    ivec2 pos_store = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 cube_size = imageSize(tex_in);
+
+    if(pos_store.y >= cube_size.y)
+    {
+        if(pos_store.x >= cube_size.x*2)
+        {
+            ivec2 pos_face = pos_store - ivec2(cube_size.x*2, cube_size.y);
+            pos_load = ivec3(pos_face, 5);
+        }
+        else if(pos_store.x >= cube_size.x)
+        {
+            ivec2 pos_face = pos_store - ivec2(cube_size.x, cube_size.y);
+            pos_load = ivec3(pos_face, 4);
+        }
+        else
+        {
+            ivec2 pos_face = pos_store - ivec2(0, cube_size.y);
+            pos_load = ivec3(pos_face, 3);
+        }
+    }
+    else
+    {
+        if(pos_store.x >= cube_size.x*2)
+        {
+            ivec2 pos_face = pos_store - ivec2(cube_size.x*2, 0);
+            pos_load = ivec3(pos_face, 2);
+        }
+        else if(pos_store.x >= cube_size.x)
+        {
+            ivec2 pos_face = pos_store - ivec2(cube_size.x, 0);
+            pos_load = ivec3(pos_face, 1);
+        }
+        else
+        {
+            ivec2 pos_face = pos_store - ivec2(0, 0);
+            pos_load = ivec3(pos_face, 0);
+        }
+    }
+
+    vec4 color;
+    color = imageLoad(tex_in, pos_load);
+    imageStore(tex_out, pos_store, color);
+}
+"""
+
+_LAYERED_LOAD_COMPUTE_3D = """
 void main()
 {
     ivec3 pos_load;
@@ -425,7 +476,6 @@ void main()
     imageStore(tex_out, pos_store, color);
 }
 """
-
 _B_X = 6
 _B_Y = 4
 
@@ -461,7 +511,7 @@ def compute_cubemap_load_store(cfg: SceneCfg, show_dbg_points=False):
     image_height = cube_size * 2
     texture_rgba = ngl.Texture2D(width=image_width, height=image_height)
 
-    program_cube_load = ngl.ComputeProgram(_LAYERED_LOAD_COMPUTE, workgroup_size=(group_size, group_size, 1))
+    program_cube_load = ngl.ComputeProgram(_LAYERED_LOAD_COMPUTE_CUBEMAP, workgroup_size=(group_size, group_size, 1))
     program_cube_load.update_properties(
         tex_in=ngl.ResourceProps(as_image=True),
         tex_out=ngl.ResourceProps(as_image=True, writable=True),
@@ -508,7 +558,7 @@ def compute_3D_load_store(cfg: SceneCfg, show_dbg_points=False):
     image_height = texture_height * 2
     texture_rgba = ngl.Texture2D(width=image_width, height=image_height)
 
-    program_3D_load = ngl.ComputeProgram(_LAYERED_LOAD_COMPUTE, workgroup_size=(group_size, group_size, 1))
+    program_3D_load = ngl.ComputeProgram(_LAYERED_LOAD_COMPUTE_3D, workgroup_size=(group_size, group_size, 1))
     program_3D_load.update_properties(
         tex_in=ngl.ResourceProps(as_image=True),
         tex_out=ngl.ResourceProps(as_image=True, writable=True),

@@ -160,7 +160,7 @@ static int register_texture(struct pass *s, const char *name, struct ngl_node *t
 
                 switch (texture->cls->id) {
                 case NGL_NODE_TEXTURECUBE:
-                    crafter_texture.type = NGLI_PGCRAFT_SHADER_TEX_TYPE_IMAGE_2D_ARRAY;
+                    crafter_texture.type = NGLI_PGCRAFT_SHADER_TEX_TYPE_IMAGE_CUBE;
                     break;
                 case NGL_NODE_TEXTURE3D:
                     crafter_texture.type = NGLI_PGCRAFT_SHADER_TEX_TYPE_IMAGE_3D;

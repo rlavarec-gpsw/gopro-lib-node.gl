@@ -405,6 +405,7 @@ static const VkDescriptorType descriptor_type_map[NGLI_TYPE_NB] = {
     [NGLI_TYPE_IMAGE_2D]       = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
     [NGLI_TYPE_IMAGE_3D]       = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
     [NGLI_TYPE_IMAGE_2D_ARRAY] = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+    [NGLI_TYPE_IMAGE_CUBE]     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
 };
 
 static VkDescriptorType get_vk_descriptor_type(int type)
@@ -431,6 +432,7 @@ static VkResult create_desc_set_layout_bindings(struct pipeline *s, const struct
         [NGLI_TYPE_IMAGE_2D]       = {.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE},
         [NGLI_TYPE_IMAGE_3D]       = {.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE},
         [NGLI_TYPE_IMAGE_2D_ARRAY] = {.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE},
+        [NGLI_TYPE_IMAGE_CUBE]     = {.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE},
     };
 
     const struct pipeline_layout *layout = &params->layout;
