@@ -1628,7 +1628,7 @@ struct pipeline_resources ngli_pgcraft_get_pipeline_resources(const struct pgcra
         .attributes    = ngli_darray_data(&s->filtered_pipeline_info.data.attributes),
         .nb_attributes = ngli_darray_count(&s->filtered_pipeline_info.data.attributes),
         .buffers       = ngli_darray_data(&s->filtered_pipeline_info.data.buffers),
-        .nb_buffers    = ngli_darray_count(&s->filtered_pipeline_info.data.buffers),
+        .nb_buffers = ngli_darray_count(&s->filtered_pipeline_info.data.buffers),
     };
     return resources;
 }

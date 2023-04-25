@@ -150,6 +150,7 @@ void* D3DBuffer::map()
 	}
 	else
 	{
+		mIsMap = true;
 		UINT8* ptr;
 		HRESULT hResult;
 		D3D_TRACE_CALL(mID3D12Resource->Map(0, nullptr, reinterpret_cast<void**>(&ptr)));
@@ -170,7 +171,11 @@ void D3DBuffer::unmap()
 	}
 	else
 	{
-		D3D_TRACE(mID3D12Resource->Unmap(0, nullptr));
+		if(mIsMap)
+		{
+			mIsMap = false;
+			D3D_TRACE(mID3D12Resource->Unmap(0, nullptr));
+		}
 	}
 }
 
@@ -212,9 +217,12 @@ void D3DBuffer::upload(const void* data, uint32_t size, uint32_t offset)
 	}
 	else
 	{
-		uint8_t* dst = (uint8_t*)map();
-		memcpy(dst + offset, data, size);
-		unmap();
+		if(data)
+		{
+			uint8_t* dst = (uint8_t*)map();
+			memcpy(dst + offset, data, size);
+			unmap();
+		}
 	}
 }
 

@@ -77,9 +77,9 @@ struct DebugUtil
 
 
 /** Trace all Direct3D calls to log output */
-const bool D3D_ENABLE_TRACE = (DEBUG_D3D12 || DEBUG_D3D12_TRACE) > 0?true:false;
-const bool ENABLE_GPU_VALIDATION = (DEBUG_D3D12 || DEBUG_D3D12_GPU_VALIDATION) > 0?true:false;
-const bool DEBUG_SHADERS = (DEBUG_D3D12 || DEBUG_D3D12_TRACE || DEBUG_D3D12_GPU_VALIDATION) > 0?true:false;
+const bool D3D_ENABLE_TRACE = int(DEBUG_D3D12 || DEBUG_D3D12_TRACE) > 0?true:false;
+const bool ENABLE_GPU_VALIDATION = int(DEBUG_D3D12 || DEBUG_D3D12_GPU_VALIDATION) > 0?true:false;
+const bool DEBUG_SHADERS = int(DEBUG_D3D12 || DEBUG_D3D12_TRACE || DEBUG_D3D12_GPU_VALIDATION) > 0?true:false;
 // Enabling GPU validation slows down performance but it's useful for debugging
 
 #define D3D_TRACE(func)                                                        \

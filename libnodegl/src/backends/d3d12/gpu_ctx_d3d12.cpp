@@ -560,9 +560,15 @@ static void begin_render_pass(struct gpu_ctx_d3d12 *s_priv,
     ngli::D3DRenderPass *render_pass = rt_priv->render_pass;
 
     ngli::D3DFramebuffer *framebuffer = rt_priv->output_framebuffer;
-    auto &color_attachments  = rt_priv->parent.params.colors;
-    glm::vec4 clearColor = glm::make_vec4(color_attachments[0].clear_value);
-    graphics->beginRenderPass(cmd_buf, render_pass, framebuffer, clearColor);
+
+    ngli_assert(framebuffer->colorAttachments.size() >= rt_priv->parent.params.nb_colors);
+
+    for(int i = rt_priv->parent.params.nb_colors; i--;)
+    {
+        framebuffer->colorAttachments[i]->mAttachement = rt_priv->parent.params.colors[i];
+    }
+
+    graphics->beginRenderPass(cmd_buf, render_pass, framebuffer);
 }
 
 static void end_render_pass(struct gpu_ctx_d3d12 *s_priv, rendertarget_d3d12 *)
@@ -579,11 +585,11 @@ static void d3d12_begin_render_pass(struct gpu_ctx *s, struct rendertarget *rt)
     rendertarget_d3d12 *rt_priv = (rendertarget_d3d12 *)rt;
     if (rt_priv)
     {
-        const auto &attachments = rt_priv->output_framebuffer->attachments;
+        const auto &attachments = rt_priv->output_framebuffer->d3dAttachments;
 
         for (uint32_t j = 0; j < attachments.size(); j++)
         {
-            auto output_texture = attachments[j].texture;
+            auto output_texture = attachments[j].mD3DAttachementBasic.texture;
             if (output_texture->imageUsageFlags & NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT)
             {
                 output_texture->changeLayout(
@@ -612,9 +618,9 @@ static void d3d12_end_render_pass(struct gpu_ctx *s)
     end_render_pass(s_priv, rt_priv);
 
     if (rt_priv) {
-        const auto &attachments = rt_priv->output_framebuffer->attachments;
+        const auto &attachments = rt_priv->output_framebuffer->d3dAttachments;
         for (uint32_t j = 0; j < attachments.size(); j++) {
-            auto output_texture = attachments[j].texture;
+            auto output_texture = attachments[j].mD3DAttachementBasic.texture;
             if (output_texture->imageUsageFlags & NGLI_TEXTURE_USAGE_SAMPLED_BIT) {
                 ngli_assert(output_texture->numSamples == 1);
                 output_texture->changeLayout(
@@ -700,36 +706,36 @@ extern "C" const struct gpu_ctx_class ngli_gpu_ctx_d3d12 = {
     .get_preferred_depth_format = d3d12_get_preferred_depth_format,
     .get_preferred_depth_stencil_format = d3d12_get_preferred_depth_stencil_format,
 
-    .buffer_create = ngli_buffer_d3d12_create,
-    .buffer_init   = ngli_buffer_d3d12_init,
-    .buffer_upload = ngli_buffer_d3d12_upload,
-    .buffer_map    = ngli_buffer_d3d12_map,
-    .buffer_unmap  = ngli_buffer_d3d12_unmap,
-    .buffer_freep  = ngli_buffer_d3d12_freep,
+    .buffer_create = d3d12_buffer_create,
+    .buffer_init   = d3d12_buffer_init,
+    .buffer_upload = d3d12_buffer_upload,
+    .buffer_map    = d3d12_buffer_map,
+    .buffer_unmap  = d3d12_buffer_unmap,
+    .buffer_freep  = d3d12_buffer_freep,
 
-    .pipeline_create           = ngli_pipeline_d3d12_create,
-    .pipeline_init             = ngli_pipeline_d3d12_init,
-    .pipeline_set_resources    = ngli_pipeline_d3d12_set_resources,
-    .pipeline_update_attribute = ngli_pipeline_d3d12_update_attribute,
-    .pipeline_update_uniform   = ngli_pipeline_d3d12_update_uniform,
-    .pipeline_update_texture   = ngli_pipeline_d3d12_update_texture,
-    .pipeline_update_buffer    = ngli_pipeline_d3d12_update_buffer,
-    .pipeline_draw             = ngli_pipeline_d3d12_draw,
-    .pipeline_draw_indexed     = ngli_pipeline_d3d12_draw_indexed,
-    .pipeline_dispatch         = ngli_pipeline_d3d12_dispatch,
-    .pipeline_freep            = ngli_pipeline_d3d12_freep,
+    .pipeline_create           = d3d12_pipeline_create,
+    .pipeline_init             = d3d12_pipeline_init,
+    .pipeline_set_resources    = d3d12_pipeline_set_resources,
+    .pipeline_update_attribute = d3d12_pipeline_update_attribute,
+    .pipeline_update_uniform   = d3d12_pipeline_update_uniform,
+    .pipeline_update_texture   = d3d12_pipeline_update_texture,
+    .pipeline_update_buffer    = d3d12_pipeline_update_buffer,
+    .pipeline_draw             = d3d12_pipeline_draw,
+    .pipeline_draw_indexed     = d3d12_pipeline_draw_indexed,
+    .pipeline_dispatch         = d3d12_pipeline_dispatch,
+    .pipeline_freep            = d3d12_pipeline_freep,
 
-    .program_create = ngli_program_d3d12_create,
-    .program_init   = ngli_program_d3d12_init,
-    .program_freep  = ngli_program_d3d12_freep,
+    .program_create = d3d12_program_create,
+    .program_init   = d3d12_program_init,
+    .program_freep  = d3d12_program_freep,
 
-    .rendertarget_create = ngli_rendertarget_d3d12_create,
-    .rendertarget_init   = ngli_rendertarget_d3d12_init,
-    .rendertarget_freep  = ngli_rendertarget_d3d12_freep,
+    .rendertarget_create = d3d12_rendertarget_create,
+    .rendertarget_init   = d3d12_rendertarget_init,
+    .rendertarget_freep  = d3d12_rendertarget_freep,
 
-    .texture_create          = ngli_texture_d3d12_create,
-    .texture_init            = ngli_texture_d3d12_init,
-    .texture_upload          = ngli_texture_d3d12_upload,
-    .texture_generate_mipmap = ngli_texture_d3d12_generate_mipmap,
-    .texture_freep           = ngli_texture_d3d12_freep,
+    .texture_create          = d3d12_texture_create,
+    .texture_init            = d3d12_texture_init,
+    .texture_upload          = d3d12_texture_upload,
+    .texture_generate_mipmap = d3d12_texture_generate_mipmap,
+    .texture_freep           = d3d12_texture_freep,
 };

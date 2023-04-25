@@ -43,7 +43,7 @@ static ngli::ShaderTools shaderTools(DEBUG_FLAGS& DEBUG_FLAG_VERBOSE);
 
 extern "C" {
 
-    struct program* ngli_program_d3d12_create(struct gpu_ctx* gpu_ctx)
+    struct program* d3d12_program_create(struct gpu_ctx* gpu_ctx)
     {
         program_d3d12* s = (program_d3d12*)ngli_calloc(1, sizeof(*s));
         if(!s)
@@ -97,7 +97,7 @@ extern "C" {
         std::vector<std::string> hlslFiles, dxcFiles, hlslMapFiles;
     };
 
-    int ngli_program_d3d12_init(struct program* s, const program_params* p)
+    int d3d12_program_init(struct program* s, const program_params* p)
     {
         gpu_ctx_d3d12* gpu_ctx = (gpu_ctx_d3d12*)s->gpu_ctx;
         program_d3d12* program = (program_d3d12*)s;
@@ -135,7 +135,7 @@ extern "C" {
         return 0;
     }
 
-    void ngli_program_d3d12_freep(struct program** sp)
+    void d3d12_program_freep(struct program** sp)
     {
         program_d3d12* program = (program_d3d12*)*sp;
         if(program->vs)

@@ -19,6 +19,9 @@
  * under the License.
  */
 #pragma once
+extern "C" {
+#include "rendertarget.h"
+}
 
 namespace ngli
 {
@@ -37,7 +40,7 @@ class D3DDevice;
 class D3DFramebuffer
 {
 public:
-	struct Attachment
+	struct D3DAttachmentBasic
 	{
 /** The destination texture */
 		D3DTexture* texture = nullptr;
@@ -59,11 +62,12 @@ public:
 		uint32_t imageUsageFlags = 0;
 		uint32_t numSamples = 1;
 		DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
-		D3DTexture* texture = nullptr;
-		uint32_t level = 0;
-		uint32_t baseLayer = 0;
 		uint32_t layerCount = 1;
+
+		D3DAttachmentBasic mD3DAttachementBasic;
+		attachment mAttachement;
 	};
+
 	/** Create a framebuffer object
 	 *  @param device The graphics device
 	 *  @param renderPass The renderPass object
@@ -73,7 +77,7 @@ public:
 	 *  @param layers The number of output layers
 	 */
 	static D3DFramebuffer* newInstance(D3DDevice* device, D3DRenderPass* renderPass,
-							   const std::vector<Attachment>& attachments,
+							   const std::vector<D3DAttachmentBasic>& attachments,
 							   uint32_t w, uint32_t h, uint32_t layers = 1);
 
 	void create(std::vector<D3DAttachment>& attachments, int32_t w, uint32_t h,
@@ -85,10 +89,10 @@ public:
 	uint32_t h; /**< The output height */
 	uint32_t layers; /**< The number of output layers */
 	uint32_t numAttachments; /**< The number of attachments */
-	std::vector<Attachment> attachments; /**< The vector of output attachments */
 
 	std::vector<D3DAttachment> d3dAttachments;
-	std::vector<D3DAttachment*> colorAttachments, resolveAttachments;
+	std::vector<D3DAttachment*> colorAttachments;
+	std::vector<D3DAttachment*> resolveAttachments;
 	D3DAttachment* depthStencilAttachment = nullptr;
 	D3DAttachment* depthResolve = nullptr;
 };

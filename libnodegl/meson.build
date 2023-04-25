@@ -527,7 +527,7 @@ gbackends_cfg = {
     'cfg': 'BACKEND_D3D12',
     'hosts_cfg': {
       'windows': {
-        'deps': ['glslang', 'd3d12', 'shaderc'],
+        'deps': ['d3d12', 'shaderc'],
         'libs': ['shaderc', 'spirv-cross-c', 'spirv-cross-core',
         'spirv-cross-cpp', 'spirv-cross-glsl', 'spirv-cross-hlsl', 'spirv-cross-msl',
         'spirv-cross-reflect', 'spirv-cross-util'],

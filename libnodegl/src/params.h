@@ -66,7 +66,10 @@ struct param_const {
 
 struct param_choices {
     const char *name;
+#pragma warning( push )
+#pragma warning( disable:4200 )
     const struct param_const consts[];
+#pragma warning( pop )
 };
 
 struct ngl_node;

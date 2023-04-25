@@ -50,6 +50,7 @@ public:
 
 	std::string mName;
 	uint32_t mSize = 0;
+	bool mIsMap = false;
 
 protected:
 

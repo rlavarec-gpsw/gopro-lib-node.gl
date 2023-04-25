@@ -30,7 +30,7 @@ extern "C" {
 #include <glm/gtc/type_ptr.hpp>
 #include <vector>
 
-struct rendertarget* ngli_rendertarget_d3d12_create(struct gpu_ctx* gpu_ctx)
+struct rendertarget* d3d12_rendertarget_create(struct gpu_ctx* gpu_ctx)
 {
     rendertarget_d3d12* s = new rendertarget_d3d12;
     if(!s)
@@ -39,7 +39,7 @@ struct rendertarget* ngli_rendertarget_d3d12_create(struct gpu_ctx* gpu_ctx)
     return (struct rendertarget*)s;
 }
 
-int ngli_rendertarget_d3d12_init(struct rendertarget* s,
+int d3d12_rendertarget_init(struct rendertarget* s,
                                 const struct rendertarget_params* params)
 {
     rendertarget_d3d12* s_priv = (rendertarget_d3d12*)s;
@@ -50,7 +50,7 @@ int ngli_rendertarget_d3d12_init(struct rendertarget* s,
     s->height = params->height;
     s->params = *params;
 
-    std::vector<ngli::D3DFramebuffer::Attachment> attachments;
+    std::vector<ngli::D3DFramebuffer::D3DAttachmentBasic> attachments;
     uint32_t w = 0, h = 0;
 
     for(int i = 0; i < params->nb_colors; i++)
@@ -100,9 +100,9 @@ int ngli_rendertarget_d3d12_init(struct rendertarget* s,
     return 0;
 }
 
-void ngli_rendertarget_d3d12_resolve(struct rendertarget* s) {}
+void d3d12_rendertarget_resolve(struct rendertarget* s) {}
 
-void ngli_rendertarget_d3d12_freep(struct rendertarget** sp)
+void d3d12_rendertarget_freep(struct rendertarget** sp)
 {
     if(!*sp)
         return;

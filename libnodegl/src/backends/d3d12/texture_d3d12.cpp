@@ -32,7 +32,7 @@ extern "C" {
 #include "gpu_ctx_d3d12.h"
 #include "util_d3d12.h"
 
-struct texture* ngli_texture_d3d12_create(struct gpu_ctx* gpu_ctx)
+struct texture* d3d12_texture_create(struct gpu_ctx* gpu_ctx)
 {
     texture_d3d12* s = (texture_d3d12*)ngli_calloc(1, sizeof(*s));
     if(!s)
@@ -41,7 +41,7 @@ struct texture* ngli_texture_d3d12_create(struct gpu_ctx* gpu_ctx)
     return (struct texture*)s;
 }
 
-int ngli_texture_d3d12_init(struct texture* s, const struct texture_params* p)
+int d3d12_texture_init(struct texture* s, const struct texture_params* p)
 {
     struct texture_d3d12* s_priv = (struct texture_d3d12*)s;
     struct gpu_ctx_d3d12* ctx = (struct gpu_ctx_d3d12*)s->gpu_ctx;
@@ -76,7 +76,7 @@ int ngli_texture_d3d12_init(struct texture* s, const struct texture_params* p)
     return 0;
 }
 
-int ngli_texture_d3d12_upload(struct texture* s, const uint8_t* data,
+int d3d12_texture_upload(struct texture* s, const uint8_t* data,
                              int linesize)
 {
     texture_d3d12* texture = (struct texture_d3d12*)s;
@@ -91,7 +91,7 @@ int ngli_texture_d3d12_upload(struct texture* s, const uint8_t* data,
     return 0;
 }
 
-int ngli_texture_d3d12_generate_mipmap(struct texture* s)
+int d3d12_texture_generate_mipmap(struct texture* s)
 {
     texture_d3d12* texture = (struct texture_d3d12*)s;
     gpu_ctx_d3d12* gpu_ctx = (gpu_ctx_d3d12*)s->gpu_ctx;
@@ -105,7 +105,7 @@ int ngli_texture_d3d12_generate_mipmap(struct texture* s)
     return 0;
 }
 
-void ngli_texture_d3d12_freep(struct texture** sp)
+void d3d12_texture_freep(struct texture** sp)
 {
     if(!sp)
         return;

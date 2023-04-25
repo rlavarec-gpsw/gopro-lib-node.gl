@@ -34,9 +34,9 @@ struct buffer_d3d12 {
     ngli::D3DBuffer* mBuffer=0;
 };
 
-struct buffer *ngli_buffer_d3d12_create(struct gpu_ctx *gpu_ctx);
-int ngli_buffer_d3d12_init(struct buffer *s, int size, int usage);
-int ngli_buffer_d3d12_upload(struct buffer *s, const void *data, int size, int offset);
-int ngli_buffer_d3d12_map(struct buffer *s, int size, int offset, void **data);
-void ngli_buffer_d3d12_unmap(struct buffer *s);
-void ngli_buffer_d3d12_freep(struct buffer **sp);
+struct buffer *d3d12_buffer_create(struct gpu_ctx *gpu_ctx);
+int d3d12_buffer_init(struct buffer *s, int size, int usage);
+int d3d12_buffer_upload(struct buffer *s, const void *data, int size, int offset);
+int d3d12_buffer_map(struct buffer *s, int size, int offset, void **data);
+void d3d12_buffer_unmap(struct buffer *s);
+void d3d12_buffer_freep(struct buffer **sp);
