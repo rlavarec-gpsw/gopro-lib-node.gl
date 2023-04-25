@@ -27,16 +27,16 @@
 namespace ngli
 {
 
-uint32_t D3DFramebuffer::Attachment::subresourceIndex()
+uint32_t D3DFramebuffer::D3DAttachmentBasic::subresourceIndex()
 {
 	return layer * texture->mipLevels + level;
 };
 
 void D3DFramebuffer::D3DAttachment::create(D3DTexture* texture, uint32_t level, uint32_t baseLayer, uint32_t layerCount)
 {
-	this->texture = texture;
-	this->level = level;
-	this->baseLayer = baseLayer;
+	this->mD3DAttachementBasic.texture = texture;
+	this->mD3DAttachementBasic.level = level;
+	this->mD3DAttachementBasic.layer = baseLayer;
 	this->layerCount = layerCount;
 	resource = texture->mID3D12Resource.Get();
 	bool depthStencilAttachment =
@@ -106,20 +106,19 @@ void D3DFramebuffer::D3DAttachment::createFromDepthStencilAttachment(D3DTexture*
 	imageUsageFlags = NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	numSamples = 1;
 	format = DXGI_FORMAT(d3dDepthStencilAttachment->format);
-	texture = d3dDepthStencilAttachment;
+	mD3DAttachementBasic.texture = d3dDepthStencilAttachment;
 }
 
 D3DFramebuffer* D3DFramebuffer::newInstance(D3DDevice* device, D3DRenderPass* renderPass,
-								 const std::vector<Attachment>& attachments,
+								 const std::vector<D3DAttachmentBasic>& attachments,
 								 uint32_t w, uint32_t h, uint32_t layers)
 {
 	D3DFramebuffer* d3dFramebuffer = new D3DFramebuffer();
-	d3dFramebuffer->attachments = attachments;
 	std::vector<D3DFramebuffer::D3DAttachment> d3dAttachments(attachments.size());
 	for(uint32_t j = 0; j < attachments.size(); j++)
 	{
-		auto& attachment = attachments[j];
 		auto& d3dAttachment = d3dAttachments[j];
+		auto& attachment = attachments[j];
 		auto d3dTexture = attachment.texture;
 		bool depthStencilAttachment =
 			d3dTexture->imageUsageFlags & NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
@@ -134,10 +133,8 @@ D3DFramebuffer* D3DFramebuffer::newInstance(D3DDevice* device, D3DRenderPass* re
 			d3dTexture->imageUsageFlags,
 			d3dTexture->numSamples,
 			DXGI_FORMAT(d3dTexture->format),
-			d3dTexture,
-			attachment.level,
-			attachment.layer,
-			1
+			1,
+			attachment
 		};
 	}
 	d3dFramebuffer->create(d3dAttachments, w, h, layers);

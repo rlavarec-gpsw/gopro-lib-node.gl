@@ -27,6 +27,7 @@ extern "C" {
 #include "memory.h"
 #include "type.h"
 #include "buffer.h"
+#include "pipeline_compat.h"
 }
 
 
@@ -53,12 +54,6 @@ ngli::D3DGraphicsPipeline::VertexInputAttributeDescription;
 struct attribute_binding
 {
     pipeline_attribute_desc desc;
-    const struct buffer* buffer;
-};
-
-struct buffer_binding
-{
-    pipeline_buffer_desc desc;
     const struct buffer* buffer;
 };
 
@@ -101,7 +96,7 @@ static int init_attributes_data(pipeline* s, const pipeline_params* params)
     return 0;
 }
 
-pipeline* ngli_pipeline_d3d12_create(struct gpu_ctx* gpu_ctx)
+pipeline* d3d12_pipeline_create(struct gpu_ctx* gpu_ctx)
 {
     pipeline_d3d12* s = (pipeline_d3d12*)ngli_calloc(1, sizeof(*s));
     if(!s)
@@ -258,7 +253,7 @@ static int pipeline_graphics_init(pipeline* s, const pipeline_params* params)
                 src_attr_desc->stride / dst_attr_desc->count;
         }
     }
-    s_priv->gp = ngli::D3DGraphicsPipeline::newInstance(
+    s_priv->mD3DGraphicsPipeline = ngli::D3DGraphicsPipeline::newInstance(
         gpu_ctx->graphics_context, state, program->vs, program->fs,
         to_d3d12_format(color_attachment_desc->format),
         depth_attachment_desc ? to_d3d12_format(depth_attachment_desc->format)
@@ -270,20 +265,18 @@ static int pipeline_graphics_init(pipeline* s, const pipeline_params* params)
     return 0;
 }
 
-static int pipeline_compute_init(pipeline* s, const pipeline_params* params)
+static int d3d12_pipeline_compute_init(pipeline* s, const pipeline_params* params, const struct pipeline_resources* resource)
 {
     gpu_ctx_d3d12* gpu_ctx = (gpu_ctx_d3d12*)s->gpu_ctx;
     pipeline_d3d12* s_priv = (struct pipeline_d3d12*)s;
     program_d3d12* program = (program_d3d12*)params->program;
-    s_priv->cp =
-        ngli::D3DComputePipeline::newInstance(gpu_ctx->graphics_context, program->cs);
+    s_priv->mD3DComputePipeline = ngli::D3DComputePipeline::newInstance(s_priv, gpu_ctx->graphics_context, program->cs, (struct pipeline_resources*)resource);
     return 0;
 }
 
-int ngli_pipeline_d3d12_init(pipeline* s, const pipeline_params* params)
+int d3d12_pipeline_init(pipeline* s, const struct pipeline_compat_params* compat_params)
 {
-    pipeline_d3d12* s_priv = (pipeline_d3d12*)s;
-
+    const struct pipeline_params* params = compat_params->params;
     s->type = params->type;
     s->graphics = params->graphics;
     s->program = params->program;
@@ -299,7 +292,7 @@ int ngli_pipeline_d3d12_init(pipeline* s, const pipeline_params* params)
     }
     else if(params->type == NGLI_PIPELINE_TYPE_COMPUTE)
     {
-        ret = pipeline_compute_init(s, params);
+        ret = d3d12_pipeline_compute_init(s, params, compat_params->resources);
         if(ret < 0)
             return ret;
     }
@@ -316,14 +309,14 @@ static int bind_pipeline(pipeline* s)
     pipeline_d3d12* pipeline = (pipeline_d3d12*)s;
     gpu_ctx_d3d12* gpu_ctx = (gpu_ctx_d3d12*)s->gpu_ctx;
     ngli::D3DCommandList* cmd_buf = gpu_ctx->cur_command_buffer;
-    if(pipeline->gp)
-        gpu_ctx->graphics->bindGraphicsPipeline(cmd_buf, pipeline->gp);
-    else if(pipeline->cp)
-        gpu_ctx->graphics->bindComputePipeline(cmd_buf, pipeline->cp);
+    if(pipeline->mD3DGraphicsPipeline)
+        gpu_ctx->graphics->bindGraphicsPipeline(cmd_buf, pipeline->mD3DGraphicsPipeline);
+    else if(pipeline->mD3DComputePipeline)
+        gpu_ctx->graphics->bindComputePipeline(cmd_buf, pipeline->mD3DComputePipeline);
     return 0;
 }
 
-int ngli_pipeline_d3d12_set_resources(pipeline* s,
+int d3d12_pipeline_set_resources(pipeline* s,
                                      const pipeline_resources* resources)
 {
     pipeline_d3d12* s_priv = (pipeline_d3d12*)s;
@@ -333,20 +326,44 @@ int ngli_pipeline_d3d12_set_resources(pipeline* s,
     for(int i = 0; i < resources->nb_attributes; i++)
     {
         int ret =
-            ngli_pipeline_d3d12_update_attribute(s, i, resources->attributes[i]);
+            d3d12_pipeline_update_attribute(s, i, resources->attributes[i]);
         if(ret < 0)
             return ret;
     }
+    
+	// Add support for gl_NumWorkGroups
+	{
+	    bool tSPIRV_Cross_NumWorkgroupsExist = false;
+	
+	    // Search if the SPIRV_Cross_NumWorkgroups already added
+	    int nb_buffers = ngli_darray_count(&s_priv->buffer_bindings);
+	    for(int i = 0; i < nb_buffers; i++)
+	    {
+	        const buffer_binding* binding =
+	            (buffer_binding*)ngli_darray_get(&s_priv->buffer_bindings, i);
+	        if(strcmp(binding->desc.name, "SPIRV_Cross_NumWorkgroups") == 0)
+	        {
+	            tSPIRV_Cross_NumWorkgroupsExist = true;
+	            break;
+	        }
+	    }
+	    if(tSPIRV_Cross_NumWorkgroupsExist)
+	    {
+	        ngli_assert((ngli_darray_count(&s_priv->buffer_bindings)-1) == resources->nb_buffers);
+	    }
+	    else
+	    {
+	        ngli_assert(ngli_darray_count(&s_priv->buffer_bindings) == resources->nb_buffers);
+	    }
+	 }
 
-    ngli_assert(ngli_darray_count(&s_priv->buffer_bindings) ==
-                resources->nb_buffers);
     for(int i = 0; i < resources->nb_buffers; i++)
     {
         const buffer_binding* buffer_binding_data =
             (const buffer_binding*)ngli_darray_get(&s_priv->buffer_bindings,
                                                     i);
         const pipeline_buffer_desc* buffer_desc = &buffer_binding_data->desc;
-        int ret = ngli_pipeline_d3d12_update_buffer(s, i, resources->buffers[i],
+        int ret = d3d12_pipeline_update_buffer(s, i, resources->buffers[i],
                                                    buffer_desc->offset,
                                                    buffer_desc->size);
         if(ret < 0)
@@ -358,7 +375,7 @@ int ngli_pipeline_d3d12_set_resources(pipeline* s,
     for(int i = 0; i < resources->nb_textures; i++)
     {
         int ret =
-            ngli_pipeline_d3d12_update_texture(s, i, resources->textures[i]);
+            d3d12_pipeline_update_texture(s, i, resources->textures[i]);
         if(ret < 0)
             return ret;
     }
@@ -372,7 +389,7 @@ int ngli_pipeline_d3d12_set_resources(pipeline* s,
     return 0;
 }
 
-int ngli_pipeline_d3d12_update_attribute(pipeline* s, int index,
+int d3d12_pipeline_update_attribute(pipeline* s, int index,
                                         const buffer* p_buffer)
 {
     pipeline_d3d12* s_priv = (pipeline_d3d12*)s;
@@ -409,15 +426,14 @@ int ngli_pipeline_d3d12_update_attribute(pipeline* s, int index,
     return 0;
 }
 
-int ngli_pipeline_d3d12_update_uniform(pipeline* s, int index, const void* value)
+int d3d12_pipeline_update_uniform(pipeline* s, int index, const void* value)
 {
     return NGL_ERROR_GRAPHICS_UNSUPPORTED;
 }
 
-int ngli_pipeline_d3d12_update_texture(pipeline* s, int index,
+int d3d12_pipeline_update_texture(pipeline* s, int index,
                                       const texture* p_texture)
 {
-    gpu_ctx_d3d12* gpu_ctx = (gpu_ctx_d3d12*)s->gpu_ctx;
     pipeline_d3d12* s_priv = (pipeline_d3d12*)s;
 
     if(index == -1)
@@ -431,11 +447,10 @@ int ngli_pipeline_d3d12_update_texture(pipeline* s, int index,
     return 0;
 }
 
-int ngli_pipeline_d3d12_update_buffer(pipeline* s, int index,
+int d3d12_pipeline_update_buffer(pipeline* s, int index,
                                      const buffer* p_buffer, int offset,
                                      int size)
 {
-    gpu_ctx_d3d12* gpu_ctx = (struct gpu_ctx_d3d12*)s->gpu_ctx;
     pipeline_d3d12* s_priv = (pipeline_d3d12*)s;
 
     if(index == -1)
@@ -475,8 +490,8 @@ static int get_binding(pipeline_d3d12* s_priv, int set)
     return set;
 #else
     // Binding graphic or compute shader
-    return s_priv->gp ? s_priv->gp->descriptorBindings[set]
-        : s_priv->cp->descriptorBindings[set];
+    return s_priv->mD3DGraphicsPipeline ? s_priv->mD3DGraphicsPipeline->descriptorBindings[set]
+        : s_priv->mD3DComputePipeline->descriptorBindings[set];
 #endif
 }
 
@@ -593,7 +608,7 @@ static void set_scissor(ngli::D3DCommandList* cmd_buf, gpu_ctx_d3d12* gpu_ctx)
     );
 }
 
-void ngli_pipeline_d3d12_draw(pipeline* s, int nb_vertices, int nb_instances)
+void d3d12_pipeline_draw(pipeline* s, int nb_vertices, int nb_instances)
 {
     gpu_ctx_d3d12* gpu_ctx = (gpu_ctx_d3d12*)s->gpu_ctx;
     ngli::D3DCommandList* cmd_buf = gpu_ctx->cur_command_buffer;
@@ -611,7 +626,7 @@ void ngli_pipeline_d3d12_draw(pipeline* s, int nb_vertices, int nb_instances)
     gpu_ctx->graphics->draw(cmd_buf, nb_vertices, nb_instances);
 }
 
-void ngli_pipeline_d3d12_draw_indexed(pipeline* s, const buffer* indices,
+void d3d12_pipeline_draw_indexed(pipeline* s, const buffer* indices,
                                      int indices_format, int nb_indices,
                                      int nb_instances)
 {
@@ -634,12 +649,33 @@ void ngli_pipeline_d3d12_draw_indexed(pipeline* s, const buffer* indices,
     gpu_ctx->graphics->drawIndexed(cmd_buf, nb_indices, nb_instances);
 }
 
-void ngli_pipeline_d3d12_dispatch(pipeline* s, int nb_group_x, int nb_group_y,
+void d3d12_update_NumWorkgroups(pipeline_d3d12* s, uint32_t groupCountX,
+                           uint32_t groupCountY, uint32_t groupCountZ)
+{
+    //Need to update SPIRV_Cross_NumWorkgroups value
+    int nb_buffers = ngli_darray_count(&s->buffer_bindings);
+    for(int i = 0; i < nb_buffers; i++)
+    {
+        const buffer_binding* binding =
+            (buffer_binding*)ngli_darray_get(&s->buffer_bindings, i);
+
+        if(strcmp(binding->desc.name, "SPIRV_Cross_NumWorkgroups") == 0)
+        {
+            std::vector<uint32_t> tData = { groupCountX, groupCountY, groupCountZ};
+            d3d12_buffer_upload((buffer*)binding->buffer, tData.data(), tData.size() * sizeof(uint32_t), 0);
+        }
+    }
+
+}
+
+void d3d12_pipeline_dispatch(pipeline* s, int nb_group_x, int nb_group_y,
                                  int nb_group_z, int threads_per_group_x,
                                  int threads_per_group_y, int threads_per_group_z)
 {
     gpu_ctx_d3d12* gpu_ctx = (gpu_ctx_d3d12*)s->gpu_ctx;
     ngli::D3DCommandList* cmd_buf = gpu_ctx->cur_command_buffer;
+
+    d3d12_update_NumWorkgroups((pipeline_d3d12*)s, nb_group_x, nb_group_y, nb_group_z);
 
     pipeline_set_uniforms((pipeline_d3d12*)s);
 
@@ -670,24 +706,31 @@ void ngli_pipeline_d3d12_dispatch(pipeline* s, int nb_group_x, int nb_group_y,
     gpu_ctx->graphics->endComputePass(cmd_buf);
 }
 
-void ngli_pipeline_d3d12_freep(pipeline** sp)
+void d3d12_pipeline_freep(pipeline** sp)
 {
     if(!*sp)
         return;
 
     pipeline* s = *sp;
-    pipeline_d3d12* s_priv = (pipeline_d3d12*)s;
+    pipeline_d3d12* pipeline = (pipeline_d3d12*)s;
 
-    if(s_priv->gp)
-        delete s_priv->gp;
-    if(s_priv->cp)
-        delete s_priv->cp;
 
-    ngli_darray_reset(&s_priv->texture_bindings);
-    ngli_darray_reset(&s_priv->buffer_bindings);
-    ngli_darray_reset(&s_priv->attribute_bindings);
+    if(*pipeline->bufferNumWorkgroups)
+    {
+        ngli_buffer_unmap(*pipeline->bufferNumWorkgroups);
+        ngli_buffer_freep(pipeline->bufferNumWorkgroups);
+    }
 
-    ngli_darray_reset(&s_priv->vertex_buffers);
+    if(pipeline->mD3DGraphicsPipeline)
+        delete pipeline->mD3DGraphicsPipeline;
+    if(pipeline->mD3DComputePipeline)
+        delete pipeline->mD3DComputePipeline;
+
+    ngli_darray_reset(&pipeline->texture_bindings);
+    ngli_darray_reset(&pipeline->buffer_bindings);
+    ngli_darray_reset(&pipeline->attribute_bindings);
+
+    ngli_darray_reset(&pipeline->vertex_buffers);
 
     ngli_freep(sp);
 }

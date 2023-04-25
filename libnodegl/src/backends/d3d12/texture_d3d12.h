@@ -37,13 +37,13 @@ struct texture_d3d12
     ngli::D3DTexture* v;
 };
 
-struct texture* ngli_texture_d3d12_create(struct gpu_ctx* gpu_ctx);
+struct texture* d3d12_texture_create(struct gpu_ctx* gpu_ctx);
 
-int ngli_texture_d3d12_init(struct texture* s,
+int d3d12_texture_init(struct texture* s,
                            const struct texture_params* params);
 
-int ngli_texture_d3d12_upload(struct texture* s, const uint8_t* data,
+int d3d12_texture_upload(struct texture* s, const uint8_t* data,
                              int linesize);
-int ngli_texture_d3d12_generate_mipmap(struct texture* s);
+int d3d12_texture_generate_mipmap(struct texture* s);
 
-void ngli_texture_d3d12_freep(struct texture** sp);
+void d3d12_texture_freep(struct texture** sp);

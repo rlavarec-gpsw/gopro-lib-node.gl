@@ -47,6 +47,8 @@ void D3DDevice::create(D3DGraphicsContext* ctx)
 			continue;
 
 		// Check to see if the adapter supports Direct3D 12
+		// Both Direct3D 11 and Direct3D 12 share a similar device creation pattern.
+		// Existing Direct3D 12 drivers are all D3D_FEATURE_LEVEL_11_0 or better
 		if(SUCCEEDED(D3D12CreateDevice(hardwareAdapter.Get(),
 									   D3D_FEATURE_LEVEL_11_0,
 									   _uuidof(ID3D12Device), nullptr)))

@@ -36,8 +36,8 @@ struct rendertarget_d3d12
     ngli::D3DFramebuffer* output_framebuffer = nullptr;
 };
 
-struct rendertarget* ngli_rendertarget_d3d12_create(struct gpu_ctx* gpu_ctx);
-int ngli_rendertarget_d3d12_init(struct rendertarget* s,
+struct rendertarget* d3d12_rendertarget_create(struct gpu_ctx* gpu_ctx);
+int d3d12_rendertarget_init(struct rendertarget* s,
                                 const struct rendertarget_params* params);
-void ngli_rendertarget_d3d12_resolve(struct rendertarget* s);
-void ngli_rendertarget_d3d12_freep(struct rendertarget** sp);
+void d3d12_rendertarget_resolve(struct rendertarget* s);
+void d3d12_rendertarget_freep(struct rendertarget** sp);

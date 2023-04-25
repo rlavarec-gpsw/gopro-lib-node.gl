@@ -58,9 +58,8 @@ public:
   */
 	void beginRenderPass(D3DCommandList* commandBuffer, D3DRenderPass* renderPass,
 						 D3DFramebuffer* framebuffer,
-						 glm::vec4 clearColor = glm::vec4(0.0f),
 						 float clearDepth = 1.0f,
-						 uint32_t clearStencil = 0, bool needClear=true);
+						 uint32_t clearStencil = 0);
 	void setRenderTargets(D3DCommandList* d3dCommandList,
 		const std::vector<D3DFramebuffer::D3DAttachment*>& colorAttachments,
 		const D3DFramebuffer::D3DAttachment* depthStencilAttachment);

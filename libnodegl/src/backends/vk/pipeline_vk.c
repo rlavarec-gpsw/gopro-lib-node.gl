@@ -684,9 +684,10 @@ struct pipeline *ngli_pipeline_vk_create(struct gpu_ctx *gpu_ctx)
     return (struct pipeline *)s;
 }
 
-VkResult ngli_pipeline_vk_init(struct pipeline *s, const struct pipeline_params *params)
+VkResult ngli_pipeline_vk_init(struct pipeline *s, const struct pipeline_compat_params* compat_params)
 {
     struct pipeline_vk *s_priv = (struct pipeline_vk *)s;
+    const struct pipeline_params* params = compat_params->params;
 
     s->type     = params->type;
     s->graphics = params->graphics;

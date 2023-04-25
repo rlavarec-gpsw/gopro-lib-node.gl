@@ -101,7 +101,7 @@ int ngli_pipeline_compat_init(struct pipeline_compat *s, const struct pipeline_c
     const struct pipeline_resources *pipeline_resources = params->resources;
 
     int ret;
-    if ((ret = ngli_pipeline_init(s->pipeline, pipeline_params)) < 0 ||
+    if ((ret = ngli_pipeline_init(s->pipeline, params)) < 0 ||
         (ret = ngli_pipeline_set_resources(s->pipeline, pipeline_resources)) < 0)
         return ret;
 

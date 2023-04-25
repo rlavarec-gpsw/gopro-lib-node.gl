@@ -21,6 +21,22 @@
 #pragma once
 #include <backends/d3d12/impl/D3DPipeline.h>
 
+extern "C" {
+#include "pipeline.h"
+}
+
+struct buffer_binding
+{
+	pipeline_buffer_desc desc;
+	const struct buffer* buffer;
+};
+
+struct pipeline_d3d12;
+
+extern "C" {
+	struct pipeline_resources;
+}
+
 namespace ngli
 {
 
@@ -33,7 +49,7 @@ public:
 				const std::vector<CD3DX12_ROOT_PARAMETER1>& rootParameters,
 				D3D12_SHADER_BYTECODE shaderByteCode);
 
-	static D3DComputePipeline* newInstance(D3DGraphicsContext* graphicsContext, D3DComputeShaderModule* cs);
+	static D3DComputePipeline* newInstance(pipeline_d3d12* pipeline, D3DGraphicsContext* graphicsContext, D3DComputeShaderModule* cs, struct pipeline_resources* resources);
 
 	void getBindings(std::vector<uint32_t*> pDescriptorBindings);
 	std::vector<uint32_t> descriptorBindings;

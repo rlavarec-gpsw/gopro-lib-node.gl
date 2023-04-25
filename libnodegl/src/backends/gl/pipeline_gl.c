@@ -518,9 +518,10 @@ struct pipeline *ngli_pipeline_gl_create(struct gpu_ctx *gpu_ctx)
     return (struct pipeline *)s;
 }
 
-int ngli_pipeline_gl_init(struct pipeline *s, const struct pipeline_params *params)
+int ngli_pipeline_gl_init(struct pipeline *s, const struct pipeline_compat_params* compat_params)
 {
     struct pipeline_gl *s_priv = (struct pipeline_gl *)s;
+    const struct pipeline_params* params = compat_params->params;
 
     s->type     = params->type;
     s->graphics = params->graphics;

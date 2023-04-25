@@ -258,8 +258,8 @@ void D3DGraphics::resourceBarrier(
 	D3D12_RESOURCE_STATES currentState, D3D12_RESOURCE_STATES newState,
 	UINT subresourceIndex)
 {
-	if(p->texture)
-		p->texture->resourceBarrierTransition(cmdList, newState, subresourceIndex);
+	if(p->mD3DAttachementBasic.texture)
+		p->mD3DAttachementBasic.texture->resourceBarrierTransition(cmdList, newState, subresourceIndex);
 	else
 	{
 		CD3DX12_RESOURCE_BARRIER resourceBarrier =
@@ -272,8 +272,8 @@ void D3DGraphics::resourceBarrier(
 void D3DGraphics::beginRenderPass(D3DCommandList* commandBuffer,
 								  D3DRenderPass* renderPass,
 								  D3DFramebuffer* framebuffer,
-								  glm::vec4 clearColor, float clearDepth,
-								  uint32_t clearStencil, bool needClear)
+								  float clearDepth,
+								  uint32_t clearStencil)
 {
 	auto& colorAttachments = framebuffer->colorAttachments;
 	auto& resolveAttachments = framebuffer->resolveAttachments;
@@ -306,22 +306,29 @@ void D3DGraphics::beginRenderPass(D3DCommandList* commandBuffer,
 													descriptorHeaps.data()));
 //	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> colorAttachmentHandles( colorAttachments.size());
 	setRenderTargets(commandBuffer, framebuffer->colorAttachments, framebuffer->depthStencilAttachment);
-	if(needClear)
+	//if(needClear)
 	{
-		if(renderPass->colorLoadOp == NGLI_LOAD_OP_CLEAR)
+		//if(renderPass->colorLoadOp == NGLI_LOAD_OP_CLEAR)
 		{
 			for(auto& colorAttachment : colorAttachments)
 			{
-				D3D_TRACE(commandBuffer->mGraphicsCommandList->ClearRenderTargetView(
-					colorAttachment->cpuDescriptor, glm::value_ptr(clearColor), 0, nullptr));
+				if(colorAttachment->mAttachement.load_op != NGLI_LOAD_OP_LOAD)
+				{
+					glm::vec4 clearColor = glm::make_vec4(colorAttachment->mAttachement.clear_value);
+					D3D_TRACE(commandBuffer->mGraphicsCommandList->ClearRenderTargetView(
+						colorAttachment->cpuDescriptor, glm::value_ptr(clearColor), 0, nullptr));
+				}
 			}
 		}
-		if(depthStencilAttachment && renderPass->depthLoadOp == NGLI_LOAD_OP_CLEAR)
+		if(depthStencilAttachment/* && renderPass->depthLoadOp == NGLI_LOAD_OP_CLEAR*/)
 		{
-			D3D_TRACE(commandBuffer->mGraphicsCommandList->ClearDepthStencilView(
-				depthStencilAttachment->cpuDescriptor,
-				D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, clearDepth,
-				clearStencil, 0, nullptr));
+			if(depthStencilAttachment->mAttachement.load_op != NGLI_LOAD_OP_CLEAR)
+			{
+				D3D_TRACE(commandBuffer->mGraphicsCommandList->ClearDepthStencilView(
+					depthStencilAttachment->cpuDescriptor,
+					D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, clearDepth,
+					clearStencil, 0, nullptr));
+			}
 		}
 	}
 	currentRenderPass = renderPass;

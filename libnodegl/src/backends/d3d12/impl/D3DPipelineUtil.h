@@ -12,10 +12,9 @@ struct D3DPipelineUtil
 		parseDescriptors(std::map<uint32_t, D3DShaderModule::DescriptorInfo>& uniforms,
 			std::vector<uint32_t>& uniformBindings,
 			std::vector<CD3DX12_ROOT_PARAMETER1>& d3dRootParams,
-			std::vector<std::unique_ptr<CD3DX12_DESCRIPTOR_RANGE1>>
-			& d3dDescriptorRanges,
+			std::vector<std::unique_ptr<CD3DX12_DESCRIPTOR_RANGE1>>& d3dDescriptorRanges,
 			PipelineType pipelineType,
-			IsReadOnly isReadOnly);
+			IsReadOnly& isReadOnly);
 };
 
 }

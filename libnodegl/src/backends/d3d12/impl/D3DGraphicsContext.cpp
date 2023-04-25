@@ -223,7 +223,7 @@ inline void D3DGraphicsContext::beginRenderPass(D3DCommandList* commandBuffer, D
 {
 	auto framebuffer = swapchainFramebuffers[currentImageIndex];
 	// Do not clear the target view if default
-	graphics->beginRenderPass(commandBuffer, defaultRenderPass, framebuffer, clearColor, 1.0f, 0, false);
+	graphics->beginRenderPass(commandBuffer, defaultRenderPass, framebuffer);
 	graphics->setViewport(commandBuffer, { 0, 0, static_cast<int32_t>(framebuffer->w), static_cast<int32_t>(framebuffer->h) });
 	graphics->setScissor(commandBuffer, { 0, 0, static_cast<int32_t>(framebuffer->w), static_cast<int32_t>(framebuffer->h) });
 }
@@ -238,7 +238,7 @@ one or more attachments via a framebuffer object.
 
 inline void D3DGraphicsContext::beginOffscreenRenderPass(D3DCommandList* commandBuffer, D3DGraphics* graphics, D3DFramebuffer* outputFramebuffer)
 {
-	graphics->beginRenderPass(commandBuffer, defaultOffscreenRenderPass, outputFramebuffer, clearColor);
+	graphics->beginRenderPass(commandBuffer, defaultOffscreenRenderPass, outputFramebuffer);
 	graphics->setViewport(commandBuffer, { 0, 0, static_cast<int32_t>(outputFramebuffer->w), static_cast<int32_t>(outputFramebuffer->h) });
 	graphics->setScissor(commandBuffer,  { 0, 0, static_cast<int32_t>(outputFramebuffer->w), static_cast<int32_t>(outputFramebuffer->h) });
 }

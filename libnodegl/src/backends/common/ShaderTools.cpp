@@ -376,6 +376,35 @@ int ShaderTools::convertSPVToHLSL(const std::string& spv,
 	auto compilerHLSL = std::make_unique<spirv_cross::CompilerHLSL>(
 		(const uint32_t*)spv.data(), spv.size() / sizeof(uint32_t));
 	auto options = compilerHLSL->get_hlsl_options();
+
+	if(shaderKind == shaderc_compute_shader)
+	{
+		size_t tTotalSize = 0;
+		{ // Look for how much memers already declare, and set binding after
+			std::string hlslReflect;
+			genShaderReflectionHLSL(hlsl, "", spv, hlslReflect);
+			auto hlslReflectJson = json::parse(hlslReflect);
+
+			json* types = getEntry(hlslReflectJson, "types");
+			if(types)
+			{
+				for(const json& type : *types)
+				{
+					json* members = getEntry(type, "members");
+					tTotalSize += members->size();
+				}
+			}
+		}
+
+		// Cross compiling compute shader, gl_NumWorkGroups doesn't exist on d3d12
+		const uint32_t newBuiltin = compilerHLSL->remap_num_workgroups_builtin();
+
+		if(newBuiltin)
+		{
+			compilerHLSL->set_decoration(newBuiltin, spv::DecorationDescriptorSet, tTotalSize);
+			compilerHLSL->set_decoration(newBuiltin, spv::DecorationBinding, 0);
+		}
+	}
 	
 	// options.flatten_matrix_vertex_input_semantics=true -> Instead of having TEXCOORDN_X
 	// eg: TEXCOORD3_0
@@ -570,6 +599,42 @@ int ShaderTools::patchShaderReflectionDataHLSL(const std::string& glslReflect,
 				std::vector<RegexUtil::Match> hlslReflectData = RegexUtil::findAll(p, hlsl);
 				input["semantic"] = hlslReflectData[0].s[1];
 			}
+	}
+	if(ext == ".comp")
+	{
+		if(hlsl.find("SPIRV_Cross_NumWorkgroups") != std::string::npos)
+		{
+			std::regex p("SPIRV_Cross_NumWorkgroups\\s*:\\s*register\\(\\w+,\\s*[a-z]*(\\d*)");
+			std::vector<RegexUtil::Match> hlslReflectData = RegexUtil::findAll(p, hlsl);
+			size_t space_set = std::stoi(hlslReflectData[0].s[1]);
+
+			std::string type = "_1";
+			json tJsonUbosEntry = {
+				{ "binding", 0 },
+				{ "block_size", 4*3 },
+				{ "name", "SPIRV_Cross_NumWorkgroups"},
+				{ "set", space_set },
+				{ "type", type }
+			};
+			json* ubos = getEntry(glslReflectJson, "ubos");
+			if(!ubos)
+			{
+				glslReflectJson["ubos"] = tJsonUbosEntry;
+			}
+			else
+			{
+				glslReflectJson["ubos"] += tJsonUbosEntry;
+			}
+
+			glslReflectJson["types"][type] = {
+				{"members", {{
+						{"name", "count"},
+						{"offset", 0},
+						{"type", "uvec3"}
+					}}},
+				{"name", "SPIRV_Cross_NumWorkgroups"}
+			};
+		}
 	}
 	hlslReflect = glslReflectJson.dump(4);
 	return 0;
@@ -872,8 +937,9 @@ int ShaderTools::generateShaderMapHLSL(const std::string& file, std::string outD
 		return 0;
 	}
 
-	std::string hlsl = readFile(hlslFileName), spv = readFile(spvFileName),
-		hlslReflect;
+	std::string hlsl = readFile(hlslFileName);
+	std::string spv = readFile(spvFileName);
+	std::string hlslReflect;
 	genShaderReflectionHLSL(hlsl, ext, spv, hlslReflect);
 	auto hlslReflectJson = json::parse(hlslReflect);
 	std::string hlslMap = parseReflectionData(hlslReflectJson, ext);

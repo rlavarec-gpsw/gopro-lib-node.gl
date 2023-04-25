@@ -28,7 +28,7 @@ struct pipeline *ngli_pipeline_create(struct gpu_ctx *gpu_ctx)
     return gpu_ctx->cls->pipeline_create(gpu_ctx);
 }
 
-int ngli_pipeline_init(struct pipeline *s, const struct pipeline_params *params)
+int ngli_pipeline_init(struct pipeline *s, const struct pipeline_compat_params* params)
 {
     return s->gpu_ctx->cls->pipeline_init(s, params);
 }
