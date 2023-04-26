@@ -26,14 +26,16 @@
 
 struct gpu_ctx;
 
-enum {
+enum MipMapFilterMode
+{
     NGLI_MIPMAP_FILTER_NONE,
     NGLI_MIPMAP_FILTER_NEAREST,
     NGLI_MIPMAP_FILTER_LINEAR,
     NGLI_NB_MIPMAP
 };
 
-enum {
+enum FilterMode
+{
     NGLI_FILTER_NEAREST,
     NGLI_FILTER_LINEAR,
     NGLI_NB_FILTER

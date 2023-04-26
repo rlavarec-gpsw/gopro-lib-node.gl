@@ -57,15 +57,19 @@ int d3d12_texture_init(struct texture* s, const struct texture_params* p)
     uint32_t size =
         s_priv->bytes_per_pixel * p->width * p->height * depth * array_layers;
 
+    D3D12_FILTER_REDUCTION_TYPE reduction = D3D12_FILTER_REDUCTION_TYPE_STANDARD;
+
     ngli::D3DSamplerDesc samplerDesc;
-    samplerDesc.minFilter = to_d3d12_filter_mode(p->min_filter);
-    samplerDesc.magFilter = to_d3d12_filter_mode(p->mag_filter);
-    samplerDesc.mipFilter = gen_mipmaps
-        ? to_d3d12_mip_filter_mode(p->mipmap_filter)
-        : ngli::FILTER_NEAREST;
-    samplerDesc.addressModeU = ngli::CLAMP_TO_EDGE;
-    samplerDesc.addressModeV = ngli::CLAMP_TO_EDGE;
-    samplerDesc.addressModeW = ngli::CLAMP_TO_EDGE;
+    samplerDesc.minFilter = (FilterMode)p->min_filter;
+    samplerDesc.magFilter = (FilterMode)p->mag_filter;
+    samplerDesc.mipmapFilter = (MipMapFilterMode)p->mipmap_filter;
+    samplerDesc.Filter = D3D12_ENCODE_BASIC_FILTER(samplerDesc.minFilter == NGLI_FILTER_LINEAR? D3D12_FILTER_TYPE_LINEAR : D3D12_FILTER_TYPE_POINT,
+                                                   samplerDesc.magFilter == NGLI_FILTER_LINEAR? D3D12_FILTER_TYPE_LINEAR : D3D12_FILTER_TYPE_POINT,
+                                                   samplerDesc.mipmapFilter == NGLI_MIPMAP_FILTER_LINEAR? D3D12_FILTER_TYPE_LINEAR : D3D12_FILTER_TYPE_POINT,
+                                                   reduction);
+    samplerDesc.AddressU = to_d3d12_wrap_mode(p->wrap_s);
+    samplerDesc.AddressV = to_d3d12_wrap_mode(p->wrap_t);
+    samplerDesc.AddressW = to_d3d12_wrap_mode(p->wrap_r);
 
     s_priv->v = ngli::D3DTexture::newInstance(
         gpu_ctx, ctx->graphics, nullptr, to_d3d12_format(p->format), size,

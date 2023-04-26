@@ -20,6 +20,10 @@
  */
 #pragma once
 
+extern "C" {
+#include <texture.h>
+}
+
 struct texture_params;
 
 namespace ngli
@@ -31,8 +35,8 @@ public:
 	D3DSamplerDesc(const texture_params* texture_params = nullptr);
 
 public:
-	FilterMode minFilter, magFilter, mipFilter;
-	SamplerAddressMode addressModeU, addressModeV, addressModeW;
+	FilterMode minFilter, magFilter;
+	MipMapFilterMode mipmapFilter;
 };
 
 } // namespace ngli

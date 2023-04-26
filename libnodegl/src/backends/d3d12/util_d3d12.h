@@ -34,9 +34,7 @@ class D3DGraphicsContext;
 class D3DRenderPass;
 }
 
-
-ngli::FilterMode to_d3d12_filter_mode(int filter);
-ngli::FilterMode to_d3d12_mip_filter_mode(int filter);
+D3D12_TEXTURE_ADDRESS_MODE to_d3d12_wrap_mode(int wrap);
 ngli::TextureType to_d3d12_texture_type(int type);
 ngli::IndexFormat to_d3d12_index_format(int indices_format);
 D3D12_BLEND to_d3d12_blend_factor(int blend_factor);

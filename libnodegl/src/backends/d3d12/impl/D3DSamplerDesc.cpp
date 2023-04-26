@@ -2,10 +2,6 @@
 #include <stdafx.h>
 #include "D3DSamplerDesc.h"
 
-extern "C" {
-#include <texture.h>
-}
-
 
 namespace ngli
 {
