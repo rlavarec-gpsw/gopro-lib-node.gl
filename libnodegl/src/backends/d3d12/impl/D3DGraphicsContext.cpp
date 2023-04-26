@@ -35,7 +35,6 @@ D3DGraphicsContext* D3DGraphicsContext::newInstance(const char* appName,
 										 bool enableDepthStencil, bool debug,
 										 OnSelectDepthStencilFormats onSelectDepthStencilFormats)
 {
-	LOG(INFO, "debug: %s", (debug) ? "true" : "false");
 	auto d3dGraphicsContext = new D3DGraphicsContext();
 	d3dGraphicsContext->init(appName, enableDepthStencil, debug, onSelectDepthStencilFormats);
 	return d3dGraphicsContext;
@@ -58,17 +57,22 @@ void D3DGraphicsContext::init(const char* appName, bool enableDepthStencil, bool
 	}
 #endif
 
+	LOG(INFO, "d3d12 debug: %s", (debug) ? "true" : "false");
 	if(debug)
 	{
 		ComPtr<ID3D12Debug1> debugController;
 		D3D_TRACE_CALL(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)));
 		debugController->EnableDebugLayer();
 		if(ENABLE_GPU_VALIDATION)
+		{
+			LOG(INFO, "d3d12 ENABLE_GPU_VALIDATION: %s", (debug) ? "true" : "false");
 			debugController->SetEnableGPUBasedValidation(true);
+		}
 
 		// Enable additional debug layers.
 		dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 	}
+
 	D3D_TRACE_CALL(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&d3dFactory)));
 	d3dDevice.create(this);
 	if(debug)
