@@ -110,8 +110,7 @@ void D3DTexture::init(D3DGraphicsContext* ctx, D3DGraphics* graphics, void* data
 	this->size = size;
 	this->format = format;
 	this->textureType = textureType;
-	this->mipLevels =
-		genMipmaps ? uint32_t(floor(log2(float(std::min(w, h))))) + 1 : 1;
+	this->mipLevels = genMipmaps ? uint32_t(floor(log2(float(std::min(w, h))))) + 1 : 1;
 	if(genMipmaps)
 		usageFlags |= NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT;
 	this->imageUsageFlags = usageFlags;
@@ -185,7 +184,7 @@ D3DTexture* D3DTexture::newInstance(D3DGraphicsContext* graphicsContext, D3DGrap
 
 	D3DTexture* d3dTexture = new D3DTexture();
 	d3dTexture->init(graphicsContext, graphics, data, size, w, h, d,
-		arrayLayers, DXGI_FORMAT(format), imageUsageFlags,
+		arrayLayers, format, imageUsageFlags,
 		textureType, genMipmaps, numSamples, samplerDesc, dataPitch);
 	return d3dTexture;
 }

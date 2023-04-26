@@ -31,22 +31,14 @@ extern "C" {
 #include "texture.h"
 }
 
-ngli::FilterMode to_d3d12_filter_mode(int filter)
+D3D12_TEXTURE_ADDRESS_MODE to_d3d12_wrap_mode(int wrap)
 {
-	static const std::map<int, ngli::FilterMode> filter_map = {
-		{NGLI_FILTER_NEAREST, ngli::FILTER_NEAREST},
-		{NGLI_FILTER_LINEAR,  ngli::FILTER_LINEAR }
+	static const std::map<int, D3D12_TEXTURE_ADDRESS_MODE> wrap_map = {
+		{NGLI_WRAP_CLAMP_TO_EDGE, D3D12_TEXTURE_ADDRESS_MODE_CLAMP},
+		{NGLI_WRAP_MIRRORED_REPEAT,  D3D12_TEXTURE_ADDRESS_MODE_MIRROR },
+		{NGLI_WRAP_REPEAT,  D3D12_TEXTURE_ADDRESS_MODE_WRAP }
 	};
-	return filter_map.at(filter);
-}
-
-ngli::FilterMode to_d3d12_mip_filter_mode(int filter)
-{
-	static const std::map<int, ngli::FilterMode> mip_filter_map = {
-		{NGLI_MIPMAP_FILTER_NEAREST, ngli::FILTER_NEAREST},
-		{NGLI_MIPMAP_FILTER_LINEAR,  ngli::FILTER_LINEAR }
-	};
-	return mip_filter_map.at(filter);
+	return wrap_map.at(wrap);
 }
 
 ngli::TextureType to_d3d12_texture_type(int type)
