@@ -39,8 +39,7 @@ struct rendertarget* d3d12_rendertarget_create(struct gpu_ctx* gpu_ctx)
     return (struct rendertarget*)s;
 }
 
-int d3d12_rendertarget_init(struct rendertarget* s,
-                                const struct rendertarget_params* params)
+int d3d12_rendertarget_init(struct rendertarget* s, const struct rendertarget_params* params)
 {
     rendertarget_d3d12* s_priv = (rendertarget_d3d12*)s;
     gpu_ctx_d3d12* gpu_ctx = (gpu_ctx_d3d12*)s->gpu_ctx;
@@ -56,34 +55,28 @@ int d3d12_rendertarget_init(struct rendertarget* s,
     for(int i = 0; i < params->nb_colors; i++)
     {
         const attachment* color_attachment = &params->colors[i];
-        const texture_d3d12* color_texture =
-            (const texture_d3d12*)color_attachment->attachment;
-        const texture_d3d12* resolve_texture =
-            (const texture_d3d12*)color_attachment->resolve_target;
-        const texture_params* color_texture_params =
-            &color_texture->parent.params;
+        const texture_d3d12* color_texture = (const texture_d3d12*)color_attachment->attachment;
+        const texture_d3d12* resolve_texture = (const texture_d3d12*)color_attachment->resolve_target;
+        const texture_params* color_texture_params = &color_texture->parent.params;
         if(i == 0)
         {
             w = color_texture->v->w;
             h = color_texture->v->h;
         }
-        attachments.push_back({ color_texture->v, 0,
-                               uint32_t(color_attachment->attachment_layer) });
+        attachments.push_back({ color_texture->v, 0, uint32_t(color_attachment->attachment_layer) });
         if(resolve_texture)
+        {
             attachments.push_back(
-                { resolve_texture->v, 0,
-                 uint32_t(color_attachment->resolve_target_layer) });
+                { resolve_texture->v, 0, uint32_t(color_attachment->resolve_target_layer) });
+        }
     }
 
     const attachment* depth_attachment = &params->depth_stencil;
-    const texture_d3d12* depth_texture =
-        (const texture_d3d12*)depth_attachment->attachment;
+    const texture_d3d12* depth_texture = (const texture_d3d12*)depth_attachment->attachment;
     if(depth_texture)
     {
-        const texture_d3d12* resolve_texture =
-            (const texture_d3d12*)depth_attachment->resolve_target;
-        const texture_params* depth_texture_params =
-            &depth_texture->parent.params;
+        const texture_d3d12* resolve_texture =  (const texture_d3d12*)depth_attachment->resolve_target;
+        const texture_params* depth_texture_params = &depth_texture->parent.params;
         attachments.push_back({ depth_texture->v });
         if(resolve_texture)
             attachments.push_back({ resolve_texture->v });
