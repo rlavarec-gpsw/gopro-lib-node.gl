@@ -28,6 +28,8 @@
 #include <backends/d3d12/impl/D3DShaderModule.h>
 #include <backends/d3d12/impl/D3DSampler.h>
 #include <backends/d3d12/impl/D3DShaderCross.h>
+#include <backends/d3d12/impl/D3DShaderCompiler.h>
+#include <backends/d3d12/impl/D3DData.h>
 
 namespace ngli
 {
@@ -59,8 +61,23 @@ D3DBlitOp::D3DBlitOp(D3DGraphicsContext* ctx, D3DTexture* srcTexture,
 
 void D3DBlitOp::createPipeline()
 {
+	struct D3DBlitOpFiles
+	{
+		D3DBlitOpFiles()
+		{
+			D3DShaderCompiler tShaderCompiler;
+			mD3DBlitOpVert = tShaderCompiler.dumpSrcIntoFile(file_d3dBlitOp_vert, ".vert");
+			mD3DBlitOpFrag = tShaderCompiler.dumpSrcIntoFile(file_d3dBlitOp_frag, ".frag");
+		}
+		
+		std::string mD3DBlitOpVert;
+		std::string mD3DBlitOpFrag;
+	};
+	// Write the shader on the disk (once) in the tmp dir
+	static D3DBlitOpFiles gD3DBlitOpFiles;
+
 	// Compile shader if doesn't exist (once) before to use it
-	static D3DShaderCross gD3DShaderCross(NGLI_DATA_DIR_D3D12, "d3dBlitOp.vert", "d3dBlitOp.frag");
+	static D3DShaderCross gD3DShaderCross("", gD3DBlitOpFiles.mD3DBlitOpVert, gD3DBlitOpFiles.mD3DBlitOpFrag);
 
 	const std::string key = "d3dBlitOp";
 	graphicsPipeline = dynamic_cast<D3DGraphicsPipeline*>(mCtx->d3dPipelineCache.get(key));
@@ -70,9 +87,8 @@ void D3DBlitOp::createPipeline()
 	state.primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 	graphicsPipeline = D3DGraphicsPipeline::newInstance(
 		mCtx, state,
-		D3DVertexShaderModule::newInstance(mCtx->device, NGLI_DATA_DIR_D3D12 "d3dBlitOp.vert").get(),
-		D3DFragmentShaderModule::newInstance(mCtx->device, NGLI_DATA_DIR_D3D12 "d3dBlitOp.frag")
-			.get(),
+		D3DVertexShaderModule::newInstance(mCtx->device, gD3DBlitOpFiles.mD3DBlitOpVert).get(),
+		D3DFragmentShaderModule::newInstance(mCtx->device, gD3DBlitOpFiles.mD3DBlitOpFrag).get(),
 		dstTexture->format, mCtx->depthStencilFormat);
 	mCtx->d3dPipelineCache.add(key, graphicsPipeline);
 }

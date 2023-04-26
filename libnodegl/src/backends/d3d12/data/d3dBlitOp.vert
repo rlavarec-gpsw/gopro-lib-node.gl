@@ -1,3 +1,5 @@
+R"shader(
+
 #version 450
 out gl_PerVertex {
     vec4 gl_Position;   
@@ -15,3 +17,5 @@ void main() {
     setPos(vec4(pos, 0.0, 1.0));
     v_texCoord = texCoord;
 }
+
+)shader"
