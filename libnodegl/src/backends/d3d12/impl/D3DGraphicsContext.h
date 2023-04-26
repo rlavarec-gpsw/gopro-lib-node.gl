@@ -62,11 +62,11 @@ public:
 	 */
 	static D3DGraphicsContext* newInstance(const char* appName,
 								   bool enableDepthStencil = false,
-								   bool debug = true,
+								   bool debug = false,
 								   OnSelectDepthStencilFormats onSelectDepthStencilFormats = nullptr);
 	void init(const char* appName,
 								   bool enableDepthStencil = false,
-								   bool debug = true,
+								   bool debug = false,
 								   OnSelectDepthStencilFormats onSelectDepthStencilFormats = nullptr);
 
 	/** Set the surface for the graphics context

@@ -23,6 +23,15 @@ void D3DShaderCross::compile(const std::string& dir, const std::string& file)
 
 	static ngli::ShaderTools shaderTools(true);
 	std::string outDir = dir;
+	
+	// If the dir is empty, get it from the filename
+	if(outDir.empty())
+	{
+		outDir = std::filesystem::path(file).remove_filename().string();
+	}
+	
+	ngli_assert(!outDir.empty());
+
 	std::vector<std::string> glslFiles = { dir + file };
 
 	auto spvFiles = shaderTools.compileShaders(glslFiles, outDir, ShaderTools::FORMAT_GLSL);

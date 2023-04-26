@@ -1,3 +1,5 @@
+R"shader(
+
 #version 450
 precision highp float;
 struct UBOData { uint level; };
@@ -11,3 +13,6 @@ layout (location = 0) out vec4 fragColor;
 void main() {
     fragColor = textureLod(sampler0, v_texCoord, float(ubo.level));
 }
+
+
+)shader"

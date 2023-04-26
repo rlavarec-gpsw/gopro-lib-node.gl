@@ -501,6 +501,7 @@ gbackends_cfg = {
       'src/backends/d3d12/impl/D3DCommandList.cpp',
       'src/backends/d3d12/impl/D3DCommandQueue.cpp',
       'src/backends/d3d12/impl/D3DComputePipeline.cpp',
+      'src/backends/d3d12/impl/D3DData.cpp',
       'src/backends/d3d12/impl/D3DDescriptorHandle.cpp',
       'src/backends/d3d12/impl/D3DDescriptorHeap.cpp',
       'src/backends/d3d12/impl/D3DDevice.cpp',
@@ -843,13 +844,6 @@ specs_filename = 'nodes.specs'
 dest_datadir = get_option('datadir') / 'nodegl'
 install_data(files(specs_filename), install_dir: dest_datadir)
 install_data(files('src/android/java/OnFrameAvailableListener.java'), install_dir: dest_datadir / 'java/org/nodegl')
-
-# D3D12 extra
-if host_system == 'windows'
-  if cc.get_id() == 'msvc'
-  install_subdir('src/backends/d3d12/data', install_dir: get_option('datadir') / 'd3d12')
-  endif
-endif
 
 # XXX: should we use an intermediate static_library() to share the objects
 # between the library and these tools?
