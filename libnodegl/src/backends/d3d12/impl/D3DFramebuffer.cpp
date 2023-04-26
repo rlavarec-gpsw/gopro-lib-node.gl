@@ -62,6 +62,8 @@ void D3DFramebuffer::create(std::vector<D3DFramebuffer::D3DAttachment>& d3dAttac
 	{
 		if(it->imageUsageFlags & NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT)
 		{
+			it->mAttachement.load_op = NGLI_LOAD_OP_CLEAR;
+
 			if(it->numSamples > 1)
 			{
 				colorAttachments.push_back(&(*it++));
@@ -74,6 +76,8 @@ void D3DFramebuffer::create(std::vector<D3DFramebuffer::D3DAttachment>& d3dAttac
 		}
 		else if(it->imageUsageFlags & NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
 		{
+			it->mAttachement.load_op = NGLI_LOAD_OP_CLEAR;
+
 			if(it->numSamples > 1)
 			{
 				depthStencilAttachment = &(*it++);
@@ -132,7 +136,7 @@ D3DFramebuffer* D3DFramebuffer::newInstance(D3DDevice* device, D3DRenderPass* re
 			attachment.layer * d3dTexture->mipLevels + attachment.level,
 			d3dTexture->imageUsageFlags,
 			d3dTexture->numSamples,
-			DXGI_FORMAT(d3dTexture->format),
+			d3dTexture->format,
 			1,
 			attachment
 		};

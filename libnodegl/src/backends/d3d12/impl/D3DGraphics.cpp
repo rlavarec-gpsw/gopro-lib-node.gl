@@ -312,7 +312,8 @@ void D3DGraphics::beginRenderPass(D3DCommandList* commandBuffer,
 		{
 			for(auto& colorAttachment : colorAttachments)
 			{
-				if(colorAttachment->mAttachement.load_op != NGLI_LOAD_OP_LOAD)
+				if(colorAttachment->mAttachement.load_op == NGLI_LOAD_OP_DONT_CARE ||
+				   colorAttachment->mAttachement.load_op == NGLI_LOAD_OP_CLEAR)
 				{
 					glm::vec4 clearColor = glm::make_vec4(colorAttachment->mAttachement.clear_value);
 					D3D_TRACE(commandBuffer->mGraphicsCommandList->ClearRenderTargetView(
@@ -322,7 +323,8 @@ void D3DGraphics::beginRenderPass(D3DCommandList* commandBuffer,
 		}
 		if(depthStencilAttachment/* && renderPass->depthLoadOp == NGLI_LOAD_OP_CLEAR*/)
 		{
-			if(depthStencilAttachment->mAttachement.load_op != NGLI_LOAD_OP_CLEAR)
+			if(depthStencilAttachment->mAttachement.load_op == NGLI_LOAD_OP_DONT_CARE ||
+			   depthStencilAttachment->mAttachement.load_op == NGLI_LOAD_OP_CLEAR)
 			{
 				D3D_TRACE(commandBuffer->mGraphicsCommandList->ClearDepthStencilView(
 					depthStencilAttachment->cpuDescriptor,
