@@ -590,7 +590,7 @@ static void set_viewport(ngli::D3DCommandList* cmd_buf, gpu_ctx_d3d12* gpu_ctx)
         gpu_ctx->cur_command_buffer,
         { vp[0], vp[1], vp[2], vp[3] });
 }
-
+#define NGLI_GRAPHICS_BACKEND_DIRECT3D12
 static void set_scissor(ngli::D3DCommandList* cmd_buf, gpu_ctx_d3d12* gpu_ctx)
 {
     int* sr = gpu_ctx->scissor;
@@ -600,10 +600,9 @@ static void set_scissor(ngli::D3DCommandList* cmd_buf, gpu_ctx_d3d12* gpu_ctx)
     gpu_ctx->graphics->setScissor(
         gpu_ctx->cur_command_buffer,
 #ifdef NGLI_GRAPHICS_BACKEND_DIRECT3D12
-        { sr[0], NGLI_MAX(rt->height - sr[1] - sr[3], 0), uint32_t(sr[2]),
-         uint32_t(sr[3]) }
+        { sr[0], NGLI_MAX(rt->height - sr[1] - sr[3], 0), int32_t(sr[2]), int32_t(sr[3]) }
 #else
-    { sr[0], sr[1], sr[2], sr[3] }
+        { sr[0], sr[1], sr[2], sr[3] }
 #endif
     );
 }
