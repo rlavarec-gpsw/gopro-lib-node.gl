@@ -3,10 +3,7 @@
 #include <backends/common/FileUtil.h>
 #include <backends/common/ShaderTools.h>
 
-enum { DEBUG_FLAG_VERBOSE = 1 };
-
-static int DEBUG_FLAGS = DEBUG_FLAG_VERBOSE;
-static ngli::ShaderTools shaderTools(DEBUG_FLAGS& DEBUG_FLAG_VERBOSE);
+static ngli::ShaderTools shaderTools(DEBUG_D3D12_ACTIVATED);
 
 namespace ngli
 {

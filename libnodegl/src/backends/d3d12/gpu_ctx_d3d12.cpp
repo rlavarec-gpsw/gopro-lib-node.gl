@@ -284,9 +284,10 @@ static int d3d12_init(struct gpu_ctx *s)
         }
     }
 #endif
+    bool tEnableD3D12Debug = DEBUG_D3D12_ACTIVATED;
     /* FIXME */
     s->features            = -1;
-    ctx->graphics_context  = ngli::D3DGraphicsContext::newInstance("NGLApplication", true);
+    ctx->graphics_context  = ngli::D3DGraphicsContext::newInstance("NGLApplication", true, tEnableD3D12Debug);
     if(!ctx->graphics_context)
         return NGL_ERROR_MEMORY;
 
