@@ -261,13 +261,53 @@ bool D3DShaderModule::compile(const std::string& filename)
 	else if(strstr(filename.c_str(), "comp"))
 		target = L"cs_6_0";
 
+
+	std::vector<LPCWSTR> arguments;
+	UINT Flags1 = 0;
+
+	if(DEBUG_SHADERS)
+	{
+		Flags1 |= D3DCOMPILE_DEBUG;
+	}
+	else
+	{
+		// Maximum optimization
+		Flags1 |= D3DCOMPILE_OPTIMIZATION_LEVEL3;
+	}
+
+	if(Flags1 & D3DCOMPILE_ENABLE_BACKWARDS_COMPATIBILITY) arguments.push_back(L"/Gec");
+	// /Ges Not implemented:
+	//if(Flags1 & D3DCOMPILE_ENABLE_STRICTNESS) arguments.push_back(L"/Ges");
+	if(Flags1 & D3DCOMPILE_IEEE_STRICTNESS) arguments.push_back(L"/Gis");
+	if(Flags1 & D3DCOMPILE_OPTIMIZATION_LEVEL2)
+	{
+		switch(Flags1 & D3DCOMPILE_OPTIMIZATION_LEVEL2)
+		{
+			case D3DCOMPILE_OPTIMIZATION_LEVEL0: arguments.push_back(L"/O0"); break;
+			case D3DCOMPILE_OPTIMIZATION_LEVEL2: arguments.push_back(L"/O2"); break;
+			case D3DCOMPILE_OPTIMIZATION_LEVEL3: arguments.push_back(L"/O3"); break;
+		}
+	}
+	// Currently, /Od turns off too many optimization passes, causing incorrect DXIL to be generated.
+	// Re-enable once /Od is implemented properly:
+	//if(Flags1 & D3DCOMPILE_SKIP_OPTIMIZATION) arguments.push_back(L"/Od");
+	if(Flags1 & D3DCOMPILE_DEBUG) arguments.push_back(L"/Zi");
+	if(Flags1 & D3DCOMPILE_PACK_MATRIX_ROW_MAJOR) arguments.push_back(L"/Zpr");
+	if(Flags1 & D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR) arguments.push_back(L"/Zpc");
+	if(Flags1 & D3DCOMPILE_AVOID_FLOW_CONTROL) arguments.push_back(L"/Gfa");
+	if(Flags1 & D3DCOMPILE_PREFER_FLOW_CONTROL) arguments.push_back(L"/Gfp");
+	// We don't implement this:
+	//if(Flags1 & D3DCOMPILE_PARTIAL_PRECISION) arguments.push_back(L"/Gpp");
+	if(Flags1 & D3DCOMPILE_RESOURCES_MAY_ALIAS) arguments.push_back(L"/res_may_alias");
+
+
 	ComPtr<IDxcOperationResult> result;
 	hr = compiler->Compile(
 		sourceBlob.Get(), // pSource
 		tFilename.c_str(), // pSourceName
 		L"main", // pEntryPoint
 		target.c_str(), // pTargetProfile
-		NULL, 0, // pArguments, argCount
+		arguments.data(), (UINT)arguments.size(), // pArguments, argCount
 		NULL, 0, // pDefines, defineCount
 		NULL, // pIncludeHandler
 		&result); // ppResult

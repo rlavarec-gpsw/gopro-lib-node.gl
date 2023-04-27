@@ -67,6 +67,7 @@ void D3DGraphicsContext::init(const char* appName, bool enableDepthStencil, bool
 		{
 			LOG(INFO, "d3d12 ENABLE_GPU_VALIDATION: %s", (debug) ? "true" : "false");
 			debugController->SetEnableGPUBasedValidation(true);
+			debugController->SetEnableSynchronizedCommandQueueValidation(true);
 		}
 
 		// Enable additional debug layers.
