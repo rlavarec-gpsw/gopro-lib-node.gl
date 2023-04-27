@@ -286,7 +286,7 @@ static int d3d12_init(struct gpu_ctx *s)
 #endif
     /* FIXME */
     s->features            = -1;
-    ctx->graphics_context  = ngli::D3DGraphicsContext::newInstance("NGLApplication", false);
+    ctx->graphics_context  = ngli::D3DGraphicsContext::newInstance("NGLApplication", true);
     if(!ctx->graphics_context)
         return NGL_ERROR_MEMORY;
 
