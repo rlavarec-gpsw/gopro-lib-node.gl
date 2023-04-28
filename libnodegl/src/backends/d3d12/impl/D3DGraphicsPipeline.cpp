@@ -289,6 +289,7 @@ D3DGraphicsPipeline::newInstance(D3DGraphicsContext* graphicsContext, const D3DG
 			semanticIndex = 0;
 		}
 
+		// This only work with spirv_cross::CompilerHLSL and flatten_matrix_vertex_input_semantics=true
 		// If this is a matrix need to link VERTEXFORMAT_MAT4 with TEXCOORDX+0, TEXCOORDX+1, TEXCOORDX+2, TEXCOORDX+3
 		for(int i = 0; i < va.count; i++)
 		{
@@ -296,8 +297,8 @@ D3DGraphicsPipeline::newInstance(D3DGraphicsContext* graphicsContext, const D3DG
 				semanticName.c_str(),
 				semanticIndex + i,
 				DXGI_FORMAT(va.format),
-				binding+i,
-				offset,
+				binding,
+				offset + (i * va.elementSize),
 				inputRate,
 				(inputRate == D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA) ? UINT(0)
 																		  : UINT(1) });
