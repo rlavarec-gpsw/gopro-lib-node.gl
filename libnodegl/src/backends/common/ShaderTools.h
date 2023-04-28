@@ -196,6 +196,12 @@ private:
 								  shaderc_shader_kind shaderKind,
 								  const MacroDefinitions& defines,
 								  std::string& dst);
+
+	std::string getExtension(const std::string& path);
+	std::string getFilenameNoExtension(const std::string& path);
+	std::string getFilename(const std::string& path);
+	std::string getPath(const std::string& dir, const std::string& file, const std::string& extension="");
+private:
 	bool verbose = false;
 	std::vector<std::string> defaultIncludePaths;
 };

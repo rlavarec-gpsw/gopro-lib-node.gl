@@ -38,7 +38,7 @@ public:
 		uint32_t timeoutMs;
 	};
 	static std::string readFile(const std::string& path);
-	static void writeFile(const std::string& path, const std::string& contents);
+	static bool writeFile(const std::string& path, const std::string& contents);
 	static std::vector<std::string> splitExt(const std::string& filename);
 	static std::vector<std::string> findFiles(const std::string& path);
 	static std::vector<std::string> findFiles(const std::string& path,

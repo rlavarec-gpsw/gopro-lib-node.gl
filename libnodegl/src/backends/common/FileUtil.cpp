@@ -73,7 +73,7 @@ while (true) { \
     } \
     auto t1 = system_clock::now(); \
     if (duration_cast<milliseconds>(t1 - t0).count() > timeoutMs) { \
-        NGLI_ERR("%s: %s timeoutMS: %d", err.c_str(), path.c_str(), timeoutMs); \
+        NGLI_ERR("%s: %s timeoutMS: %d", err.c_str(), path.string().c_str(), timeoutMs); \
     } \
 }
 
@@ -131,12 +131,20 @@ std::string FileUtil::readFile(const std::string& path)
 	return std::string(file.data.get(), file.size);
 }
 
-void FileUtil::writeFile(const std::string& path, const std::string& contents)
+bool FileUtil::writeFile(const std::string& path, const std::string& contents)
 {
-	std::ofstream out(path, std::ofstream::binary);
-	assert(out);
-	out.write(contents.data(), contents.size());
-	out.close();
+	for(size_t iTry = 3; iTry--;)
+	{
+		std::ofstream out(path, std::ofstream::binary, _SH_DENYRW);
+		if(out.is_open())
+		{
+			out.write(contents.data(), contents.size());
+			out.close();
+			return true;
+		}
+		Sleep(500); // Wait before to retry
+	}
+	return false;
 }
 
 std::vector<std::string> FileUtil::splitExt(const std::string& filename)
