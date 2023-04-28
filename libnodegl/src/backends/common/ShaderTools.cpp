@@ -67,7 +67,7 @@ static json* getEntry(const json& data, const std::string& key)
 }
 ShaderTools::ShaderTools(bool verbose) : verbose(verbose)
 {
-	defaultIncludePaths = { "ngfx/data/shaders", "nodegl/data/shaders" };
+	defaultIncludePaths = { "nodegl/data/shaders" };
 }
 
 int ShaderTools::cmd(std::string str)
@@ -76,8 +76,8 @@ int ShaderTools::cmd(std::string str)
 	{
 		LOG(INFO, ">> %s", str.c_str());
 	}
-	else
-		str += " >> /dev/null 2>&1";
+
+	//str += " >> /dev/null 2>&1";
 	return system(str.c_str());
 }
 
@@ -228,11 +228,9 @@ int ShaderTools::compileShaderGLSL(std::string filename,
 								   std::vector<std::string>& outFiles, int flags)
 {
 	std::string parentPath = fs::path(filename).parent_path().string();
-	filename = fs::path(filename).filename().string();
-	std::string inFileName =
-		fs::path(parentPath + "/" + filename).make_preferred().string();
-	std::string outFileName =
-		fs::path(outDir + "/" + filename + ".spv").make_preferred().string();
+	filename = getFilename(filename);
+	std::string inFileName = getPath(parentPath, filename);
+	std::string outFileName = getPath(outDir, filename, ".spv");
 	if(!FileUtil::srcFileNewerThanOutFile(inFileName, outFileName))
 	{
 		outFiles.push_back(outFileName);
@@ -267,30 +265,36 @@ int ShaderTools::compileShaderMSL(const std::string& file,
 								  const MacroDefinitions& defines,
 								  std::string outDir, std::vector<std::string>& outFiles, int flags)
 {
-	std::string strippedFilename =
-		FileUtil::splitExt(fs::path(file).filename().string())[0];
-	std::string inFileName = fs::path(outDir + "/" + strippedFilename + ".metal")
-		.make_preferred()
-		.string();
-	std::string outFileName = fs::path(outDir + "/" + strippedFilename + ".metallib")
-		.make_preferred()
-		.string();
+	std::string strippedFilename = getFilenameNoExtension(file);
+	std::string inFileName = getPath(outDir, strippedFilename, ".metal");
+	std::string outFileName = getPath(outDir, strippedFilename, ".metallib");
 	if(!FileUtil::srcFileNewerThanOutFile(inFileName, outFileName))
 	{
 		outFiles.push_back(outFileName);
 		return 0;
 	}
-
+	int result = 0;
 	std::string debugFlags = ""; //-gline-tables-only -MO";
-	int result = cmd("xcrun -sdk macosx metal " + debugFlags + " -c " +
+
+	// Try compile (can fail because the shader is not good or because another process is using the file because of parallel unit test)
+	for(size_t iTry = 3; iTry--;)
+	{
+		result = cmd("xcrun -sdk macosx metal " + debugFlags + " -c " +
 					 inFileName + " -o " + outDir + "/" + strippedFilename +
 					 ".air && "
 					 "xcrun -sdk macosx metallib " +
 					 outDir + "/" + strippedFilename + ".air -o " + outFileName);
-	if(result == 0)
-		LOG(INFO, "compiled file: %s", file.c_str());
-	else
-		NGLI_ERR("cannot compile file: %s", file.c_str());
+		if(result == 0)
+		{
+			LOG(INFO, "compiled file: %s", file.c_str());
+			break;
+		}
+		else
+		{
+			LOG(ERROR, "cannot compile file: %s", file.c_str());
+			Sleep(500); // Wait before to retry
+		}
+	}
 	outFiles.push_back(outFileName);
 	return result;
 }
@@ -299,9 +303,9 @@ int ShaderTools::compileShaderHLSL(const std::string& file,
 								   const MacroDefinitions& defines,
 								   std::string outDir, std::vector<std::string>& outFiles, int flags)
 {
-	std::string filename = fs::path(file).filename().string();
+	std::string filename = getFilename(file);
 	std::string inFileName = fs::path(file).make_preferred().string();
-	std::string outFileName = fs::path(outDir + "/" + filename + ".dxc").make_preferred().string();
+	std::string outFileName = getPath(outDir, filename, ".dxc");
 	if(!FileUtil::srcFileNewerThanOutFile(inFileName, outFileName))
 	{
 		outFiles.push_back(outFileName);
@@ -324,18 +328,30 @@ int ShaderTools::compileShaderHLSL(const std::string& file,
 		shaderModel = "ps_6_0";
 	else if(strstr(inFileName.c_str(), ".comp") || strstr(inFileName.c_str(), "_compute"))
 		shaderModel = "cs_6_0";
+
 	const char* dxc_path_env = getenv("DXC_PATH");
 	std::string dxc_path = dxc_path_env ? std::string(dxc_path_env) : "dxc.exe";
-	int result = cmd(dxc_path + " /T " + shaderModel + " /Fo " + outFileName + " - D DIRECT3D12 " +
-					 inFileName + " -O3 -all-resources-bound -Fc " + outFileName + ".info");
-	if(flags & PATCH_SHADER_LAYOUTS_HLSL)
+	int result = 0;
+	// Try compile (can fail because the shader is not good or because another process is using the file because of parallel unit test)
+	for(size_t iTry = 3; iTry--;)
 	{
-		fs::remove(inFileName);
+		result = cmd(dxc_path + " /T " + shaderModel + " /Fo " + outFileName + " - D DIRECT3D12 " +
+						 inFileName + " -O3 -all-resources-bound -Fc " + outFileName + ".info");
+		if(flags & PATCH_SHADER_LAYOUTS_HLSL)
+		{
+			fs::remove(inFileName);
+		}
+		if(result == 0)
+		{
+			LOG(INFO, "compiled file: %s", file.c_str());
+			break;
+		}
+		else
+		{
+			LOG(ERROR, "cannot compile file: %s", file.c_str());
+			Sleep(500); // Wait before to retry
+		}
 	}
-	if(result == 0)
-		LOG(INFO, "compiled file: %s", file.c_str());
-	else
-		NGLI_ERR("cannot compile file: %s", file.c_str());
 	outFiles.push_back(outFileName);
 	return result;
 }
@@ -428,16 +444,11 @@ int ShaderTools::convertShader(const std::string& file, const std::string& extra
 							   std::string outDir, Format fmt,
 							   std::vector<std::string>& outFiles)
 {
-	auto splitFilename = FileUtil::splitExt(fs::path(file).filename().string());
-	std::string strippedFilename = splitFilename[0];
-	std::string ext = FileUtil::splitExt(strippedFilename)[1];
-	std::string inFileName = fs::path(outDir + "/" + strippedFilename + ".spv")
-		.make_preferred()
-		.string();
-	std::string outFileName = fs::path(outDir + "/" + strippedFilename +
-								  (fmt == FORMAT_MSL ? ".metal" : ".hlsl"))
-		.make_preferred()
-		.string();
+	std::string strippedFilename = getFilenameNoExtension(file);
+	std::string ext = getExtension(strippedFilename);
+	std::string inFileName = getPath(outDir, strippedFilename, ".spv");
+	std::string outFileName = getPath(outDir, strippedFilename, fmt == FORMAT_MSL ? ".metal" : ".hlsl");
+
 	if(!FileUtil::srcFileNewerThanOutFile(inFileName, outFileName))
 	{
 		outFiles.push_back(outFileName);
@@ -861,15 +872,13 @@ std::string ShaderTools::parseReflectionData(const json& reflectData, std::strin
 int ShaderTools::generateShaderMapGLSL(const std::string& file, std::string outDir,
 									   std::vector<std::string>& outFiles, int flags)
 {
-	std::string filename = fs::path(file).filename().string();
-	std::string ext = FileUtil::splitExt(filename)[1];
+	std::string filename = getFilename(file);
+	std::string ext = getExtension(filename);
 
-	std::string glslFileName =
-		fs::path(outDir + "/" + filename).make_preferred().string();
-	std::string spvFileName =
-		fs::path(outDir + "/" + filename + ".spv").make_preferred().string();
-	std::string glslMapFileName =
-		fs::path(outDir + "/" + filename + ".map").make_preferred().string();
+	std::string glslFileName = getPath(outDir, filename);
+	std::string spvFileName = getPath(outDir, filename, ".spv");
+	std::string glslMapFileName = getPath(outDir, filename, ".map");
+
 	if(!FileUtil::srcFileNewerThanOutFile(glslFileName, glslMapFileName))
 	{
 		outFiles.push_back(glslMapFileName);
@@ -889,18 +898,13 @@ int ShaderTools::generateShaderMapGLSL(const std::string& file, std::string outD
 int ShaderTools::generateShaderMapMSL(const std::string& file, std::string outDir,
 									  std::vector<std::string>& outFiles, int flags)
 {
-	auto splitFilename = FileUtil::splitExt(fs::path(file).filename().string());
-	std::string glslFilename = splitFilename[0];
-	std::string ext = FileUtil::splitExt(splitFilename[0])[1];
+	std::string glslFilename = getFilenameNoExtension(file);
+	std::string ext = getExtension(glslFilename);
 
-	std::string mslFileName = fs::path(outDir + "/" + glslFilename + ".metal")
-		.make_preferred()
-		.string();
-	std::string spvFileName =
-		fs::path(outDir + "/" + glslFilename + ".spv").make_preferred().string();
-	std::string mslMapFileName = fs::path(outDir + "/" + glslFilename + ".metal.map")
-		.make_preferred()
-		.string();
+	std::string mslFileName = getPath(outDir, glslFilename, ".metal");
+	std::string spvFileName = getPath(outDir, glslFilename, ".spv");
+	std::string mslMapFileName = getPath(outDir, glslFilename, ".metal.map");
+
 	if(!FileUtil::srcFileNewerThanOutFile(mslFileName, mslMapFileName))
 	{
 		outFiles.push_back(mslMapFileName);
@@ -920,17 +924,13 @@ int ShaderTools::generateShaderMapMSL(const std::string& file, std::string outDi
 int ShaderTools::generateShaderMapHLSL(const std::string& file, std::string outDir,
 									   std::vector<std::string>& outFiles, int flags)
 {
-	auto splitFilename = FileUtil::splitExt(fs::path(file).filename().string());
-	std::string glslFilename = splitFilename[0];
-	std::string ext = FileUtil::splitExt(splitFilename[0])[1];
+	std::string glslFilename = getFilenameNoExtension(file);
+	std::string ext = getExtension(glslFilename);
 
-	std::string hlslFileName =
-		fs::path(outDir + "/" + glslFilename + ".hlsl").make_preferred().string();
-	std::string spvFileName =
-		fs::path(outDir + "/" + glslFilename + ".spv").make_preferred().string();
-	std::string hlslMapFileName = fs::path(outDir + "/" + glslFilename + ".hlsl.map")
-		.make_preferred()
-		.string();
+	std::string hlslFileName = getPath(outDir, glslFilename, ".hlsl");
+	std::string spvFileName = getPath(outDir, glslFilename, ".spv");
+	std::string hlslMapFileName = getPath(outDir, glslFilename, ".hlsl.map");
+
 	if(!FileUtil::srcFileNewerThanOutFile(hlslFileName, hlslMapFileName))
 	{
 		outFiles.push_back(hlslMapFileName);
@@ -981,10 +981,9 @@ void ShaderTools::applyPatches(const std::vector<std::string>& patchFiles,
 {
 	for(const std::string& patchFile : patchFiles)
 	{
-		std::string filename = FileUtil::splitExt(fs::path(patchFile).string())[0];
+		std::string filename = getFilenameNoExtension(patchFile);
 		LOG(INFO, "filename: %s", filename.c_str());
-		std::string outFile =
-			fs::path(outDir + "/" + filename).make_preferred().string();
+		std::string outFile = getPath(outDir, filename);
 		if(fs::exists(outFile))
 		{
 			LOG(INFO, "applying patch: {patchFile}");
@@ -1010,4 +1009,23 @@ std::vector<std::string> ShaderTools::generateShaderMaps(const std::vector<std::
 	return outFiles;
 }
 
+std::string ShaderTools::getExtension(const std::string& path)
+{
+	return std::filesystem::path(path).extension().string();
+}
+
+std::string ShaderTools::getFilenameNoExtension(const std::string& path)
+{
+	return std::filesystem::path(path).stem().string();
+}
+
+std::string ShaderTools::getFilename(const std::string& path)
+{
+	return std::filesystem::path(path).filename().string();
+}
+
+std::string ShaderTools::getPath(const std::string& dir, const std::string& file, const std::string& extension)
+{
+	return (std::filesystem::path(dir) / (file + extension)).make_preferred().string();
+}
 }

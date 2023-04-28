@@ -30,19 +30,23 @@ namespace ngli
 bool File::read(const std::string& filename)
 {
 	std::filesystem::path tFilename = FileUtil::getAbsolutePath(filename);
-	std::ifstream in(tFilename.string(),
-					 std::ios::binary | std::ios::in | std::ios::ate);
-	if(!in.is_open())
+	for(size_t iTry = 3; iTry--;)
 	{
-		NGLI_ERR("cannot open file: %s", filename.c_str());
-		return false;
+		std::ifstream in(tFilename.string(),
+						 std::ios::binary | std::ios::in | std::ios::ate);
+		if(in.is_open())
+		{
+			size = int(in.tellg());
+			in.seekg(0, std::ios::beg);
+			data.reset(new char[size]);
+			in.read(data.get(), size);
+			in.close();
+			return true;
+		}
+		LOG(ERROR, "cannot open file: %s", filename.c_str());
+		Sleep(500); // Wait before to retry
 	}
-	size = int(in.tellg());
-	in.seekg(0, std::ios::beg);
-	data.reset(new char[size]);
-	in.read(data.get(), size);
-	in.close();
-	return true;
+	return false;
 }
 
 }
