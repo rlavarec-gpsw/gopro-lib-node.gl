@@ -259,6 +259,11 @@ static int d3d12_init(struct gpu_ctx *s)
     }
     else
     {
+        if(!config->window)
+        {
+            LOG(ERROR, "could not retrieve window");
+            return -1;
+        }
         if(config->capture_buffer)
         {
             LOG(ERROR, "capture_buffer is not supported by onscreen context");
