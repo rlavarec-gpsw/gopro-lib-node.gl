@@ -41,13 +41,24 @@ D3D12_TEXTURE_ADDRESS_MODE to_d3d12_wrap_mode(int wrap)
 	return wrap_map.at(wrap);
 }
 
-ngli::TextureType to_d3d12_texture_type(int type)
+ngli::TextureType to_d3d12_texture_type(int type, size_t nb_samples)
 {
 	static const std::map<int, ngli::TextureType> texture_type_map = {
 		{NGLI_TEXTURE_TYPE_2D,   ngli::TEXTURE_TYPE_2D  },
 		{NGLI_TEXTURE_TYPE_3D,   ngli::TEXTURE_TYPE_3D  },
 		{NGLI_TEXTURE_TYPE_CUBE, ngli::TEXTURE_TYPE_CUBE}
 	};
+	static const std::map<int, ngli::TextureType> texture_type_map_ms = {
+		{NGLI_TEXTURE_TYPE_2D,   ngli::TEXTURE_TYPE_2DMS  },
+		{NGLI_TEXTURE_TYPE_3D,   ngli::TEXTURE_TYPE_3D  },
+		{NGLI_TEXTURE_TYPE_CUBE, ngli::TEXTURE_TYPE_CUBE}
+	};
+
+	if(nb_samples > 1)
+	{
+		return texture_type_map_ms.at(type);
+	}
+	
 	return texture_type_map.at(type);
 }
 
@@ -164,8 +175,7 @@ AttachmentStoreOp to_d3d12_store_op(int op)
 ngli::D3DRenderPass* get_render_pass(ngli::D3DGraphicsContext* ctx,
 							const struct rendertarget_params* params)
 {
-	bool hasDepthStencilAttachment =
-		params->depth_stencil.attachment != nullptr;
+	bool hasDepthStencilAttachment = params->depth_stencil.attachment != nullptr;
 	ngli::D3DGraphicsContext::D3DRenderPassConfig rp_config;
 	rp_config.colorAttachmentDescriptions.resize(params->nb_colors);
 
@@ -178,24 +188,26 @@ ngli::D3DRenderPass* get_render_pass(ngli::D3DGraphicsContext* ctx,
 		v1.storeOp = to_d3d12_store_op(v0.store_op);
 	}
 	if(hasDepthStencilAttachment)
+	{
 		rp_config.depthStencilAttachmentDescription = {
 			to_d3d12_format(params->depth_stencil.attachment->params.format),
 			std::nullopt, std::nullopt, to_d3d12_load_op(params->depth_stencil.load_op),
 			to_d3d12_store_op(params->depth_stencil.store_op) };
+	}
 	else
+	{
 		rp_config.depthStencilAttachmentDescription = std::nullopt;
-	rp_config.enableDepthStencilResolve =
-		params->depth_stencil.resolve_target != nullptr;
-	rp_config.numSamples =
-		glm::max(params->colors[0].attachment->params.samples, 1);
+	}
+
+	rp_config.enableDepthStencilResolve = params->depth_stencil.resolve_target != nullptr;
+	rp_config.numSamples = glm::max(params->colors[0].attachment->params.samples, 1);
 	return ctx->getRenderPass(rp_config);
 }
 
 ngli::D3DRenderPass* get_compat_render_pass(ngli::D3DGraphicsContext* ctx,
 										 const struct rendertarget_desc& desc)
 {
-	bool hasDepthStencilAttachment =
-		desc.depth_stencil.format != NGLI_FORMAT_UNDEFINED;
+	bool hasDepthStencilAttachment = desc.depth_stencil.format != NGLI_FORMAT_UNDEFINED;
 	ngli::D3DGraphicsContext::D3DRenderPassConfig rp_config;
 	auto& colorAttachmentDescs = rp_config.colorAttachmentDescriptions;
 	colorAttachmentDescs.resize(desc.nb_colors);
@@ -208,11 +220,15 @@ ngli::D3DRenderPass* get_compat_render_pass(ngli::D3DGraphicsContext* ctx,
 		v1.storeOp = NGLI_STORE_OP_DONT_CARE;
 	}
 	if(hasDepthStencilAttachment)
+	{
 		rp_config.depthStencilAttachmentDescription = {
 			to_d3d12_format(desc.depth_stencil.format), std::nullopt, std::nullopt,
 			NGLI_LOAD_OP_DONT_CARE, NGLI_STORE_OP_DONT_CARE };
+	}
 	else
+	{
 		rp_config.depthStencilAttachmentDescription = std::nullopt;
+	}
 	rp_config.enableDepthStencilResolve = desc.colors[0].resolve;
 	rp_config.numSamples = glm::max(desc.samples, 1);
 	return ctx->getRenderPass(rp_config);

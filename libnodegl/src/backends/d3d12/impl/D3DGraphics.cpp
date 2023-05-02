@@ -341,8 +341,7 @@ void D3DGraphics::setRenderTargets(D3DCommandList* d3dCommandList,
 	const std::vector<D3DFramebuffer::D3DAttachment*>& colorAttachments,
 	const D3DFramebuffer::D3DAttachment* depthStencilAttachment)
 {
-	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> colorAttachmentHandles(
-		colorAttachments.size());
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> colorAttachmentHandles( colorAttachments.size() );
 	for(uint32_t j = 0; j < colorAttachments.size(); j++)
 		colorAttachmentHandles[j] = colorAttachments[j]->cpuDescriptor;
 	D3D_TRACE(d3dCommandList->mGraphicsCommandList->OMSetRenderTargets(
@@ -372,6 +371,8 @@ void D3DGraphics::endRenderPass(D3DCommandList* commandBuffer)
 			resourceBarrier(d3dCommandList, resolveAttachment,
 							D3D12_RESOURCE_STATE_PRESENT,
 							D3D12_RESOURCE_STATE_RESOLVE_DEST);
+
+			// This code enable to copy a multi-sampled resource into a non-multi-sampled resource.
 			D3D_TRACE(d3dCommandList->mGraphicsCommandList->ResolveSubresource(
 				resolveAttachment->resource, resolveAttachment->subresourceIndex,
 				colorAttachment->resource, colorAttachment->subresourceIndex,
