@@ -71,11 +71,12 @@ int d3d12_texture_init(struct texture* s, const struct texture_params* p)
     samplerDesc.AddressV = to_d3d12_wrap_mode(p->wrap_t);
     samplerDesc.AddressW = to_d3d12_wrap_mode(p->wrap_r);
 
+    size_t nb_samples = p->samples == 0 ? 1 : p->samples;
     s_priv->v = ngli::D3DTexture::newInstance(
         gpu_ctx, ctx->graphics, nullptr, to_d3d12_format(p->format), size,
         p->width, p->height, depth, array_layers, p->usage,
-        to_d3d12_texture_type(p->type), gen_mipmaps,
-        p->samples == 0 ? 1 : p->samples, &samplerDesc);
+        to_d3d12_texture_type(p->type, nb_samples), gen_mipmaps,
+        nb_samples, &samplerDesc);
 
     return 0;
 }

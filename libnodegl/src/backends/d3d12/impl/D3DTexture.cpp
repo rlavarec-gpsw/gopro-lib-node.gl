@@ -389,7 +389,12 @@ D3DTexture::getRtvDesc(TextureType textureType, DXGI_FORMAT format, uint32_t num
 {
 	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
 	rtvDesc.Format = getViewFormat(format, plane);
-	if(textureType == TEXTURE_TYPE_2D)
+	if(textureType == TEXTURE_TYPE_2DMS)
+	{
+		rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
+		rtvDesc.Texture2D.MipSlice = level;
+	}
+	else if(textureType == TEXTURE_TYPE_2D)
 	{
 		if(numSamples > 1)
 		{
@@ -402,7 +407,7 @@ D3DTexture::getRtvDesc(TextureType textureType, DXGI_FORMAT format, uint32_t num
 		}
 	}
 	else if(textureType == TEXTURE_TYPE_2D_ARRAY ||
-		textureType == TEXTURE_TYPE_CUBE)
+			textureType == TEXTURE_TYPE_CUBE)
 	{
 		if(numSamples > 1)
 		{
@@ -423,6 +428,10 @@ D3DTexture::getRtvDesc(TextureType textureType, DXGI_FORMAT format, uint32_t num
 		rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE3D;
 		rtvDesc.Texture3D.MipSlice = level;
 	}
+	else
+	{
+		ngli_assert(0);// Missing something
+	}
 	return rtvDesc;
 }
 D3DDescriptorHandle* D3DTexture::getRtvDescriptor(uint32_t level,
@@ -432,26 +441,37 @@ D3DDescriptorHandle* D3DTexture::getRtvDescriptor(uint32_t level,
 {
 	for(auto& rtvData : rtvDescriptorCache)
 	{
-		if(textureType == TEXTURE_TYPE_2D && numSamples > 1)
+		if((textureType == TEXTURE_TYPE_2D && numSamples > 1) ||
+			textureType == TEXTURE_TYPE_2DMS)
+		{
 			return rtvData.handle;
+		}
 		else if(textureType == TEXTURE_TYPE_2D &&
 			rtvData.desc.Texture2D.MipSlice == level)
+		{
 			return rtvData.handle;
+		}
 		else if((textureType == TEXTURE_TYPE_2D_ARRAY ||
 				 textureType == TEXTURE_TYPE_CUBE) &&
 			numSamples > 1 &&
 			rtvData.desc.Texture2DMSArray.FirstArraySlice == baseLayer &&
 			rtvData.desc.Texture2DMSArray.ArraySize == layerCount)
+		{
 			return rtvData.handle;
+		}
 		else if((textureType == TEXTURE_TYPE_2D_ARRAY ||
 				 textureType == TEXTURE_TYPE_CUBE) &&
 			rtvData.desc.Texture2DArray.MipSlice == level &&
 			rtvData.desc.Texture2DArray.FirstArraySlice == baseLayer &&
 			rtvData.desc.Texture2DArray.ArraySize == layerCount)
+		{
 			return rtvData.handle;
+		}
 		else if(textureType == TEXTURE_TYPE_3D &&
 			rtvData.desc.Texture3D.MipSlice == level)
+		{
 			return rtvData.handle;
+		}
 	}
 	// Create render target view
 	auto rtvDescriptorHeap = &ctx->d3dRtvDescriptorHeap;

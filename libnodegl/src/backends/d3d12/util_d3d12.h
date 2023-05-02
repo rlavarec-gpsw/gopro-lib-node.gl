@@ -35,7 +35,7 @@ class D3DRenderPass;
 }
 
 D3D12_TEXTURE_ADDRESS_MODE to_d3d12_wrap_mode(int wrap);
-ngli::TextureType to_d3d12_texture_type(int type);
+ngli::TextureType to_d3d12_texture_type(int type, size_t nb_samples);
 ngli::IndexFormat to_d3d12_index_format(int indices_format);
 D3D12_BLEND to_d3d12_blend_factor(int blend_factor);
 D3D12_BLEND_OP to_d3d12_blend_op(int blend_op);

@@ -57,7 +57,6 @@ int d3d12_rendertarget_init(struct rendertarget* s, const struct rendertarget_pa
         const attachment* color_attachment = &params->colors[i];
         const texture_d3d12* color_texture = (const texture_d3d12*)color_attachment->attachment;
         const texture_d3d12* resolve_texture = (const texture_d3d12*)color_attachment->resolve_target;
-        const texture_params* color_texture_params = &color_texture->parent.params;
         if(i == 0)
         {
             w = color_texture->v->w;
@@ -76,7 +75,6 @@ int d3d12_rendertarget_init(struct rendertarget* s, const struct rendertarget_pa
     if(depth_texture)
     {
         const texture_d3d12* resolve_texture =  (const texture_d3d12*)depth_attachment->resolve_target;
-        const texture_params* depth_texture_params = &depth_texture->parent.params;
         attachments.push_back({ depth_texture->v });
         if(resolve_texture)
             attachments.push_back({ resolve_texture->v });

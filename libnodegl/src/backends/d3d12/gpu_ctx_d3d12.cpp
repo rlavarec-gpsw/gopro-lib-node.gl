@@ -180,8 +180,6 @@ static int create_offscreen_resources(struct gpu_ctx *s)
 
     int usage = NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT |
                 NGLI_TEXTURE_USAGE_TRANSFER_SRC_BIT;
-    if (config->samples > 0)
-        usage |= NGLI_TEXTURE_USAGE_SAMPLED_BIT;
 
     auto &color_texture = offscreen_resources.color_texture;
 
@@ -190,6 +188,9 @@ static int create_offscreen_resources(struct gpu_ctx *s)
     if (res < 0)
         return res;
 
+	
+    struct texture_d3d12* color_texture_d3d12 = (struct texture_d3d12*)color_texture;
+    color_texture_d3d12->v->mID3D12Resource->SetName(L"color_texture"); // debug infos
 
     auto &color_resolve_texture = offscreen_resources.color_resolve_texture;
     if (config->samples)
@@ -202,6 +203,10 @@ static int create_offscreen_resources(struct gpu_ctx *s)
                              &color_resolve_texture);
         if (res < 0)
             return res;
+
+        struct texture_d3d12* color_resolve_texture_d3d12 = (struct texture_d3d12*)color_resolve_texture;
+        color_resolve_texture_d3d12->v->mID3D12Resource->SetName(L"color_resolve_texture"); // debug infos
+        color_resolve_texture_d3d12->v->mResolveMultiSamplingTarget = true;
     }
 
     // Depth stencil
@@ -215,9 +220,11 @@ static int create_offscreen_resources(struct gpu_ctx *s)
     if(res < 0)
         return res;
 
+    struct texture_d3d12* depth_stencil_texture_d3d12 = (struct texture_d3d12*)depth_stencil_texture;
+    depth_stencil_texture_d3d12->v->mID3D12Resource->SetName(L"depth_stencil_texture"); // debug infos
 
-    struct texture* color = color_resolve_texture ? color_resolve_texture : color_texture;
-    struct texture* resolve_color = color_resolve_texture ? color_texture    : NULL;
+    struct texture* color = color_texture;
+    struct texture* resolve_color = color_resolve_texture ? color_resolve_texture    : NULL;
 
     auto &rt = offscreen_resources.rt;
     // TODO: use STORE_OP_DONT_CARE for depth buffer?
