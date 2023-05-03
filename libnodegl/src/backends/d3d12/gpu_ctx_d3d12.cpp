@@ -427,11 +427,11 @@ static int d3d12_begin_draw(struct gpu_ctx *s, double t)
         s_priv->swapchain_util->acquire_image();
     }
     s_priv->cur_command_buffer = s_priv->graphics_context->drawCommandBuffer();
-    ngli::D3DCommandList *cmd_buf     = s_priv->cur_command_buffer;
+
 //    const struct ngl_config *config = &s->config;
-    cmd_buf->begin();
+    s_priv->cur_command_buffer->begin();
     if (s_priv->enable_profiling) {
-        s_priv->graphics->beginProfile(cmd_buf);
+        s_priv->graphics->beginProfile(s_priv->cur_command_buffer);
     }
     return 0;
 }

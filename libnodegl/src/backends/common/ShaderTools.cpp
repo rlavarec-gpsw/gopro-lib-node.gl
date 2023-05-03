@@ -819,6 +819,7 @@ std::string ShaderTools::parseReflectionData(const json& reflectData, std::strin
 		{"sampler3D", "DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER"},
 		{"samplerCube", "DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER"},
 		{"image2D", "DESCRIPTOR_TYPE_STORAGE_IMAGE"},
+		{"image3D", "DESCRIPTOR_TYPE_STORAGE_IMAGE"},
 		{"uniformBuffer", "DESCRIPTOR_TYPE_UNIFORM_BUFFER"},
 		{"shaderStorageBuffer", "DESCRIPTOR_TYPE_STORAGE_BUFFER"},
 		{"image2DArray", "DESCRIPTOR_TYPE_STORAGE_IMAGE"} };

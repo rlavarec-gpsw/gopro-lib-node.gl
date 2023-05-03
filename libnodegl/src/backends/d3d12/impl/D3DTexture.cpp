@@ -357,10 +357,17 @@ D3DDescriptorHandle* D3DTexture::getUavDescriptor(uint32_t mipLevel, uint32_t pl
 	if(textureType == TEXTURE_TYPE_CUBE)
 	{
 		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
-		uavDesc.Texture2DArray.ArraySize = 6;
+		uavDesc.Texture2DArray.ArraySize = 6; // Cube
 		uavDesc.Texture2DArray.FirstArraySlice = 0;
 		uavDesc.Texture2DArray.MipSlice = 0;
 		uavDesc.Texture2DArray.PlaneSlice = plane;
+	}
+	else if(textureType == TEXTURE_TYPE_3D)
+	{
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
+		uavDesc.Texture3D.MipSlice = mipLevel;
+		uavDesc.Texture3D.FirstWSlice = 0;
+		uavDesc.Texture3D.WSize = d - uavDesc.Texture3D.FirstWSlice;
 	}
 	else
 	{
