@@ -138,6 +138,7 @@ def _get_rtt_scene(
         width=size,
         height=size,
         min_filter="linear",
+        mag_filter="linear",
         mipmap_filter=mipmap_filter,
     )
     rtt = ngl.RenderToTexture(
