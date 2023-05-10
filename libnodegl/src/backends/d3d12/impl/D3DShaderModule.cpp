@@ -153,23 +153,21 @@ void D3DShaderModule::initBindings(std::ifstream& in,
 void D3DShaderModule::initBindings(const std::string& filename,
 								ShaderStageFlags shaderStages)
 {
-	std::filesystem::path tFilename = FileUtil::getAbsolutePath(filename);
-	std::ifstream in(tFilename.string());
-	if(!in.is_open())
-		NGLI_ERR("cannot open file: %s", tFilename.string().c_str());
-	initBindings(in, shaderStages);
-	in.close();
+	std::ifstream in;
+	if(FileUtil::open(in, filename))
+	{
+		initBindings(in, shaderStages);
+	}
 }
 
 void D3DVertexShaderModule::initBindings(const std::string& filename)
 {
-	std::filesystem::path tFilename = FileUtil::getAbsolutePath(filename);
-	std::ifstream in(tFilename.string());
-	if(!in.is_open())
-		NGLI_ERR("cannot open file: %s", filename.c_str());
-	parseAttributes(in, attributes);
-	D3DShaderModule::initBindings(in, SHADER_STAGE_VERTEX_BIT);
-	in.close();
+	std::ifstream in;
+	if(FileUtil::open(in, filename))
+	{
+		parseAttributes(in, attributes);
+		D3DShaderModule::initBindings(in, SHADER_STAGE_VERTEX_BIT);
+	}
 }
 
 
