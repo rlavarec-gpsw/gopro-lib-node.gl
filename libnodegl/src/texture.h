@@ -57,6 +57,7 @@ enum ImageUsageFlags
     NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT         = 1 << 4,
     NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT = 1 << 5,
     NGLI_TEXTURE_USAGE_TRANSIENT_ATTACHMENT_BIT     = 1 << 6,
+    NGLI_TEXTURE_USAGE_STORAGE_BIT_READ_ONLY        = 1 << 7,
 };
 
 enum texture_type {
@@ -86,6 +87,7 @@ struct texture_params {
     int wrap_t;
     int wrap_r;
     int usage;
+    char name[MAX_ID_LEN];
 };
 
 struct texture {

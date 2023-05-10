@@ -1285,6 +1285,7 @@ int ngli_hud_init(struct hud *s)
         .min_filter    = NGLI_FILTER_NEAREST,
         .mag_filter    = NGLI_FILTER_NEAREST,
         .usage         = NGLI_TEXTURE_USAGE_TRANSFER_DST_BIT | NGLI_TEXTURE_USAGE_SAMPLED_BIT,
+        .name = {0}
     };
     s->texture = ngli_texture_create(gpu_ctx);
     if (!s->texture)

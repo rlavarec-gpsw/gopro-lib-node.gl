@@ -63,6 +63,7 @@ static VkResult create_dummy_texture(struct gpu_ctx *s)
         .usage   = NGLI_TEXTURE_USAGE_SAMPLED_BIT |
                    NGLI_TEXTURE_USAGE_STORAGE_BIT |
                    NGLI_TEXTURE_USAGE_TRANSFER_DST_BIT,
+        .name = {0}
     };
 
     VkResult res = ngli_texture_vk_init(s_priv->dummy_texture, &params);
@@ -95,6 +96,7 @@ static VkResult create_texture(struct gpu_ctx *s, int format, int samples, int u
         .height  = s_priv->height,
         .samples = samples,
         .usage   = usage,
+        .name = {0}
     };
 
     VkResult res = ngli_texture_vk_init(texture, &params);
@@ -185,6 +187,7 @@ static VkResult create_render_resources(struct gpu_ctx *s)
                 .width            = s_priv->width,
                 .height           = s_priv->height,
                 .usage            = COLOR_USAGE,
+                .name = {0}
             };
 
             const struct texture_vk_wrap_params wrap_params = {

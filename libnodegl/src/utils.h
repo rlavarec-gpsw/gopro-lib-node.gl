@@ -50,6 +50,8 @@
     }                                                   \
 } while (0)
 
+#define MAX_ID_LEN 128
+
 #define NGLI_STATIC_ASSERT(id, c) typedef char ngli_checking_##id[(c) ? 1 : -1]
 
 #define NGLI_MIN(a, b) ((a) < (b) ? (a) : (b))

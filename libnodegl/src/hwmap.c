@@ -79,6 +79,7 @@ static int init_hwconv(struct hwmap *hwmap)
         .wrap_s        = params->texture_wrap_s,
         .wrap_t        = params->texture_wrap_t,
         .usage         = params->texture_usage | NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT,
+        .name = {0}
     };
 
     hwmap->hwconv_texture = ngli_texture_create(gpu_ctx);

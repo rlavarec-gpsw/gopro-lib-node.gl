@@ -57,7 +57,8 @@ static int create_dummy_texture(struct gpu_ctx *s)
         .height  = 1,
         .samples = 1,
         .usage   = NGLI_TEXTURE_USAGE_SAMPLED_BIT |
-                 NGLI_TEXTURE_USAGE_TRANSFER_SRC_BIT};
+                 NGLI_TEXTURE_USAGE_TRANSFER_SRC_BIT,
+        .name = {0} };
 
     ngli_texture_init(dummy_texture, &dummy_texture_params);
     return 0;
@@ -84,6 +85,7 @@ static int create_texture(gpu_ctx *s, int format, int width, int height,
         .height  = height,
         .samples = samples,
         .usage   = usage,
+        .name = {0}
     };
 
     int res = ngli_texture_init(texture, &params);

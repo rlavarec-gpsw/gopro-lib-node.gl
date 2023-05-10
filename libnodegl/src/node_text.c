@@ -442,6 +442,7 @@ static int atlas_create(struct ngl_node *node)
         .usage         = NGLI_TEXTURE_USAGE_TRANSFER_SRC_BIT
                        | NGLI_TEXTURE_USAGE_TRANSFER_DST_BIT
                        | NGLI_TEXTURE_USAGE_SAMPLED_BIT,
+        .name = {0}
     };
 
     ctx->font_atlas = ngli_texture_create(gpu_ctx); // freed at context reconfiguration/destruction
