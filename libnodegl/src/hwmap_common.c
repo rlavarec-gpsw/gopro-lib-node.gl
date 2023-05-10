@@ -212,6 +212,7 @@ static int common_init(struct hwmap *hwmap, struct sxplayer_frame *frame)
             .wrap_s        = params->texture_wrap_s,
             .wrap_t        = params->texture_wrap_t,
             .usage         = params->texture_usage,
+            .name = { 0 }
         };
 
         common->planes[i] = ngli_texture_create(gpu_ctx);

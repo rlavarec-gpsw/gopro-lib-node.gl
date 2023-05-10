@@ -130,6 +130,7 @@ static int register_texture(struct pass *s, const char *name, struct ngl_node *t
         .clamp_video = texture_opts->clamp_video,
     };
     snprintf(crafter_texture.name, sizeof(crafter_texture.name), "%s", name);
+    snprintf(texture_priv->params.name, sizeof(texture_priv->params.name), "%s", name);
 
     switch (texture->cls->id) {
     case NGL_NODE_TEXTURE2D:
@@ -157,6 +158,11 @@ static int register_texture(struct pass *s, const char *name, struct ngl_node *t
                 /* Disable direct rendering when using image load/store */
                 texture_priv->supported_image_layouts = 1 << NGLI_IMAGE_LAYOUT_DEFAULT;
                 texture_priv->params.usage |= NGLI_TEXTURE_USAGE_STORAGE_BIT;
+
+                if(!resprops->writable)
+                {
+                    texture_priv->params.usage |= NGLI_TEXTURE_USAGE_STORAGE_BIT_READ_ONLY;
+                }
 
                 switch (texture->cls->id) {
                 case NGL_NODE_TEXTURECUBE:

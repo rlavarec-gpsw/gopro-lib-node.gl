@@ -26,7 +26,7 @@
 
 #include "buffer.h"
 #include "darray.h"
-#include "program.h" // MAX_ID_LEN
+#include "utils.h" // MAX_ID_LEN
 
 enum block_layout {
     NGLI_BLOCK_LAYOUT_UNKNOWN,

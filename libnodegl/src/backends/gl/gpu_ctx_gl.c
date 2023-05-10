@@ -113,6 +113,7 @@ static int wrap_capture_cvpixelbuffer(struct gpu_ctx *s,
         .width  = width,
         .height = height,
         .usage  = NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT,
+        .name = {0}
     };
 
     const struct texture_gl_wrap_params wrap_params = {
@@ -174,6 +175,7 @@ static int wrap_capture_cvpixelbuffer(struct gpu_ctx *s,
         .width  = width,
         .height = height,
         .usage  = NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT,
+        .name = {0}
     };
 
     const struct texture_gl_wrap_params wrap_params = {
@@ -244,6 +246,7 @@ static int create_texture(struct gpu_ctx *s, int format, int samples, struct tex
         .height  = config->height,
         .samples = samples,
         .usage   = NGLI_TEXTURE_USAGE_COLOR_ATTACHMENT_BIT,
+        .name = {0}
     };
 
     int ret = ngli_texture_init(texture, &params);

@@ -25,7 +25,6 @@
 
 struct gpu_ctx;
 
-#define MAX_ID_LEN 128
 
 struct program_variable_info {
     int binding;

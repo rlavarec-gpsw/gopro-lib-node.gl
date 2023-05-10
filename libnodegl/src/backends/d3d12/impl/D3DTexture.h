@@ -100,6 +100,27 @@ public:
 	D3DDescriptorHandle* getUavDescriptor(uint32_t mipLevel, uint32_t plane = 0);
 	void setName(const std::string& name);
 
+private:
+	void getResourceDesc();
+	void createResource();
+	void createDepthStencilView();
+	void downloadFn(D3DCommandList* cmdList, D3DReadbackBuffer& readbackBuffer,
+					D3D12_BOX& srcRegion,
+					D3D12_PLACED_SUBRESOURCE_FOOTPRINT& dstFootprint,
+					int subresourceIndex = 0);
+	void uploadFn(D3DCommandList* cmdList, void* data, uint32_t size,
+				  D3DBuffer* stagingBuffer, uint32_t x = 0, uint32_t y = 0,
+				  uint32_t z = 0, int32_t w = -1, int32_t h = -1, int32_t d = -1,
+				  int32_t arrayLayers = -1, int32_t numPlanes = -1,
+				  int32_t dataPitch = -1);
+	void generateMipmapsFn(D3DCommandList* cmdList);
+	DXGI_FORMAT getViewFormat(DXGI_FORMAT resourceFormat, uint32_t planeIndex = 0);
+	D3D12_RENDER_TARGET_VIEW_DESC
+		getRtvDesc(TextureType textureType, DXGI_FORMAT format, uint32_t numSamples,
+			uint32_t level, uint32_t baseLayer, uint32_t layerCount, uint32_t plane);
+
+	void setRessourceName();
+
 public:
 	ComPtr<ID3D12Resource> mID3D12Resource;
 
@@ -145,31 +166,17 @@ public:
 	};
 	std::unique_ptr<GenMipmapData> genMipmapData;
 
-	std::string name;
 	DXGI_FORMAT format;
 	uint32_t w = 0, h = 0, d = 1, arrayLayers = 1, mipLevels = 1, numSamples = 1;
 	uint32_t size = 0;
 	std::vector<uint32_t> planeWidth, planeHeight, planeSize;
 	ImageUsageFlags imageUsageFlags;
 	TextureType textureType;
+
 private:
-	void getResourceDesc();
-	void createResource();
-	void createDepthStencilView();
-	void downloadFn(D3DCommandList* cmdList, D3DReadbackBuffer& readbackBuffer,
-					D3D12_BOX& srcRegion,
-					D3D12_PLACED_SUBRESOURCE_FOOTPRINT& dstFootprint,
-					int subresourceIndex = 0);
-	void uploadFn(D3DCommandList* cmdList, void* data, uint32_t size,
-				  D3DBuffer* stagingBuffer, uint32_t x = 0, uint32_t y = 0,
-				  uint32_t z = 0, int32_t w = -1, int32_t h = -1, int32_t d = -1,
-				  int32_t arrayLayers = -1, int32_t numPlanes = -1,
-				  int32_t dataPitch = -1);
-	void generateMipmapsFn(D3DCommandList* cmdList);
-	DXGI_FORMAT getViewFormat(DXGI_FORMAT resourceFormat, uint32_t planeIndex = 0);
-	D3D12_RENDER_TARGET_VIEW_DESC
-		getRtvDesc(TextureType textureType, DXGI_FORMAT format, uint32_t numSamples,
-			uint32_t level, uint32_t baseLayer, uint32_t layerCount, uint32_t plane);
+
+	std::string name;
+
 	D3DGraphicsContext* ctx = nullptr;
 	D3DGraphics* graphics = nullptr;
 	ID3D12Device* d3dDevice = nullptr;

@@ -44,6 +44,7 @@ void D3DTexture::getResourceDesc()
 		resourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 	if(imageUsageFlags & NGLI_TEXTURE_USAGE_STORAGE_BIT)
 		resourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
 //	auto d3dDevice = ctx->d3dDevice.mID3D12Device.Get();
 	bool isSampled = (imageUsageFlags & NGLI_TEXTURE_USAGE_SAMPLED_BIT);
 	if(textureType == TEXTURE_TYPE_3D)
@@ -77,7 +78,7 @@ void D3DTexture::createResource()
 		&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
 		D3D12_RESOURCE_STATE_COPY_DEST, isRenderTarget ? &clearValue : nullptr,
 		IID_PPV_ARGS(&mID3D12Resource)));
-	mID3D12Resource->SetName(L"D3DTexture");
+	setRessourceName();
 }
 
 void D3DTexture::createDepthStencilView()
@@ -549,6 +550,10 @@ void D3DTexture::upload(void* data, uint32_t size, uint32_t x, uint32_t y,
 		(imageUsageFlags & NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
 		? D3D12_RESOURCE_STATE_DEPTH_WRITE
 		: D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE; //TODO: optimize
+
+	if(imageUsageFlags & NGLI_TEXTURE_USAGE_STORAGE_BIT_READ_ONLY)
+		resourceState = D3D12_RESOURCE_STATE_GENERIC_READ | D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+
 	resourceBarrierTransition(&copyCommandList, resourceState);
 	copyCommandList.end();
 	ctx->d3dCommandQueue.submit(copyCommandList.mGraphicsCommandList.Get(), nullptr);
@@ -770,9 +775,17 @@ void D3DTexture::resourceBarrierTransition(D3DCommandList* cmdList,
 
 void D3DTexture::setName(const std::string& name)
 {
-	mID3D12Resource->SetName(StringUtil::toWString(name).c_str());
 	this->name = name;
+
+	setRessourceName();
 }
 
+void D3DTexture::setRessourceName()
+{
+	if(!mID3D12Resource)
+		return;
+	std::wstring tTextureName = L"D3DTexture:" + StringUtil::toWString(name);
+	mID3D12Resource->SetName(tTextureName.c_str());
+}
 
 }
