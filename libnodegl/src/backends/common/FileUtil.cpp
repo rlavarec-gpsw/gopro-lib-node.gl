@@ -89,6 +89,23 @@ void FileUtil::remove(const fs::path& path)
 	RETRY_WITH_TIMEOUT(fs::remove(path), 3000);
 }
 
+
+bool FileUtil::open(std::ifstream& in, const std::string& filename)
+{
+	std::filesystem::path tFilename = FileUtil::getAbsolutePath(filename);
+	for(size_t iTry = 3; iTry--;)
+	{
+		in.open(tFilename);
+		if(in.is_open())
+		{
+			return true;
+		}
+		LOG(ERROR, "cannot open file: %s", filename.c_str());
+		Sleep(500); // Wait before to retry
+	}
+	return false;
+}
+
 std::filesystem::path FileUtil::getAbsolutePath(const std::string& path)
 {
 	std::filesystem::path tFilename = path;

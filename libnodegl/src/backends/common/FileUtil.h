@@ -55,6 +55,8 @@ public:
 	static bool exists(const std::filesystem::path& path);
 	static void remove(const std::filesystem::path& path);
 
+	static bool open(std::ifstream& in, const std::string& filename);
+
 	static std::filesystem::path getAbsolutePath(const std::string& path);
 };
 }; // namespace ngli
