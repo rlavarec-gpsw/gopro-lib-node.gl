@@ -369,18 +369,18 @@ static int d3d12_init(struct gpu_ctx *s)
 
     // TODO: query programmatically
 
-    s->limits.max_color_attachments              = 8;
-    s->limits.max_texture_dimension_1d           = 16384;
-    s->limits.max_texture_dimension_2d           = 16384;
-    s->limits.max_texture_dimension_3d           = 2048;
-    s->limits.max_texture_dimension_cube         = 16384;
-    s->limits.max_compute_work_group_count[0]    = 65535;
-    s->limits.max_compute_work_group_count[1]    = 65535;
-    s->limits.max_compute_work_group_count[2]    = 65535;
-    s->limits.max_compute_work_group_invocations = 1024;
-    s->limits.max_compute_work_group_size[0]     = 1024;
-    s->limits.max_compute_work_group_size[1]     = 1024;
-    s->limits.max_compute_work_group_size[2]     = 1024;
+    s->limits.max_color_attachments              = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; // 8
+    s->limits.max_texture_dimension_1d           = D3D12_REQ_TEXTURE1D_U_DIMENSION; // 16384
+    s->limits.max_texture_dimension_2d           = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION; // 16384
+    s->limits.max_texture_dimension_3d           = D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION; // 2048
+    s->limits.max_texture_dimension_cube         = D3D12_REQ_TEXTURECUBE_DIMENSION; // 16384
+    s->limits.max_compute_work_group_count[0]    = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION; // 65535
+    s->limits.max_compute_work_group_count[1]    = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+    s->limits.max_compute_work_group_count[2]    = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+    s->limits.max_compute_work_group_invocations = D3D12_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP; // 1024
+    s->limits.max_compute_work_group_size[0]     = D3D12_CS_THREAD_GROUP_MAX_X; // 1024
+    s->limits.max_compute_work_group_size[1]     = D3D12_CS_THREAD_GROUP_MAX_Y; // 1024
+    s->limits.max_compute_work_group_size[2]     = D3D12_CS_THREAD_GROUP_MAX_Z; // 64
     s->limits.max_draw_buffers        = s->limits.max_color_attachments;
     s->limits.max_samples             = 8;
     s->limits.max_texture_image_units = 0;
