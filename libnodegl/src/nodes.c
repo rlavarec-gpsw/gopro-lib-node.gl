@@ -34,6 +34,15 @@
 #include "utils.h"
 #include "nodes_register.h"
 
+// Should switch to _Atomic on all platforms once MSVC support gets beyond experimental
+#if defined (_WIN32)
+#include <winnt.h>
+#define ngli_atomic_add(ptr, num) InterlockedExchangeAdd ((ptr), (num))
+#else
+#include <stdatomic.h>
+#define ngli_atomic_add(ptr, num) __sync_fetch_and_add ((ptr), (num))
+#endif
+
 enum {
     STATE_INIT_FAILED   = -1,
     STATE_UNINITIALIZED = 0, /* post uninit(), default */
@@ -540,7 +549,7 @@ static int node_set_ctx(struct ngl_node *node, struct ngl_ctx *ctx, struct ngl_c
         if (node->state > STATE_UNINITIALIZED) {
             if (node->ctx != pctx)
                 return 0;
-            if (node->ctx_refcount-- == 1) {
+            if (ngli_atomic_add(&node->ctx_refcount, -1) == 1) {
                 node_uninit(node);
                 node->ctx = NULL;
             }
@@ -559,7 +568,7 @@ static int node_set_ctx(struct ngl_node *node, struct ngl_ctx *ctx, struct ngl_c
             node->ctx = NULL;
             return ret;
         }
-        node->ctx_refcount++;
+        ngli_atomic_add(&node->ctx_refcount, 1);
     }
 
     return 0;
@@ -1015,7 +1024,7 @@ int ngl_node_param_set_dict(struct ngl_node *node, const char *key, const char *
 
 struct ngl_node *ngl_node_ref(struct ngl_node *node)
 {
-    node->refcount++;
+    ngli_atomic_add(&node->refcount, 1);
     return node;
 }
 
@@ -1025,7 +1034,7 @@ void ngl_node_unrefp(struct ngl_node **nodep)
 
     if (!node)
         return;
-    const int delete = node->refcount-- == 1;
+    const int delete = ngli_atomic_add(&node->refcount, -1) == 1;
     if (delete) {
         LOG(VERBOSE, "DELETE %s @ %p", node->label, node);
         ngli_assert(!node->ctx);
