@@ -67,7 +67,7 @@ static int create_dummy_texture(struct gpu_ctx *s)
 static void destroy_dummy_texture(struct gpu_ctx *s)
 {
     struct gpu_ctx_d3d12 *s_priv = (gpu_ctx_d3d12 *)s;
-
+    // dummy_texture is tested before to be delete
     ngli_texture_freep(&s_priv->dummy_texture);
 }
 
@@ -171,6 +171,7 @@ static int create_onscreen_resources(struct gpu_ctx *s)
     gpu_ctx_d3d12 *s_priv = (gpu_ctx_d3d12 *)s;
     // use d3d12 default renderpass
     s_priv->default_rendertarget = nullptr;
+    s_priv->default_rendertarget_load = nullptr;
     return 0;
 }
 
