@@ -120,5 +120,6 @@ int ngli_get_filesize(const char *name, int64_t *size);
 char *ngli_numbered_lines(const char *s);
 int ngli_config_copy(struct ngl_config *dst, const struct ngl_config *src);
 void ngli_config_reset(struct ngl_config *config);
+int ngli_atomic_fetch_add_i32(int *obj, int arg);
 
 #endif /* UTILS_H */

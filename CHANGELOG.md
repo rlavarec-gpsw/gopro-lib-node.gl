@@ -9,6 +9,12 @@ Versioning](https://semver.org/spec/v2.0.0.html) for `libnodegl`.
 
 ## [Unreleased]
 
+### Fixed
+- rtt unit tests on Mac ARM architecture now pass
+
+### Changed
+- ref count changes across node.gl, but particularly in nodes, are now atomic
+
 ## [2023.1] [libnodegl 0.8.0] - 2023-04-03
 ### Fixed
 - Make-release now works on Mac

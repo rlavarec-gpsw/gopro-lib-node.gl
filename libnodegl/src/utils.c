@@ -24,7 +24,9 @@
 #ifdef _WIN32
 #define POW10_9 1000000000
 #include <Windows.h>
+#include <winnt.h>
 #else
+#include <stdatomic.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -291,4 +293,14 @@ void ngli_config_reset(struct ngl_config *config)
     ngli_freep(&config->backend_config);
     ngli_freep(&config->hud_export_filename);
     memset(config, 0, sizeof(*config));
+}
+
+// Should switch to _Atomic variables on all platforms once MSVC support gets beyond experimental
+int ngli_atomic_fetch_add_i32(int *obj, int arg)
+{
+#ifdef _WIN32
+    return InterlockedExchangeAdd (obj, arg);
+#else
+    return __sync_fetch_and_add(obj, arg);
+#endif
 }

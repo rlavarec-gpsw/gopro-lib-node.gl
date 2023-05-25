@@ -24,6 +24,7 @@
 #include "gpu_ctx_vk.h"
 #include "log.h"
 #include "memory.h"
+#include "utils.h"
 #include "vkutils.h"
 #include "ycbcr_sampler_vk.h"
 
@@ -127,7 +128,7 @@ int ngli_ycbcr_sampler_vk_is_compat(const struct ycbcr_sampler_vk *s,
 
 struct ycbcr_sampler_vk *ngli_ycbcr_sampler_vk_ref(struct ycbcr_sampler_vk *s)
 {
-    s->refcount++;
+    ngli_atomic_fetch_add_i32(&s->refcount, 1);
     return s;
 }
 
@@ -137,7 +138,7 @@ void ngli_ycbcr_sampler_vk_unrefp(struct ycbcr_sampler_vk **sp)
     if (!s)
         return;
 
-    if (s->refcount-- == 1) {
+    if (ngli_atomic_fetch_add_i32(&s->refcount, -1) == 1) {
         struct gpu_ctx *gpu_ctx = s->gpu_ctx;
         struct gpu_ctx_vk *gpu_ctx_vk = (struct gpu_ctx_vk *)gpu_ctx;
         struct vkcontext *vk = gpu_ctx_vk->vkcontext;
