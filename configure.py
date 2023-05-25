@@ -344,7 +344,7 @@ def _shaderc_install(cfg):
 def _d3dx12_ShaderCompiler_install(cfg):
     if _SYSTEM == "Windows":
         d3d12_list_bin = op.join(_ROOTDIR, "external", "d3dx12_ShaderCompiler" , "bin", "x64", "*.*")
-        return [f"xcopy /Y \"{d3d12_list_bin}\" \"{cfg.bin_path}\""]
+        return [f"(xcopy /Y \"{d3d12_list_bin}\" \"{cfg.bin_path}\")"]
     return []
 
 
@@ -353,7 +353,7 @@ def _d3dx12_AgilitySDK_install(cfg):
     if _SYSTEM == "Windows":
         d3d12_list_bin = op.join(_ROOTDIR, "external", "d3dx12_AgilitySDK" , "build", "native", "bin", "x64", "*.*")
         d3d12_output = op.join(cfg.bin_path, "D3D12")  # Need to ouput inside D3D12 related to "d3d12_declare_agility_SDK.c"
-        return [f"xcopy /Y /I \"{d3d12_list_bin}\" \"{d3d12_output}\""]
+        return [f"(xcopy /Y /I \"{d3d12_list_bin}\" \"{d3d12_output}\")"]
     return []
 
 
@@ -435,7 +435,7 @@ def _pynodegl_install(cfg):
     ret = ["$(PIP) " + _cmd_join("-v", "install", "-e", op.join(".", "pynodegl"))]
     if _SYSTEM == "Windows":
         dlls = op.join(cfg.prefix, "Scripts", "*.dll")
-        ret += [f"xcopy /Y {dlls} pynodegl\\."]
+        ret += [f"(xcopy /Y {dlls} pynodegl\\.)"]
     else:
         rpath = op.join(cfg.prefix, "lib")
         ldflags = f"-Wl,-rpath,{rpath}"
