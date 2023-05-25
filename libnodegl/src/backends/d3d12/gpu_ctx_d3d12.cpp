@@ -367,13 +367,25 @@ static int d3d12_init(struct gpu_ctx *s)
             to_ngli_format(graphics_context->depthStencilFormat);
     }
 
-    // TODO: query programmatically
+    
+    /* max_texture_image_units is specific to the OpenGL backend and has no
+     * direct D3D12 equivalent so use a sane default value */
+    // https://developer.nvidia.com/dx12-dos-and-donts
+    //    Make sure to devise ways to deal with varying resource binding Tiers within a device feature level
+    //        UAV count across all stages may be limited to 8 or 64
+    //        CBV count may be limited to 14 per stage
+    //        Sampler count may be limited to 16 per stage
+    s->limits.max_texture_image_units            = 32;
 
-    s->limits.max_color_attachments              = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; // 8
+    //
+    // https://gpuweb.github.io/gpuweb/correspondence/
+    //
     s->limits.max_texture_dimension_1d           = D3D12_REQ_TEXTURE1D_U_DIMENSION; // 16384
     s->limits.max_texture_dimension_2d           = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION; // 16384
     s->limits.max_texture_dimension_3d           = D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION; // 2048
     s->limits.max_texture_dimension_cube         = D3D12_REQ_TEXTURECUBE_DIMENSION; // 16384
+    s->limits.max_color_attachments              = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; // 8
+    s->limits.max_draw_buffers                   = s->limits.max_color_attachments;
     s->limits.max_compute_work_group_count[0]    = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION; // 65535
     s->limits.max_compute_work_group_count[1]    = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
     s->limits.max_compute_work_group_count[2]    = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
@@ -381,10 +393,11 @@ static int d3d12_init(struct gpu_ctx *s)
     s->limits.max_compute_work_group_size[0]     = D3D12_CS_THREAD_GROUP_MAX_X; // 1024
     s->limits.max_compute_work_group_size[1]     = D3D12_CS_THREAD_GROUP_MAX_Y; // 1024
     s->limits.max_compute_work_group_size[2]     = D3D12_CS_THREAD_GROUP_MAX_Z; // 64
-    s->limits.max_draw_buffers        = s->limits.max_color_attachments;
-    s->limits.max_samples             = 8;
-    s->limits.max_texture_image_units = 0;
-    s->limits.max_uniform_block_size  = INT_MAX;
+    s->limits.max_compute_shared_memory_size     = 32*1024;                     // 32KiB
+    s->limits.min_uniform_block_offset_alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT; // 256
+    s->limits.min_storage_block_offset_alignment = std::max(32, D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT); // 32
+    s->limits.max_samples                        = 8;
+    s->limits.max_uniform_block_size             = INT_MAX;
 
     if (config->hud)
         ctx->enable_profiling = true;
