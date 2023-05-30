@@ -69,7 +69,7 @@ void D3DTexture::getResourceDesc()
 	}
 }
 
-void D3DTexture::createResource()
+HRESULT D3DTexture::createResource()
 {
 	HRESULT hResult;
 	D3D12_CLEAR_VALUE clearValue = { DXGI_FORMAT(format), {0.0f, 0.0f, 0.0f, 0.0f} };
@@ -79,6 +79,7 @@ void D3DTexture::createResource()
 		D3D12_RESOURCE_STATE_COPY_DEST, isRenderTarget ? &clearValue : nullptr,
 		IID_PPV_ARGS(&mID3D12Resource)));
 	setRessourceName();
+	return hResult;
 }
 
 void D3DTexture::createDepthStencilView()
@@ -101,7 +102,6 @@ void D3DTexture::init(D3DGraphicsContext* ctx, D3DGraphics* graphics, void* data
 						TextureType textureType, bool genMipmaps,
 						uint32_t numSamples, const D3DSamplerDesc* samplerDesc, int32_t dataPitch)
 {
-	//HRESULT hResult;
 	this->ctx = ctx;
 	this->graphics = graphics;
 	this->w = w;
@@ -139,7 +139,9 @@ void D3DTexture::init(D3DGraphicsContext* ctx, D3DGraphics* graphics, void* data
 	getResourceDesc();
 	isRenderTarget =
 		(resourceFlags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
-	createResource();
+	HRESULT hResult = createResource();
+	if(FAILED(hResult))
+		mErrorState = NGL_ERROR_MEMORY;
 
 	for(auto& s : mCurrentResourceState)
 		s = D3D12_RESOURCE_STATE_COPY_DEST;
@@ -540,11 +542,12 @@ void D3DTexture::upload(void* data, uint32_t size, uint32_t x, uint32_t y,
 		uint64_t stagingBufferSize;
 		D3D_TRACE(stagingBufferSize =
 			GetRequiredIntermediateSize(mID3D12Resource.Get(), 0, arrayLayers * numPlanes));
-		stagingBuffer.init(ctx, nullptr, uint32_t(stagingBufferSize),
-			D3D12_HEAP_TYPE_UPLOAD);
+		if(!stagingBuffer.init(ctx, nullptr, uint32_t(stagingBufferSize), D3D12_HEAP_TYPE_UPLOAD))
+		{
+			mErrorState = NGL_ERROR_MEMORY;
+		}
 		stagingBuffer.mID3D12Resource->SetName(L"StagingBuffer");
-		uploadFn(&copyCommandList, data, size, &stagingBuffer, x, y, z, w, h, d,
-			arrayLayers, numPlanes, dataPitch);
+		uploadFn(&copyCommandList, data, size, &stagingBuffer, x, y, z, w, h, d, arrayLayers, numPlanes, dataPitch);
 	}
 	D3D12_RESOURCE_STATES resourceState =
 		(imageUsageFlags & NGLI_TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
@@ -578,7 +581,7 @@ void D3DTexture::generateMipmaps(D3DCommandList* commandBuffer)
 }
 
 //TODO: support sub-region update (use CopySubResourceRegion)
-void D3DTexture::uploadFn(D3DCommandList* cmdList, void* data, uint32_t,
+bool D3DTexture::uploadFn(D3DCommandList* cmdList, void* data, uint32_t,
 	D3DBuffer* stagingBuffer, uint32_t, uint32_t,
 	uint32_t, int32_t, int32_t, int32_t,
 	int32_t, int32_t, int32_t dataPitch)
@@ -603,7 +606,13 @@ void D3DTexture::uploadFn(D3DCommandList* cmdList, void* data, uint32_t,
 			UpdateSubresources(cmdList->mGraphicsCommandList.Get(), mID3D12Resource.Get(), stagingBuffer->mID3D12Resource.Get(), 0,
 				0, arrayLayers * numPlanes, textureData.data());
 		assert(bufferSize);
+		if(bufferSize == 0)
+		{
+			mErrorState = NGL_ERROR_MEMORY;
+			return false;
+		}
 	}
+	return true;
 }
 
 void D3DTexture::download(void* data, uint32_t size, uint32_t x, uint32_t y,
@@ -778,6 +787,11 @@ void D3DTexture::setName(const std::string& name)
 	this->name = name;
 
 	setRessourceName();
+}
+
+int D3DTexture::getErrorState()
+{
+	return mErrorState;
 }
 
 void D3DTexture::setRessourceName()

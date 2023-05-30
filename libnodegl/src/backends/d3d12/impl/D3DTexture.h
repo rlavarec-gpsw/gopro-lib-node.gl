@@ -100,15 +100,17 @@ public:
 	D3DDescriptorHandle* getUavDescriptor(uint32_t mipLevel, uint32_t plane = 0);
 	void setName(const std::string& name);
 
+	int getErrorState();
+
 private:
 	void getResourceDesc();
-	void createResource();
+	HRESULT createResource();
 	void createDepthStencilView();
 	void downloadFn(D3DCommandList* cmdList, D3DReadbackBuffer& readbackBuffer,
 					D3D12_BOX& srcRegion,
 					D3D12_PLACED_SUBRESOURCE_FOOTPRINT& dstFootprint,
 					int subresourceIndex = 0);
-	void uploadFn(D3DCommandList* cmdList, void* data, uint32_t size,
+	bool uploadFn(D3DCommandList* cmdList, void* data, uint32_t size,
 				  D3DBuffer* stagingBuffer, uint32_t x = 0, uint32_t y = 0,
 				  uint32_t z = 0, int32_t w = -1, int32_t h = -1, int32_t d = -1,
 				  int32_t arrayLayers = -1, int32_t numPlanes = -1,
@@ -174,6 +176,9 @@ public:
 	TextureType textureType;
 
 private:
+
+	// Stock error state when creating the texture
+	int mErrorState = 0;
 
 	std::string name;
 
