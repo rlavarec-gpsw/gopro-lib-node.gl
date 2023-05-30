@@ -389,14 +389,14 @@ def _nodegl_setup(cfg):
         extra_library_dirs += [
             op.join(cfg.prefix, "Lib"),
             op.join(vcpkg_prefix, "lib"),
-            op.join(_ROOTDIR, "external", "d3dx12_ShaderCompiler/lib/x64"),
+            op.join(_ROOTDIR, "external", "d3dx12_ShaderCompiler", "lib", "x64"),
         ]
         extra_include_dirs += [
             op.join(cfg.prefix, "Include"),
             op.join(vcpkg_prefix, "include"),
             op.join(_ROOTDIR, "external", "d3dx12"),
-            op.join(_ROOTDIR, "external", "d3dx12_ShaderCompiler/inc"),
-            op.join(_ROOTDIR, "external", "d3dx12_AgilitySDK/build/native/include"),
+            op.join(_ROOTDIR, "external", "d3dx12_ShaderCompiler", "inc"),
+            op.join(_ROOTDIR, "external", "d3dx12_AgilitySDK", "build", "native", "include"),
             op.join(_ROOTDIR, "external", "json"),
             op.join("src", "pch", "windows"),
         ]
