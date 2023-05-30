@@ -77,9 +77,11 @@ int d3d12_texture_init(struct texture* s, const struct texture_params* p)
         p->width, p->height, depth, array_layers, p->usage,
         to_d3d12_texture_type(p->type, nb_samples), gen_mipmaps,
         nb_samples, &samplerDesc);
+    if(!s_priv->v)
+        return NGL_ERROR_MEMORY;
     s_priv->v->setName(s_priv->parent.params.name);
 
-    return 0;
+    return s_priv->v->getErrorState();
 }
 
 int d3d12_texture_upload(struct texture* s, const uint8_t* data,

@@ -38,7 +38,7 @@ D3DBuffer* D3DBuffer::newInstance(D3DGraphicsContext* ctx, const void* data, uin
 	return d3dBuffer;
 }
 
-void D3DBuffer::init(D3DGraphicsContext* ctx, const void* data, uint32_t size, int bufferUsageFlags)
+bool D3DBuffer::init(D3DGraphicsContext* ctx, const void* data, uint32_t size, int bufferUsageFlags)
 {
 	mBufferUsageFlags = bufferUsageFlags;
 	D3D12_HEAP_TYPE heapType = D3D12_HEAP_TYPE_DEFAULT;
@@ -85,10 +85,10 @@ void D3DBuffer::init(D3DGraphicsContext* ctx, const void* data, uint32_t size, i
 	if(bufferUsageFlags & NGLI_BUFFER_USAGE_VERTEX_BUFFER_BIT)
 		initialResourceState |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 
-	init(ctx, data, size, heapType, heapFlag, resourceFlags, initialResourceState);
+	return init(ctx, data, size, heapType, heapFlag, resourceFlags, initialResourceState);
 }
 
-void D3DBuffer::init(D3DGraphicsContext* ctx, const void* data, uint32_t size,
+bool D3DBuffer::init(D3DGraphicsContext* ctx, const void* data, uint32_t size,
 					   D3D12_HEAP_TYPE heapType,
 					   D3D12_HEAP_FLAGS heapFlag,
 					   D3D12_RESOURCE_FLAGS resourceFlags,
@@ -112,6 +112,9 @@ void D3DBuffer::init(D3DGraphicsContext* ctx, const void* data, uint32_t size,
 	mCurrentResourceState = initialResourceState;
 	if(data)
 		upload(data, size, 0);
+	if(FAILED(hResult))
+		return false;
+	return true;
 }
 
 D3DBuffer::~D3DBuffer() {

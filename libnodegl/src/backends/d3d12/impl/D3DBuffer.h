@@ -32,9 +32,9 @@ class D3DBuffer
 public:
 	static D3DBuffer* newInstance(D3DGraphicsContext* ctx, const void* data, uint32_t size, int usageFlags);
 
-	void init(D3DGraphicsContext* ctx, const void* data, uint32_t size, int bufferUsageFlags);
+	bool init(D3DGraphicsContext* ctx, const void* data, uint32_t size, int bufferUsageFlags);
 
-	void init(D3DGraphicsContext* ctx, const void* data, uint32_t size,
+	bool init(D3DGraphicsContext* ctx, const void* data, uint32_t size,
 				D3D12_HEAP_TYPE heapType = D3D12_HEAP_TYPE_DEFAULT,
 				D3D12_HEAP_FLAGS heapFlag = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES,
 				D3D12_RESOURCE_FLAGS resourceFlags = D3D12_RESOURCE_FLAG_NONE,
