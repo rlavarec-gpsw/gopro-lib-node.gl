@@ -22,7 +22,6 @@
 #include "StringUtil.h"
 #include <codecvt>
 #include <locale>
-#include <string>
 
 namespace ngli
 {
