@@ -70,12 +70,6 @@ _EXTERNAL_DEPS = dict(
         dst_dir="json",
         sha256="665fa14b8af3837966949e8eb0052d583e2ac105d3438baba9951785512cf921",
     ),
-    d3dx12=dict(
-        version="10.0.17763.0",
-        url="https://raw.githubusercontent.com/microsoft/DirectX-Graphics-Samples/v@VERSION@/Libraries/D3DX12/d3dx12.h",
-        dst_dir="d3dx12",
-        sha256="9d6961932474a83c11c5f43db8be3570624a2b72acb4c426f8312f0ecf04b1fa",
-    ),
     d3dx12_ShaderCompiler=dict(
         version="1.7.2212.1",
         url="https://github.com/microsoft/DirectXShaderCompiler/releases/download/v@VERSION@/dxc_2023_03_01.zip",
@@ -84,13 +78,12 @@ _EXTERNAL_DEPS = dict(
         sha256="e4e8cb7326ff7e8a791acda6dfb0cb78cc96309098bfdb0ab1e465dc29162422",
     ),
     d3dx12_AgilitySDK=dict(
-        version="1.610.0",
+        version="1.610.3",
         url="https://globalcdn.nuget.org/packages/microsoft.direct3d.d3d12.@VERSION@.nupkg",
         uncompress_dir="d3dx12_AgilitySDK-@VERSION@",
         dst_file="d3dx12_AgilitySDK-@VERSION@.zip",
-        sha256="e7b04d428637cb02e36e79a40c27d0a7df192b5ee45685cd4e7dd4ed48e84b1d",
+        sha256="3e4f2905aa9baf159c3a2b87f8d1ef6e9a31177d5f66da06c019af2254787248",
     ),
-
     shaderc=dict(
         version="2023.3",
         url="https://github.com/google/shaderc/archive/refs/tags/v@VERSION@.zip",
@@ -108,7 +101,6 @@ def _get_external_deps(args):
 
     if _SYSTEM == "Windows":
         deps.append("pkgconf")
-        deps.append("d3dx12")
         deps.append("d3dx12_ShaderCompiler")
         deps.append("d3dx12_AgilitySDK")
 
@@ -394,9 +386,9 @@ def _nodegl_setup(cfg):
         extra_include_dirs += [
             op.join(cfg.prefix, "Include"),
             op.join(vcpkg_prefix, "include"),
-            op.join(_ROOTDIR, "external", "d3dx12"),
             op.join(_ROOTDIR, "external", "d3dx12_ShaderCompiler", "inc"),
             op.join(_ROOTDIR, "external", "d3dx12_AgilitySDK", "build", "native", "include"),
+            op.join(_ROOTDIR, "external", "d3dx12_AgilitySDK", "build", "native", "include", "d3dx12"),
             op.join(_ROOTDIR, "external", "json"),
             op.join("src", "pch", "windows"),
         ]
