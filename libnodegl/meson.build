@@ -648,6 +648,7 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
       d3d12_libs = {
         'd3d12':        {                  'required': true},
         'dxgi':         {                  'required': true},
+        'dxguid':       {                  'required': true},
         'd3dcompiler':  {                  'required': true},
         'dxcompiler':   {                  'required': true, 'inside_extra_library_dir': true},
       }
