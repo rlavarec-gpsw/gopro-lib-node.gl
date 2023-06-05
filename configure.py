@@ -91,7 +91,7 @@ _EXTERNAL_DEPS = dict(
         version="2023.3",
         url="https://github.com/google/shaderc/archive/refs/tags/v@VERSION@.zip",
         dst_file="shaderc-@VERSION@.zip",
-        sha256="9609a7591362e6648e78c2a4b0adce95527d0b411ff45ff7f3e5151e2966a1d3",
+        sha256="04ba900b98068a12758f52f06f688ed2cfa9c2cd97143923493141712f961094",
     ),
 )
 
