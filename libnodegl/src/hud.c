@@ -74,6 +74,7 @@ struct hud {
 #define MEMORY_WIDGET_TEXT_LEN      25
 #define ACTIVITY_WIDGET_TEXT_LEN    12
 #define DRAWCALL_WIDGET_TEXT_LEN    12
+#define GLOBALINFOS_WIDGET_TEXT_LEN 25
 
 enum {
     LATENCY_UPDATE_CPU,
@@ -106,6 +107,11 @@ enum {
     DRAWCALL_RENDERS,
     DRAWCALL_RTTS,
     NB_DRAWCALL
+};
+
+enum {
+    GLOBALINFOS_NGL_VERSION,
+    NB_GLOBALINFOS
 };
 
 #define BUFFER_NODES                \
@@ -249,16 +255,26 @@ static const struct drawcall_spec {
     },
 };
 
-NGLI_STATIC_ASSERT(hud_nb_latency,  NGLI_ARRAY_NB(latency_specs)  == NB_LATENCY);
-NGLI_STATIC_ASSERT(hud_nb_memory,   NGLI_ARRAY_NB(memory_specs)   == NB_MEMORY);
-NGLI_STATIC_ASSERT(hud_nb_activity, NGLI_ARRAY_NB(activity_specs) == NB_ACTIVITY);
-NGLI_STATIC_ASSERT(hud_nb_drawcall, NGLI_ARRAY_NB(drawcall_specs) == NB_DRAWCALL);
+static const struct globalinfos_spec {
+    const char* label;
+    const uint32_t color;
+} globalinfos_specs[] = {
+    [GLOBALINFOS_NGL_VERSION]   = { "NGLVersion", BRIGHT_MAGENTA },
+};
+
+NGLI_STATIC_ASSERT(hud_nb_latency,      NGLI_ARRAY_NB(latency_specs)     == NB_LATENCY);
+NGLI_STATIC_ASSERT(hud_nb_memory,       NGLI_ARRAY_NB(memory_specs)      == NB_MEMORY);
+NGLI_STATIC_ASSERT(hud_nb_activity,     NGLI_ARRAY_NB(activity_specs)    == NB_ACTIVITY);
+NGLI_STATIC_ASSERT(hud_nb_drawcall,     NGLI_ARRAY_NB(drawcall_specs)    == NB_DRAWCALL);
+NGLI_STATIC_ASSERT(hud_nb_globalinfos,  NGLI_ARRAY_NB(globalinfos_specs) == NB_GLOBALINFOS);
 
 enum widget_type {
     WIDGET_LATENCY,
     WIDGET_MEMORY,
     WIDGET_ACTIVITY,
     WIDGET_DRAWCALL,
+    WIDGET_GLOBALINFOS,
+    NB_WIDGET
 };
 
 struct data_graph {
@@ -726,6 +742,14 @@ static void widget_drawcall_draw(struct hud *s, struct widget *widget)
     draw_block_graph(s, d, &widget->graph_rect, d->amin, d->amax, BRIGHT_LIME_GREEN);
 }
 
+static void widget_globalinfos_draw(struct hud* s, struct widget* widget)
+{
+    char buf[GLOBALINFOS_WIDGET_TEXT_LEN + 1];
+
+    snprintf(buf, sizeof(buf), "%-12s %d.%d.%d", globalinfos_specs[GLOBALINFOS_NGL_VERSION].label, NGL_VERSION_MAJOR, NGL_VERSION_MINOR, NGL_VERSION_MICRO);
+    print_text(s, widget->text_x, widget->text_y, buf, globalinfos_specs[GLOBALINFOS_NGL_VERSION].color);
+}
+
 /* Widget CSV header */
 
 static void widget_latency_csv_header(struct hud *s, struct widget *widget, struct bstr *dst)
@@ -865,6 +889,19 @@ static const struct widget_spec widget_specs[] = {
         .csv_report    = widget_drawcall_csv_report,
         .uninit        = widget_drawcall_uninit,
     },
+    [WIDGET_GLOBALINFOS] = {
+        .text_cols     = GLOBALINFOS_WIDGET_TEXT_LEN,
+        .text_rows     = NB_GLOBALINFOS,
+        .graph_w       = 320,
+        .nb_data_graph = NB_GLOBALINFOS,
+        .priv_size     = 0,
+        .init          = NULL,
+        .make_stats    = NULL,
+        .draw          = widget_globalinfos_draw,
+        .csv_header    = NULL,
+        .csv_report    = NULL,
+        .uninit        = NULL,
+    },
 };
 
 static inline int get_widget_width(enum widget_type type)
@@ -949,19 +986,21 @@ static int widgets_init(struct hud *s)
     ngli_darray_init(&s->widgets, sizeof(struct widget), 0);
 
     /* Smallest dimensions possible (in pixels) */
-    const int latency_width  = get_widget_width(WIDGET_LATENCY);
-    const int memory_width   = get_widget_width(WIDGET_MEMORY);
-    const int activity_width = get_widget_width(WIDGET_ACTIVITY) * NB_ACTIVITY + WIDGET_MARGIN * (NB_ACTIVITY - 1);
-    const int drawcall_width = get_widget_width(WIDGET_DRAWCALL) * NB_DRAWCALL + WIDGET_MARGIN * (NB_DRAWCALL - 1);
+    const int latency_width     = get_widget_width(WIDGET_LATENCY);
+    const int memory_width      = get_widget_width(WIDGET_MEMORY);
+    const int activity_width    = get_widget_width(WIDGET_ACTIVITY) * NB_ACTIVITY + WIDGET_MARGIN * (NB_ACTIVITY - 1);
+    const int drawcall_width    = get_widget_width(WIDGET_DRAWCALL) * NB_DRAWCALL + WIDGET_MARGIN * (NB_DRAWCALL - 1);
+    const int globalinfos_width = get_widget_width(WIDGET_GLOBALINFOS);
 
     s->canvas.w = WIDGET_MARGIN * 2
-                + NGLI_MAX(NGLI_MAX(NGLI_MAX(latency_width, memory_width), activity_width), drawcall_width);
+                + NGLI_MAX(NGLI_MAX(NGLI_MAX(NGLI_MAX(latency_width, memory_width), activity_width), drawcall_width), globalinfos_width);
 
-    s->canvas.h = WIDGET_MARGIN * 4
+    s->canvas.h = WIDGET_MARGIN * NB_WIDGET
                 + get_widget_height(WIDGET_LATENCY)
                 + get_widget_height(WIDGET_MEMORY)
                 + get_widget_height(WIDGET_ACTIVITY)
-                + get_widget_height(WIDGET_DRAWCALL);
+                + get_widget_height(WIDGET_DRAWCALL)
+                + get_widget_height(WIDGET_GLOBALINFOS);
 
     /* Latency widget in the top-left */
     const int x_latency = WIDGET_MARGIN;
@@ -998,6 +1037,13 @@ static int widgets_init(struct hud *s)
             return ret;
         x_drawcall += x_drawcall_step;
     }
+
+    /* Globalinfos widget in the bottom-left */
+    const int x_globalinfos = WIDGET_MARGIN;
+    const int y_globalinfos = WIDGET_MARGIN + y_drawcall + get_widget_height(WIDGET_DRAWCALL);
+    ret = create_widget(s, WIDGET_GLOBALINFOS, NULL, x_globalinfos, y_globalinfos);
+    if (ret < 0)
+        return ret;
 
     /* Call init on every widget */
     struct darray *widgets_array = &s->widgets;
@@ -1066,6 +1112,10 @@ static int widgets_csv_header(struct hud *s)
     s->csv_line = ngli_bstr_create();
     if (!s->csv_line)
         return NGL_ERROR_MEMORY;
+
+    /* add first global informations */
+    ngli_bstr_printf(s->csv_line, "# {\"ngl_version\":\"%d.%d.%d\"}", NGL_VERSION_MAJOR, NGL_VERSION_MINOR, NGL_VERSION_MICRO);
+    ngli_bstr_print(s->csv_line, "\n");
 
     ngli_bstr_print(s->csv_line, "time,");
 
