@@ -521,7 +521,14 @@ foreach gbackend_name, gbackend_cfg : gbackends_cfg
         # user. This makes meson bail out early if the required library can not
         # be found.
         required = lib.get('required') and opt_gbackend.enabled()
-        dep = cxx.find_library(libname, required: required, dirs: extra_library_dirs)
+
+        # add d extension to include the debug library in debug mode
+        extension = ''
+        if get_option('buildtype') == 'debug'
+          extension = 'd'
+        endif
+
+        dep = cxx.find_library(libname+extension, required: required, dirs: extra_library_dirs)
         # Add the dependency if the library is marked as required or if it has
         # been found so the backend can be disabled later on.
         if lib.get('required') or dep.found()
