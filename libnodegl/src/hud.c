@@ -111,6 +111,7 @@ enum {
 
 enum {
     GLOBALINFOS_NGL_VERSION,
+    GLOBALINFOS_BACKEND,
     NB_GLOBALINFOS
 };
 
@@ -259,7 +260,8 @@ static const struct globalinfos_spec {
     const char* label;
     const uint32_t color;
 } globalinfos_specs[] = {
-    [GLOBALINFOS_NGL_VERSION]   = { "NGLVersion", BRIGHT_MAGENTA },
+    [GLOBALINFOS_NGL_VERSION]   = { "NGLVersion",   BRIGHT_MAGENTA },
+    [GLOBALINFOS_BACKEND]       = { "Backend",      BRIGHT_CYAN },
 };
 
 NGLI_STATIC_ASSERT(hud_nb_latency,      NGLI_ARRAY_NB(latency_specs)     == NB_LATENCY);
@@ -748,6 +750,9 @@ static void widget_globalinfos_draw(struct hud* s, struct widget* widget)
 
     snprintf(buf, sizeof(buf), "%-12s %d.%d.%d", globalinfos_specs[GLOBALINFOS_NGL_VERSION].label, NGL_VERSION_MAJOR, NGL_VERSION_MINOR, NGL_VERSION_MICRO);
     print_text(s, widget->text_x, widget->text_y, buf, globalinfos_specs[GLOBALINFOS_NGL_VERSION].color);
+
+    snprintf(buf, sizeof(buf), "%-12s %s", globalinfos_specs[GLOBALINFOS_BACKEND].label, ngli_get_backend_string_id(s->ctx->config.backend));
+    print_text(s, widget->text_x, widget->text_y + NGLI_FONT_H, buf, globalinfos_specs[GLOBALINFOS_BACKEND].color);
 }
 
 /* Widget CSV header */
@@ -1114,7 +1119,7 @@ static int widgets_csv_header(struct hud *s)
         return NGL_ERROR_MEMORY;
 
     /* add first global informations */
-    ngli_bstr_printf(s->csv_line, "# {\"ngl_version\":\"%d.%d.%d\"}", NGL_VERSION_MAJOR, NGL_VERSION_MINOR, NGL_VERSION_MICRO);
+    ngli_bstr_printf(s->csv_line, "# {\"ngl_version\":\"%d.%d.%d\",\"backend\":\"%s\"}", NGL_VERSION_MAJOR, NGL_VERSION_MINOR, NGL_VERSION_MICRO, ngli_get_backend_string_id(s->ctx->config.backend));
     ngli_bstr_print(s->csv_line, "\n");
 
     ngli_bstr_print(s->csv_line, "time,");
