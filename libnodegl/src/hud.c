@@ -994,7 +994,9 @@ static int widgets_init(struct hud *s)
     struct widget *widgets = ngli_darray_data(widgets_array);
     for (int i = 0; i < ngli_darray_count(widgets_array); i++) {
         struct widget *widget = &widgets[i];
-        int ret = widget_specs[widget->type].init(s, widget);
+        if (widget_specs[widget->type].init) {
+            int ret = widget_specs[widget->type].init(s, widget);
+        }
         if (ret < 0)
             return ret;
     }
@@ -1019,7 +1021,9 @@ static void widgets_make_stats(struct hud *s)
     struct widget *widgets = ngli_darray_data(widgets_array);
     for (int i = 0; i < ngli_darray_count(widgets_array); i++) {
         struct widget *widget = &widgets[i];
-        widget_specs[widget->type].make_stats(s, widget);
+        if (widget_specs[widget->type].make_stats) {
+            widget_specs[widget->type].make_stats(s, widget);
+        }
     }
     /* HACK: reset drawcall draw counts after calling
      * widget_latency_make_stats(). This is needed here because several draws
@@ -1060,7 +1064,9 @@ static int widgets_csv_header(struct hud *s)
     for (int i = 0; i < ngli_darray_count(widgets_array); i++) {
         struct widget *widget = &widgets[i];
         ngli_bstr_print(s->csv_line, i ? "," : "");
-        widget_specs[widget->type].csv_header(s, widget, s->csv_line);
+        if (widget_specs[widget->type].csv_header) {
+            widget_specs[widget->type].csv_header(s, widget, s->csv_line);
+        }
     }
 
     ngli_bstr_print(s->csv_line, "\n");
@@ -1089,7 +1095,9 @@ static void widgets_csv_report(struct hud *s)
     for (int i = 0; i < ngli_darray_count(widgets_array); i++) {
         ngli_bstr_print(s->csv_line, ",");
         struct widget *widget = &widgets[i];
-        widget_specs[widget->type].csv_report(s, widget, s->csv_line);
+        if (widget_specs[widget->type].csv_report) {
+            widget_specs[widget->type].csv_report(s, widget, s->csv_line);
+        }
     }
     ngli_bstr_print(s->csv_line, "\n");
 
@@ -1111,7 +1119,9 @@ static void widgets_uninit(struct hud *s)
     struct widget *widgets = ngli_darray_data(widgets_array);
     for (int i = 0; i < ngli_darray_count(widgets_array); i++) {
         struct widget *widget = &widgets[i];
-        widget_specs[widget->type].uninit(s, widget);
+        if (widget_specs[widget->type].uninit) {
+            widget_specs[widget->type].uninit(s, widget);
+        }
         free_widget(widget);
     }
     ngli_darray_reset(&s->widgets);
