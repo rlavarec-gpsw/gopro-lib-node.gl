@@ -76,6 +76,8 @@ struct api_impl {
     int (*gl_wrap_framebuffer)(struct ngl_ctx *s, uint32_t framebuffer);
 };
 
+const char* ngli_get_backend_string_id(int backend);
+
 struct ngl_ctx {
     /* Controller-only fields */
     int configured;

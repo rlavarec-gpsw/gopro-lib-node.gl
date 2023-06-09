@@ -58,28 +58,34 @@ extern const struct api_impl api_gl;
 extern const struct api_impl api_vk;
 
 static const struct {
-    const char *string_id;
     const struct api_impl *api_impl;
-} api_map[] = {
-    [NGL_BACKEND_OPENGL] = {
-        .string_id = "opengl",
+} api_map[NGL_NB_BACKEND] = {
 #ifdef BACKEND_GL
+    [NGL_BACKEND_OPENGL] = {
         .api_impl = &api_gl,
-#endif
     },
-    [NGL_BACKEND_OPENGLES] = {
-        .string_id = "opengles",
+#endif
 #ifdef BACKEND_GLES
+    [NGL_BACKEND_OPENGLES] = {
         .api_impl = &api_gl,
-#endif
     },
-    [NGL_BACKEND_VULKAN] = {
-        .string_id = "vulkan",
+#endif
 #ifdef BACKEND_VK
+    [NGL_BACKEND_VULKAN] = {
         .api_impl = &api_vk,
-#endif
     },
+#endif
 };
+
+const char* ngli_get_backend_string_id(int backend)
+{
+    switch (backend) {
+    case NGL_BACKEND_OPENGL:    return "opengl";
+    case NGL_BACKEND_OPENGLES:  return "opengles";
+    case NGL_BACKEND_VULKAN:    return "vulkan";
+    }
+    ngli_assert(0);
+}
 
 void ngl_log_set_callback(void *arg, ngl_log_callback_type callback)
 {
@@ -638,7 +644,7 @@ int ngl_configure(struct ngl_ctx *s, struct ngl_config *config)
     }
 
     if (config->backend < 0 ||
-        config->backend >= NGLI_ARRAY_NB(api_map)) {
+        config->backend >= NGL_NB_BACKEND) {
         LOG(ERROR, "unknown backend %d", config->backend);
         return NGL_ERROR_INVALID_ARG;
     }
@@ -646,7 +652,7 @@ int ngl_configure(struct ngl_ctx *s, struct ngl_config *config)
     s->api_impl = api_map[config->backend].api_impl;
     if (!s->api_impl) {
         LOG(ERROR, "backend \"%s\" not available with this build",
-            api_map[config->backend].string_id);
+            ngli_get_backend_string_id(config->backend));
         return NGL_ERROR_UNSUPPORTED;
     }
 

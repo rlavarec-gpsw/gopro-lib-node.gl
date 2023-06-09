@@ -32,39 +32,35 @@ extern const struct gpu_ctx_class ngli_gpu_ctx_gles;
 extern const struct gpu_ctx_class ngli_gpu_ctx_vk;
 
 static const struct {
-    const char *string_id;
     const struct gpu_ctx_class *cls;
-} backend_map[] = {
-    [NGL_BACKEND_OPENGL] = {
-        .string_id = "opengl",
+} backend_map[NGL_NB_BACKEND] = {
 #ifdef BACKEND_GL
+    [NGL_BACKEND_OPENGL] = {
         .cls = &ngli_gpu_ctx_gl,
-#endif
     },
-    [NGL_BACKEND_OPENGLES] = {
-        .string_id = "opengles",
+#endif
 #ifdef BACKEND_GLES
+    [NGL_BACKEND_OPENGLES] = {
         .cls = &ngli_gpu_ctx_gles,
-#endif
     },
-    [NGL_BACKEND_VULKAN] = {
-        .string_id = "vulkan",
+#endif
 #ifdef BACKEND_VK
+    [NGL_BACKEND_VULKAN] = {
         .cls = &ngli_gpu_ctx_vk,
-#endif
     },
+#endif
 };
 
 struct gpu_ctx *ngli_gpu_ctx_create(const struct ngl_config *config)
 {
     if (config->backend < 0 ||
-        config->backend >= NGLI_ARRAY_NB(backend_map)) {
+        config->backend >= NGL_NB_BACKEND) {
         LOG(ERROR, "unknown backend %d", config->backend);
         return NULL;
     }
     if (!backend_map[config->backend].cls) {
         LOG(ERROR, "backend \"%s\" not available with this build",
-            backend_map[config->backend].string_id);
+            ngli_get_backend_string_id(config->backend));
         return NULL;
     }
 
@@ -80,7 +76,7 @@ struct gpu_ctx *ngli_gpu_ctx_create(const struct ngl_config *config)
         return NULL;
     }
     s->config = ctx_config;
-    s->backend_str = backend_map[config->backend].string_id;
+    s->backend_str = ngli_get_backend_string_id(config->backend);
     s->cls = cls;
     return s;
 }
