@@ -143,15 +143,27 @@ enum {
     NGL_NODE_BUFFERVEC4,            \
     NGL_NODE_BUFFERMAT4
 
+/* colors */
+
+#define BRIGHT_MAGENTA          0xF43DF4FF
+#define BRIGHT_CYAN             0x3DF4F4FF
+#define BRIGHT_YELLOW           0xFFF43DFF
+#define BRIGHT_LIME_GREEN       0x3DF43DFF
+#define VIVID_MAGENTA           0xD632FFFF
+#define VIVID_BLUE              0x3284FFFF
+#define VIVID_CYAN_LIME_GREEN   0x32FF84FF
+#define VIVID_YELLOW            0xD6FF32FF
+#define VIVID_RED               0xFF3232FF
+
 static const struct {
     const char *label;
     const uint32_t color;
     char unit;
 } latency_specs[] = {
-    [LATENCY_UPDATE_CPU] = {"update CPU", 0xF43DF4FF, 'u'},
-    [LATENCY_DRAW_CPU]   = {"draw   CPU", 0x3DF4F4FF, 'u'},
-    [LATENCY_TOTAL_CPU]  = {"total  CPU", 0xF4F43DFF, 'u'},
-    [LATENCY_DRAW_GPU]   = {"draw   GPU", 0x3DF43DFF, 'n'},
+    [LATENCY_UPDATE_CPU] = {"update CPU", BRIGHT_MAGENTA, 'u'},
+    [LATENCY_DRAW_CPU]   = {"draw   CPU", BRIGHT_CYAN, 'u'},
+    [LATENCY_TOTAL_CPU]  = {"total  CPU", BRIGHT_YELLOW, 'u'},
+    [LATENCY_DRAW_GPU]   = {"draw   GPU", BRIGHT_LIME_GREEN, 'n'},
 };
 
 static const struct {
@@ -162,27 +174,27 @@ static const struct {
     [MEMORY_BUFFERS_CPU] = {
         .label="Buffers CPU",
         .node_types=(const int[]){BUFFER_NODES, -1},
-        .color=0xD632FFFF,
+        .color= VIVID_MAGENTA,
     },
     [MEMORY_BUFFERS_GPU] = {
         .label="Buffers GPU",
         .node_types=(const int[]){BUFFER_NODES, -1},
-        .color=0x3284FFFF,
+        .color= VIVID_BLUE,
     },
     [MEMORY_BLOCKS_CPU] = {
         .label="Blocks CPU",
         .node_types=(const int[]){NGL_NODE_BLOCK, -1},
-        .color=0x32FF84FF,
+        .color= VIVID_CYAN_LIME_GREEN,
     },
     [MEMORY_BLOCKS_GPU] = {
         .label="Blocks GPU",
         .node_types=(const int[]){NGL_NODE_BLOCK, -1},
-        .color=0xD6FF32FF,
+        .color= VIVID_YELLOW,
     },
     [MEMORY_TEXTURES] = {
         .label="Textures",
         .node_types=(const int[]){NGL_NODE_TEXTURE2D, NGL_NODE_TEXTURE3D, -1},
-        .color=0xFF3232FF,
+        .color= VIVID_RED,
     },
 };
 
@@ -688,32 +700,30 @@ static void widget_activity_draw(struct hud *s, struct widget *widget)
 {
     struct widget_activity *priv = widget->priv_data;
     const struct activity_spec *spec = widget->user_data;
-    const uint32_t color = 0x3df4f4ff;
 
     char buf[ACTIVITY_WIDGET_TEXT_LEN + 1];
     snprintf(buf, sizeof(buf), "%d/%d", priv->nb_actives, priv->nodes.count);
-    print_text(s, widget->text_x, widget->text_y, spec->label, color);
-    print_text(s, widget->text_x, widget->text_y + NGLI_FONT_H, buf, color);
+    print_text(s, widget->text_x, widget->text_y, spec->label, BRIGHT_CYAN);
+    print_text(s, widget->text_x, widget->text_y + NGLI_FONT_H, buf, BRIGHT_CYAN);
 
     struct data_graph *d = &widget->data_graph[0];
     register_graph_value(d, priv->nb_actives);
-    draw_block_graph(s, d, &widget->graph_rect, d->amin, d->amax, color);
+    draw_block_graph(s, d, &widget->graph_rect, d->amin, d->amax, BRIGHT_CYAN);
 }
 
 static void widget_drawcall_draw(struct hud *s, struct widget *widget)
 {
     struct widget_drawcall *priv = widget->priv_data;
     const struct drawcall_spec *spec = widget->user_data;
-    const uint32_t color = 0x3df43dff;
 
     char buf[DRAWCALL_WIDGET_TEXT_LEN + 1];
     snprintf(buf, sizeof(buf), "%d", priv->nb_draws);
-    print_text(s, widget->text_x, widget->text_y, spec->label, color);
-    print_text(s, widget->text_x, widget->text_y + NGLI_FONT_H, buf, color);
+    print_text(s, widget->text_x, widget->text_y, spec->label, BRIGHT_LIME_GREEN);
+    print_text(s, widget->text_x, widget->text_y + NGLI_FONT_H, buf, BRIGHT_LIME_GREEN);
 
     struct data_graph *d = &widget->data_graph[0];
     register_graph_value(d, priv->nb_draws);
-    draw_block_graph(s, d, &widget->graph_rect, d->amin, d->amax, color);
+    draw_block_graph(s, d, &widget->graph_rect, d->amin, d->amax, BRIGHT_LIME_GREEN);
 }
 
 /* Widget CSV header */
