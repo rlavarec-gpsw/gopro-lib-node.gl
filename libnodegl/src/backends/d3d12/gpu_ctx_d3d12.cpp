@@ -704,7 +704,7 @@ static int d3d12_get_preferred_depth_stencil_format(struct gpu_ctx *s)
 }
 
 extern "C" const struct gpu_ctx_class ngli_gpu_ctx_d3d12 = {
-    .name               = "d3d12",
+    .name               = "Direct3D 12",
     .create             = d3d12_create,
     .init               = d3d12_init,
     .resize             = d3d12_resize,
