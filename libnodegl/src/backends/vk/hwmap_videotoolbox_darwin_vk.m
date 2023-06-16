@@ -19,6 +19,7 @@
  * under the License.
  */
 
+
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -30,6 +31,12 @@
 #include <IOSurface/IOSurface.h>
 #include <Metal/Metal.h>
 
+/* MoltenVK deprecated functions prototype contains [[deprecated]] keyword,
+   that is not recognized by objc compiler. Do not use VK prototype
+ */
+#ifndef VK_NO_PROTOTYPES
+#define VK_NO_PROTOTYPES
+#endif
 #include <MoltenVK/vk_mvk_moltenvk.h>
 
 #include "format.h"
@@ -187,7 +194,17 @@ static int vt_darwin_map_frame(struct hwmap *hwmap, struct sxplayer_frame *frame
         }
 
         id<MTLTexture> mtl_texture = CVMetalTextureGetTexture(texture_ref);
-        res = vkSetMTLTextureMVK(plane_vk->image, mtl_texture);
+        if (!vk->set_mtl_texture_mvk_fn) {
+            VK_LOAD_FUNC(vk->instance, SetMTLTextureMVK);
+            if (!SetMTLTextureMVK) {
+                LOG(ERROR, "could not find function vkSetMTLTextureMVK");
+                CFRelease(texture_ref);
+                return ngli_vk_res2ret(VK_ERROR_EXTENSION_NOT_PRESENT);
+            }
+            vk->set_mtl_texture_mvk_fn = SetMTLTextureMVK;
+        }
+          
+        res = ((PFN_vkSetMTLTextureMVK)vk->set_mtl_texture_mvk_fn)(plane_vk->image, mtl_texture);
         if (res != VK_SUCCESS) {
             LOG(ERROR, "could not set Metal texture: %s", ngli_vk_res2str(res));
             CFRelease(texture_ref);
@@ -220,6 +237,7 @@ static int vt_darwin_init(struct hwmap *hwmap, struct sxplayer_frame * frame)
     struct ngl_ctx *ctx = hwmap->ctx;
     struct gpu_ctx *gpu_ctx = ctx->gpu_ctx;
     struct gpu_ctx_vk *gpu_ctx_vk = (struct gpu_ctx_vk *)gpu_ctx;
+    struct vkcontext *vk = gpu_ctx_vk->vkcontext;
     struct hwmap_vt_darwin *vt = hwmap->hwmap_priv_data;
 
     CVPixelBufferRef cvpixbuf = (CVPixelBufferRef)frame->data;
@@ -229,7 +247,16 @@ static int vt_darwin_init(struct hwmap *hwmap, struct sxplayer_frame * frame)
     if (ret < 0)
         return ret;
 
-    vkGetMTLDeviceMVK(gpu_ctx_vk->vkcontext->phy_device, &vt->device);
+    if (!vk->get_mtl_device_mvk_fn) {
+        VK_LOAD_FUNC(gpu_ctx_vk->vkcontext->instance, GetMTLDeviceMVK);
+        if (!GetMTLDeviceMVK) {
+            LOG(ERROR, "could not find vkGetMTLDeviceMVK function");
+            return NGL_ERROR_GRAPHICS_GENERIC;
+        }
+        vk->get_mtl_device_mvk_fn = GetMTLDeviceMVK;
+    }
+      
+    ((PFN_vkGetMTLDeviceMVK)vk->get_mtl_device_mvk_fn)(vk->phy_device, &vt->device);
     CVReturn status = CVMetalTextureCacheCreate(NULL, NULL, vt->device, NULL, &vt->texture_cache);
     if (status != kCVReturnSuccess) {
         LOG(ERROR, "could not create Metal texture cache: %d", status);

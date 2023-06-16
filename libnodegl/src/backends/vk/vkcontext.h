@@ -93,6 +93,10 @@ struct vkcontext {
     VK_DECLARE_FUNC(GetMemoryFdPropertiesKHR);
     VK_DECLARE_FUNC(GetRefreshCycleDurationGOOGLE);
     VK_DECLARE_FUNC(GetPastPresentationTimingGOOGLE);
+#if defined(TARGET_DARWIN)
+    void *set_mtl_texture_mvk_fn;
+    void *get_mtl_device_mvk_fn;
+#endif
 };
 
 struct vkcontext *ngli_vkcontext_create(void);
