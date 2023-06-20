@@ -16,7 +16,7 @@
 #define NOMINMAX
 #include <windows.h>
 
-#include <d3dx12.h>
+#include <d3dx12/d3dx12.h>
 #include <dxgi1_4.h>
 #include <wrl.h>
 #include <system_error>
