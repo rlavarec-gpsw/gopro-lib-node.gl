@@ -21,6 +21,7 @@
 #
 
 import argparse
+import certifi
 import glob
 import hashlib
 import logging
@@ -545,6 +546,8 @@ class _EnvBuilder(venv.EnvBuilder):
 
     def post_setup(self, context):
         if _SYSTEM == "MinGW":
+            os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
+            os.environ["SSL_CERT_FILE"] = certifi.where()
             return
         pip_install = [context.env_exe, "-m", "pip", "install"]
         pip_install += ["meson", "ninja"]

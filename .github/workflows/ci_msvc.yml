@@ -68,6 +68,8 @@ jobs:
           # install dependencies inside vcpkg
           .\vcpkg.exe install --triplet ${{env.VCPKG_TRIPLET}} ${{env.VCPKG_INSTALL_PACKAGES}}
 
+          pip install certifi
+
       - name: Build (${{matrix.build_backend}})
         run: |
           # Disable the Vulkan backend when using the vs backend to workaround
