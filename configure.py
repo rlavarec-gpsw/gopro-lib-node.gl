@@ -545,6 +545,10 @@ class _EnvBuilder(venv.EnvBuilder):
 
     def post_setup(self, context):
         if _SYSTEM == "MinGW":
+            pip_install = [context.env_exe, "-m", "pip", "install"]
+            pip_install += ["certifi"]
+            logging.info("install certificate dependencies: %s", _cmd_join(*pip_install))
+            run(pip_install, check=True)
             return
         pip_install = [context.env_exe, "-m", "pip", "install"]
         pip_install += ["meson", "ninja"]
