@@ -29,11 +29,11 @@ jobs:
       - name: Install dependencies
         run: |
           pacman -S --noconfirm --needed git make mingw-w64-x86_64-{toolchain,ffmpeg,python,python3-pillow,meson,glslang,vulkan-devel,python-certifi}
-          export REQUESTS_CA_BUNDLE='python -m certifi'
-          export SSL_CERT_FILE='python -m certifi'
 
       - name: Build
         run: |
+          export REQUESTS_CA_BUNDLE='python -m certifi'
+          export SSL_CERT_FILE='python -m certifi'
           ./configure.py
           make
 
