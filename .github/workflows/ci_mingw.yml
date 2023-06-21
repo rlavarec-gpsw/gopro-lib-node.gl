@@ -23,6 +23,9 @@ jobs:
         with:
           msystem: MINGW64 # Start a 64 bit Mingw environment
           update: true
+          install: >-
+            openssl
+            certifi
 
       - name: Install dependencies
         run: |
