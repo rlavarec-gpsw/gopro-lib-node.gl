@@ -21,7 +21,6 @@
 #
 
 import argparse
-import certifi
 import glob
 import hashlib
 import logging
@@ -39,6 +38,8 @@ import venv
 import zipfile
 from multiprocessing import Pool
 from subprocess import run
+
+import certifi
 
 _ROOTDIR = op.abspath(op.dirname(__file__))
 _SYSTEM = "MinGW" if sysconfig.get_platform().startswith("mingw") else platform.system()
