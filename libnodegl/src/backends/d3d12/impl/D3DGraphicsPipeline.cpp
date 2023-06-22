@@ -79,11 +79,37 @@ void D3DGraphicsPipeline::create(
 		FALSE,
 		0,
 		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF };
+
+
+	// *_COLOR are not allowed inside SrcBlendAlpha and DestBlendAlpha
+	// https://github.com/gpuweb/gpuweb/issues/65
+	// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_render_target_blend_desc
+	auto getAlphaBlendFactor = [](D3D12_BLEND blendFactor) -> D3D12_BLEND {
+		switch(blendFactor)
+		{
+			case D3D12_BLEND_SRC_COLOR:
+				return D3D12_BLEND_SRC_ALPHA;
+				break;
+			case D3D12_BLEND_DEST_COLOR:
+				return D3D12_BLEND_DEST_ALPHA;
+				break;
+			case D3D12_BLEND_INV_SRC_COLOR:
+				return D3D12_BLEND_INV_SRC_ALPHA;
+				break;
+			case D3D12_BLEND_INV_DEST_COLOR:
+				return D3D12_BLEND_INV_DEST_ALPHA;
+				break;
+			default:
+				return blendFactor;
+				break;
+		};
+	};
+
 	D3D12_RENDER_TARGET_BLEND_DESC renderTargetBlendDesc = {
 		state.blendEnable,         FALSE,
 		state.blendSrcColorFactor, state.blendDstColorFactor,
-		state.blendColorOp,        state.blendSrcAlphaFactor,
-		state.blendDstAlphaFactor, state.blendAlphaOp,
+		state.blendColorOp,        getAlphaBlendFactor(state.blendSrcAlphaFactor),
+		getAlphaBlendFactor(state.blendDstAlphaFactor), state.blendAlphaOp,
 		D3D12_LOGIC_OP_NOOP,       state.colorWriteMask };
 
 	D3D12_BLEND_DESC blendDesc = {};
@@ -128,9 +154,11 @@ void D3DGraphicsPipeline::create(
 		desc.RTVFormats[j] = colorFormat;
 	desc.SampleDesc.Count = state.numSamples;
 
+	LOG(INFO, "before CreateGraphicsPipelineState");
 	D3D_TRACE_CALL(d3dDevice->CreateGraphicsPipelineState(&desc,
 											 IID_PPV_ARGS(&d3dPipelineState)));
-	d3dPipelineState->SetName(L"D3DGraphicsPipeline");
+	if(d3dPipelineState)
+		d3dPipelineState->SetName(L"D3DGraphicsPipeline");
 }
 
 D3DGraphicsPipeline*
@@ -142,26 +170,6 @@ D3DGraphicsPipeline::newInstance(D3DGraphicsContext* graphicsContext, const D3DG
 {
 	D3DGraphicsPipeline* d3dGraphicsPipeline = new D3DGraphicsPipeline();
 
-	auto getAlphaBlendFactor = [](D3D12_BLEND blendFactor) -> D3D12_BLEND {
-		switch(blendFactor)
-		{
-			case D3D12_BLEND_SRC_COLOR:
-				return D3D12_BLEND_SRC_ALPHA;
-				break;
-			case D3D12_BLEND_DEST_COLOR:
-				return D3D12_BLEND_DEST_ALPHA;
-				break;
-			case D3D12_BLEND_INV_SRC_COLOR:
-				return D3D12_BLEND_INV_SRC_ALPHA;
-				break;
-			case D3D12_BLEND_INV_DEST_COLOR:
-				return D3D12_BLEND_INV_DEST_ALPHA;
-				break;
-			default:
-				return blendFactor;
-				break;
-		};
-	};
    /* struct State {
 	  D3D12_PRIMITIVE_TOPOLOGY primitiveTopology =
 		  D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
