@@ -15,6 +15,9 @@ Versioning](https://semver.org/spec/v2.0.0.html) for `libnodegl`.
 ### Changed
 - ref count changes across node.gl, but particularly in nodes, are now atomic
 
+### Added
+- Display nodegl version and used backend in hud
+
 ## [2023.1] [libnodegl 0.8.0] - 2023-04-03
 ### Fixed
 - Make-release now works on Mac
