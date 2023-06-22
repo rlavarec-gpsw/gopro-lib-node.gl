@@ -61,7 +61,7 @@ class _CompareResources(CompareSceneBase):
 
         # filter columns
         with open(self._csvfile) as csvfile:
-            reader = csv.DictReader(csvfile)
+            reader = csv.DictReader(filter(lambda row: row[0] != "#", csvfile))
             data = [self._columns]
             for row in reader:
                 data.append([row[k] for k in self._columns])
