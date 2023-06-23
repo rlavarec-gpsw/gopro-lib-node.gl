@@ -107,7 +107,7 @@ public:
 	{
 		free((void*)r->source_name);
 		free((void*)r->content);
-		free(r);
+		delete r;
 	}
 	std::vector<std::string> includePaths;
 };
