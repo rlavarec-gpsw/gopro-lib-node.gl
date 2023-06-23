@@ -29,5 +29,6 @@ class StringUtil
 public:
 	static std::string toLower(const std::string& str);
 	static std::wstring toWString(const std::string& str);
+	static std::string toString(const std::wstring& str);
 };
 } // namespace ngli
