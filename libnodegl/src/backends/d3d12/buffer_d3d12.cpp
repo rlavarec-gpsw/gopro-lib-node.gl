@@ -80,6 +80,7 @@ void d3d12_buffer_freep(struct buffer **sp)
     ctx->cls->wait_idle(ctx);
 
     struct buffer_d3d12 *s_priv = (struct buffer_d3d12 *)s;
+    delete s_priv->mBuffer;
     delete s_priv;
     *sp=0;
 }
