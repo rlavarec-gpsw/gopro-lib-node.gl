@@ -22,6 +22,7 @@
 #include <backends/d3d12/impl/D3DDevice.h>
 #include <backends/d3d12/impl/D3DFence.h>
 #include <backends/d3d12/impl/D3DGraphicsContext.h>
+#include <backends/common/StringUtil.h>
 
 namespace ngli
 {
@@ -32,28 +33,51 @@ void D3DDevice::create(D3DGraphicsContext* ctx)
 	HRESULT hResult;
 	auto factory = ctx->d3dFactory.Get();
 	hardwareAdapter = nullptr;
-	for(UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != factory->EnumAdapters1(adapterIndex, &hardwareAdapter); adapterIndex++)
+	std::string tGpuName;
+	bool tFoundD3D12GPU = false;
+	bool tUseFilter = true;
+
+	for(size_t iTry = 2; iTry--;)
 	{
-		DXGI_ADAPTER_DESC1 desc;
-		hardwareAdapter->GetDesc1(&desc);
-		if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-			continue;
+		for(UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != factory->EnumAdapters1(adapterIndex, &hardwareAdapter); adapterIndex++)
+		{
+			DXGI_ADAPTER_DESC1 desc;
+			hardwareAdapter->GetDesc1(&desc);
+			if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+				continue;
 
-		const wchar_t* gpu_filter_env = _wgetenv(L"GPU_FILTER");
-		std::wstring gpu_filter = gpu_filter_env ? gpu_filter_env : L"";
+			if(tUseFilter)
+			{
+				const wchar_t* gpu_to_use_env = _wgetenv(L"GPU_TO_USE");
+				std::wstring gpu_to_use = gpu_to_use_env ? gpu_to_use_env : L"";
 
-		//Skip GPUs not matching user filter
-		if(wcsstr(desc.Description, gpu_filter.c_str()) == nullptr)
-			continue;
+				//Skip GPUs not matching user filter
+				if(wcsstr(desc.Description, gpu_to_use.c_str()) == nullptr)
+					continue;
+			}
 
-		// Check to see if the adapter supports Direct3D 12
-		// Both Direct3D 11 and Direct3D 12 share a similar device creation pattern.
-		// Existing Direct3D 12 drivers are all D3D_FEATURE_LEVEL_11_0 or better
-		if(SUCCEEDED(D3D12CreateDevice(hardwareAdapter.Get(),
-									   D3D_FEATURE_LEVEL_11_0,
-									   _uuidof(ID3D12Device), nullptr)))
+			tGpuName = ngli::StringUtil::toString(desc.Description);
+
+			// Check to see if the adapter supports Direct3D 12
+			// Both Direct3D 11 and Direct3D 12 share a similar device creation pattern.
+			// Existing Direct3D 12 drivers are all D3D_FEATURE_LEVEL_11_0 or better
+			if(SUCCEEDED(D3D12CreateDevice(hardwareAdapter.Get(),
+										   D3D_FEATURE_LEVEL_11_0,
+										   _uuidof(ID3D12Device), nullptr)))
+			{
+				tFoundD3D12GPU = true;
+				break;
+			}
+		}
+		
+		if(tFoundD3D12GPU)
 			break;
+
+		// If not found, try without filter
+		tUseFilter = false;
 	}
+
+	LOG(INFO, "D3D12 is using this GPU -> %s", tGpuName.c_str());
 	D3D_TRACE_CALL(D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0,
 						IID_PPV_ARGS(&mID3D12Device)));
 	mID3D12Device->SetName(L"D3DDevice");
