@@ -1,11 +1,13 @@
 
+import glob
 import os
-import shutil
 import re
-from pick import pick
-import xml.etree.ElementTree as ET
+import shutil
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
+
+from pick import pick
 
 # go to root
 repoDir = os.path.join(os.path.dirname(__file__), "..")
@@ -42,44 +44,68 @@ def getFilename( filename ):
     return os.path.join(buildir, filename)
 
 libnodegl_sln = "libnodegl.sln"
-libnodegl_dev_sln = libnodegl_sln.replace(".sln", ".dev.sln")
 
 nodegl_vcxproj = "nodegl@sha.vcxproj"
-nodegl_dev_vcxproj = nodegl_vcxproj.replace(".vcxproj", ".dev.vcxproj")
-
-shutil.copyfile(getFilename(libnodegl_sln), getFilename(libnodegl_dev_sln))
-shutil.copyfile(getFilename(nodegl_vcxproj), getFilename(nodegl_dev_vcxproj))
 
 listProjectToInclude = {"ngl-python": "..\\ngl-tools\\ngl-python@exe.vcxproj",
                         "ngl-desktop": "..\\ngl-tools\\ngl-desktop@exe.vcxproj",
                         "ngl-serialize": "..\\ngl-tools\\ngl-serialize@exe.vcxproj"}
 
-listProjectNodeGLLib = {"nodegl": nodegl_dev_vcxproj}
+listProjectNodeGLLib = {"nodegl": nodegl_vcxproj}
 
-with open(getFilename(libnodegl_dev_sln), 'r') as f:
-    nodegl_vcxproj_data_file = "".join(f.readlines())
-    projectID = re.search("Project\(\"{(.*)}\"\)", nodegl_vcxproj_data_file).group(1)
+listBuiltType = []
 
-    nodegl_vcxproj_data_file = nodegl_vcxproj_data_file.replace(nodegl_vcxproj, nodegl_dev_vcxproj)
+'''
+for file in glob.glob("builddir/**/*.vcxproj"):
+    with open(file, 'r') as f:
+        project_vcxproj_data_file = "\n".join(f.readlines())
+    project_vcxproj_data_file = project_vcxproj_data_file.replace("debug|", "Debug|")
+    project_vcxproj_data_file = project_vcxproj_data_file.replace("release|", "Release|")
+    project_vcxproj_data_file = project_vcxproj_data_file.replace(">debug<", ">Debug<")
+    project_vcxproj_data_file = project_vcxproj_data_file.replace(">release<", ">Release<")
+
+    with open(file, 'w') as f:
+        f.write(project_vcxproj_data_file)
+'''
+
+with open(getFilename(libnodegl_sln), 'r') as f:
+    nodegl_sln_data_file = "".join(f.readlines())
+    projectID = re.search("Project\(\"{(.*)}\"\)", nodegl_sln_data_file).group(1)
+    '''
+    nodegl_sln_data_file = nodegl_sln_data_file.replace("debug|", "Debug|")
+    nodegl_sln_data_file = nodegl_sln_data_file.replace("release|", "Release|")
+    '''
+    # Is the solution got release inside
+    if nodegl_sln_data_file.find("release") != -1:
+        listBuiltType.append("release")
+
+    # Is the solution got debug inside
+    if nodegl_sln_data_file.find("debug") != -1:
+        listBuiltType.append("debug")
+
+    # Must have found release or debug
+    assert len(listBuiltType) >= 1
+    print("Setup build type -> ", listBuiltType)
 
     AllProjectEntry = ''
     AllProjectConfig = ''
     for name, project in listProjectToInclude.items():
         with open(getFilename(project), 'r') as f:
-            project_data_file = "\n".join(f.readlines())
-            project_uid = re.search("ProjectGuid>{(.*?)}", project_data_file).group(1)
+            project_vcxproj_data_file = "\n".join(f.readlines())
+            project_uid = re.search("ProjectGuid>{(.*?)}", project_vcxproj_data_file).group(1)
 
-            AllProjectEntry += 'Project("{'+projectID+'}") = "'+name+'", "'+project+'", "{'+project_uid+'}"' + "\n" + 'EndProject' + "\n"
-            for builtType in ["release", "debug"]:
-                AllProjectConfig += '{'+project_uid+'}.'+builtType+'|x64.ActiveCfg = '+builtType+'|x64' + "\n" + '{'+project_uid+'}.'+builtType+'|x64.Build.0 = '+builtType+'|x64' + "\n"
+            # If the project doesn't exist yet in sln
+            if nodegl_sln_data_file.find(f'"{name}"') == -1:
+                AllProjectEntry += 'Project("{'+projectID+'}") = "'+name+'", "'+project+'", "{'+project_uid+'}"' + "\n" + 'EndProject' + "\n"
+                for builtType in listBuiltType:
+                    AllProjectConfig += '{'+project_uid+'}.'+builtType+'|x64.ActiveCfg = '+builtType+'|x64' + "\n" + '{'+project_uid+'}.'+builtType+'|x64.Build.0 = '+builtType+'|x64' + "\n"
 
-    nodegl_vcxproj_data_file = nodegl_vcxproj_data_file.replace("EndProject\nGlobal\n", 'EndProject\n' + AllProjectEntry + 'Global' + "\n")
-    for builtType in ["release", "debug"]:
-        nodegl_vcxproj_data_file = nodegl_vcxproj_data_file.replace("ActiveCfg = "+builtType+"|x64\n	EndGlobalSection\n", "ActiveCfg = "+builtType+"|x64\n	" + AllProjectConfig + "EndGlobalSection" + "\n")
+    nodegl_sln_data_file = nodegl_sln_data_file.replace("EndProject\nGlobal\n", 'EndProject\n' + AllProjectEntry + 'Global' + "\n")
+    for builtType in listBuiltType:
+        nodegl_sln_data_file = nodegl_sln_data_file.replace("ActiveCfg = "+builtType+"|x64\n	EndGlobalSection\n", "ActiveCfg = "+builtType+"|x64\n	" + AllProjectConfig + "EndGlobalSection" + "\n")
 
-with open(getFilename(libnodegl_dev_sln), 'w') as f:
-    f.write(nodegl_vcxproj_data_file)
-
+with open(getFilename(libnodegl_sln), 'w') as f:
+    f.write(nodegl_sln_data_file)
 
 def getOrCreate(xmlObj, name, findSubElement=None, findAttribute=None):
     tXmlObj = xmlObj.findall('{*}' + name)
@@ -120,7 +146,7 @@ def updateProject(projectName, commands):
     tree = getVCXProjXml(projectUserFile)
     ProjectXml = tree.getroot()
 
-    for builtType in ["release", "debug"]:
+    for builtType in listBuiltType:
         ItemDefinitionGroupXML = getOrCreate(ProjectXml, 'ItemDefinitionGroup')
         CommandXml = getOrCreate(getOrCreate(ItemDefinitionGroupXML, "CustomBuildStep", "Command", ["Condition", "'$(Configuration)|$(Platform)'=='"+builtType+"|x64'"]), 'Command')
         CommandXml.set("Condition", "'$(Configuration)|$(Platform)'=='"+builtType+"|x64'")
@@ -140,7 +166,7 @@ def getVCXProjUserXml(filename):
     root.set("xmlns", "http://schemas.microsoft.com/developer/msbuild/2003")
     root.set("ToolsVersion", "Current")
 
-    for builtType in ["release", "debug"]:
+    for builtType in listBuiltType:
         PropertyGroupXml = ET.SubElement(root, "PropertyGroup")
         PropertyGroupXml.set("Condition", "'$(Configuration)|$(Platform)'=='"+builtType+"|x64'")
     return ET.ElementTree(root)

@@ -1,7 +1,8 @@
-import subprocess
-from pick import pick
-import re
 import os
+import re
+import subprocess
+
+from pick import pick
 
 # go to root
 os.chdir(os.path.join(os.path.dirname(__file__), ".."))
@@ -21,10 +22,10 @@ option, index = pick(options, title, indicator='=>', default_index=0)
 fullName = re.split(r"\s{3}\s*", option)[1]
 print(fullName)
 
-os.environ["GPU_FILTER"] = fullName
+os.environ["GPU_TO_USE"] = fullName
 
 
-solutionToLaunch = R"builddir\libnodegl\libnodegl.dev.sln"
+solutionToLaunch = R"builddir\libnodegl\libnodegl.sln"
 if not os.path.isfile(solutionToLaunch):
     input("Error: " + solutionToLaunch + " doesn't exist")
 else:
