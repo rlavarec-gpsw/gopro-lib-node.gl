@@ -37,8 +37,10 @@ void D3DDevice::create(D3DGraphicsContext* ctx)
 	bool tFoundD3D12GPU = false;
 	bool tUseFilter = true;
 
+	// Do it first with the check of GPU_TO_USE and second round without if nothing found.
 	for(size_t iTry = 2; iTry--;)
 	{
+		// All adapter
 		for(UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != factory->EnumAdapters1(adapterIndex, &hardwareAdapter); adapterIndex++)
 		{
 			DXGI_ADAPTER_DESC1 desc;
@@ -51,7 +53,7 @@ void D3DDevice::create(D3DGraphicsContext* ctx)
 				const wchar_t* gpu_to_use_env = _wgetenv(L"GPU_TO_USE");
 				std::wstring gpu_to_use = gpu_to_use_env ? gpu_to_use_env : L"";
 
-				//Skip GPUs not matching user filter
+				// Skip GPUs not matching GPU_TO_USE
 				if(wcsstr(desc.Description, gpu_to_use.c_str()) == nullptr)
 					continue;
 			}
