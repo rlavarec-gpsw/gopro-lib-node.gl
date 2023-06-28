@@ -9,14 +9,18 @@ Versioning](https://semver.org/spec/v2.0.0.html) for `libnodegl`.
 
 ## [Unreleased]
 
+## [2023.2] [libnodegl 0.9.0] - 2023-06-28
+
 ### Fixed
 - rtt unit tests on Mac ARM architecture now pass
+- Compilation of asm file extension .S for aarch64
 
 ### Changed
-- ref count changes across node.gl, but particularly in nodes, are now atomic
+- Ref count changes across node.gl, but particularly in nodes, are now atomic
 
 ### Added
 - Display nodegl version and used backend in hud
+- Add cubemap image support in compute shaders for OpenGL and Vulkan backends.
 
 ## [2023.1] [libnodegl 0.8.0] - 2023-04-03
 ### Fixed
