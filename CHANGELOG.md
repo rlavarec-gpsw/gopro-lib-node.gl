@@ -8,6 +8,7 @@ for the globale releases (`YYYY.MINOR`), and to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html) for `libnodegl`.
 
 ## [Unreleased]
+- Add support for macOS cross-compilation
 
 ### Added
 - Log draw times at debug level when hud is enabled
