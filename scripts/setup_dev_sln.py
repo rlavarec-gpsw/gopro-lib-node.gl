@@ -55,10 +55,9 @@ listProjectNodeGLLib = {"nodegl": nodegl_vcxproj}
 
 listBuiltType = []
 
-'''
-for file in glob.glob("builddir/**/*.vcxproj"):
+for file in glob.glob("builddir/**/*.sln"):
     with open(file, 'r') as f:
-        project_vcxproj_data_file = "\n".join(f.readlines())
+        project_vcxproj_data_file = "".join(f.readlines())
     project_vcxproj_data_file = project_vcxproj_data_file.replace("debug|", "Debug|")
     project_vcxproj_data_file = project_vcxproj_data_file.replace("release|", "Release|")
     project_vcxproj_data_file = project_vcxproj_data_file.replace(">debug<", ">Debug<")
@@ -66,25 +65,50 @@ for file in glob.glob("builddir/**/*.vcxproj"):
 
     with open(file, 'w') as f:
         f.write(project_vcxproj_data_file)
-'''
 
+tListVcxproj = {}
+for file in glob.glob("builddir/**/*.vcxproj"):
+    tListVcxproj[file] = file
+    with open(file, 'r') as f:
+        project_vcxproj_data_file = "".join(f.readlines())
+    project_vcxproj_data_file = project_vcxproj_data_file.replace("debug|", "Debug|")
+    project_vcxproj_data_file = project_vcxproj_data_file.replace("release|", "Release|")
+    project_vcxproj_data_file = project_vcxproj_data_file.replace(">debug<", ">Debug<")
+    project_vcxproj_data_file = project_vcxproj_data_file.replace(">release<", ">Release<")
+
+    with open(file, 'w') as f:
+        f.write(project_vcxproj_data_file)
+
+tIsReleaseAddDebug = False
 with open(getFilename(libnodegl_sln), 'r') as f:
     nodegl_sln_data_file = "".join(f.readlines())
     projectID = re.search("Project\(\"{(.*)}\"\)", nodegl_sln_data_file).group(1)
-    '''
-    nodegl_sln_data_file = nodegl_sln_data_file.replace("debug|", "Debug|")
-    nodegl_sln_data_file = nodegl_sln_data_file.replace("release|", "Release|")
-    '''
+
     # Is the solution got release inside
-    if nodegl_sln_data_file.find("release") != -1:
-        listBuiltType.append("release")
+    if nodegl_sln_data_file.find("Release") != -1:
+        listBuiltType.append("Release")
+        tIsReleaseAddDebug = True
+        listBuiltType.append("Debug")
 
     # Is the solution got debug inside
-    if nodegl_sln_data_file.find("debug") != -1:
-        listBuiltType.append("debug")
+    if nodegl_sln_data_file.find("Debug") != -1:
+        if tIsReleaseAddDebug:
+            tIsReleaseAddDebug = False
+        else:
+            listBuiltType.append("Debug")
+
+    if tIsReleaseAddDebug:
+        SolutionConfigurationPlatforms = re.search(r"GlobalSection\(SolutionConfigurationPlatforms\) = preSolution([\w\W]*?)EndGlobalSection", nodegl_sln_data_file).group(1)
+        SolutionConfigurationPlatforms = SolutionConfigurationPlatforms + "\n" + SolutionConfigurationPlatforms.replace("Release", "Debug")
+        nodegl_sln_data_file = re.sub(r"GlobalSection\(SolutionConfigurationPlatforms\) = preSolution([\w\W]*?)EndGlobalSection", "GlobalSection(SolutionConfigurationPlatforms) = preSolution" + SolutionConfigurationPlatforms + "EndGlobalSection", nodegl_sln_data_file)
+
+        ProjectConfigurationPlatforms = re.search(r"GlobalSection\(ProjectConfigurationPlatforms\) = postSolution([\w\W]*?)EndGlobalSection", nodegl_sln_data_file).group(1)
+        ProjectConfigurationPlatforms = ProjectConfigurationPlatforms + "\n" + ProjectConfigurationPlatforms.replace("Release", "Debug")
+        nodegl_sln_data_file = re.sub(r"GlobalSection\(ProjectConfigurationPlatforms\) = postSolution([\w\W]*?)EndGlobalSection", "GlobalSection(ProjectConfigurationPlatforms) = postSolution" + ProjectConfigurationPlatforms + "EndGlobalSection", nodegl_sln_data_file)
+
 
     # Must have found release or debug
-    assert len(listBuiltType) >= 1
+    #assert len(listBuiltType) >= 1
     print("Setup build type -> ", listBuiltType)
 
     AllProjectEntry = ''
@@ -107,6 +131,7 @@ with open(getFilename(libnodegl_sln), 'r') as f:
 with open(getFilename(libnodegl_sln), 'w') as f:
     f.write(nodegl_sln_data_file)
 
+
 def getOrCreate(xmlObj, name, findSubElement=None, findAttribute=None):
     tXmlObj = xmlObj.findall('{*}' + name)
     if len(tXmlObj) == 0:
@@ -121,8 +146,15 @@ def getOrCreate(xmlObj, name, findSubElement=None, findAttribute=None):
 
             if findAttribute:
                 for subElem in tSubElement:
-                    if findAttribute and (subElem.attrib[findAttribute[0]] == findAttribute[1]):
+                    if findAttribute and (findAttribute[0] in subElem.attrib) and (subElem.attrib[findAttribute[0]] == findAttribute[1]):
                         return elem
+            else:
+                return elem
+        else:
+
+            if findAttribute:
+                if (findAttribute[0] in elem.attrib) and (elem.attrib[findAttribute[0]] == findAttribute[1]):
+                    return elem
             else:
                 return elem
 
@@ -133,31 +165,44 @@ def getOrCreate(xmlObj, name, findSubElement=None, findAttribute=None):
     # Return first item if found
     return tXmlObj[0]
 
+
 def getVCXProjXml(filename):
     return ET.parse(filename)  # Must have a vcxproj
+
 
 def updateProject(projectName, commands):
 
     if projectName in listProjectToInclude:
-        projectUserFile = getFilename(listProjectToInclude[projectName])
+        projectFile = getFilename(listProjectToInclude[projectName])
+    elif projectName in listProjectNodeGLLib:
+        projectFile = getFilename(listProjectNodeGLLib[projectName])
     else:
-        projectUserFile = getFilename(listProjectNodeGLLib[projectName])
+        projectFile = projectName
 
-    tree = getVCXProjXml(projectUserFile)
+    tree = getVCXProjXml(projectFile)
     ProjectXml = tree.getroot()
 
     for builtType in listBuiltType:
-        ItemDefinitionGroupXML = getOrCreate(ProjectXml, 'ItemDefinitionGroup')
-        CommandXml = getOrCreate(getOrCreate(ItemDefinitionGroupXML, "CustomBuildStep", "Command", ["Condition", "'$(Configuration)|$(Platform)'=='"+builtType+"|x64'"]), 'Command')
-        CommandXml.set("Condition", "'$(Configuration)|$(Platform)'=='"+builtType+"|x64'")
-        CommandXml.text = commands
-        OutputsXml = getOrCreate(getOrCreate(ItemDefinitionGroupXML, "CustomBuildStep", "Command", ["Condition", "'$(Configuration)|$(Platform)'=='"+builtType+"|x64'"]), 'Outputs')
-        OutputsXml.set("Condition", "'$(Configuration)|$(Platform)'=='"+builtType+"|x64'")
-        OutputsXml.text = R'dummy_file.txt'
+        ItemGroupXML = getOrCreate(ProjectXml, 'ItemGroup', None,  ["Label", '"ProjectConfigurations"'])
+        ProjectConfigurationXML = getOrCreate(ItemGroupXML, 'ProjectConfiguration', None, ["Include", builtType+"|x64"])
+        ProjectConfigurationXML.set("Include", builtType+"|x64")
+        ConfigurationXML = getOrCreate(ProjectConfigurationXML, 'Configuration')
+        ConfigurationXML.text = builtType
+        PlatformXML = getOrCreate(ProjectConfigurationXML, 'Platform')
+        PlatformXML.text = 'x64'
 
+        if commands != '':
+            ItemDefinitionGroupXML = getOrCreate(ProjectXml, 'ItemDefinitionGroup')
+            CommandXml = getOrCreate(getOrCreate(ItemDefinitionGroupXML, "CustomBuildStep", "Command", ["Condition", "'$(Configuration)|$(Platform)'=='"+builtType+"|x64'"]), 'Command')
+            CommandXml.set("Condition", "'$(Configuration)|$(Platform)'=='"+builtType+"|x64'")
+            CommandXml.text = commands
+            OutputsXml = getOrCreate(getOrCreate(ItemDefinitionGroupXML, "CustomBuildStep", "Command", ["Condition", "'$(Configuration)|$(Platform)'=='"+builtType+"|x64'"]), 'Outputs')
+            OutputsXml.set("Condition", "'$(Configuration)|$(Platform)'=='"+builtType+"|x64'")
+            OutputsXml.text = R'dummy_file.txt'
 
     ET.indent(tree, space="\t", level=0)
-    tree.write(projectUserFile)
+    tree.write(projectFile)
+
 
 def getVCXProjUserXml(filename):
     if os.path.isfile(filename):
@@ -194,10 +239,21 @@ updateProject("ngl-desktop", f'copy /Y "$(TargetPath)" "{deployDir}"' + "\n" + R
 updateProject("ngl-serialize", f'copy /Y "$(TargetPath)" "{deployDir}"' + "\n" + R'rmdir /S /Q "$(temp)\ngl-desktop\localhost-1234"')
 
 listProjectToInclude = listProjectToInclude | listProjectNodeGLLib
+
+for vcxproj in tListVcxproj:
+    isInList = False
+    for proj_name, proj_file in listProjectNodeGLLib.items():
+        if vcxproj.find(proj_name+'@') >= 0:
+            isInList = True
+            break
+    if not isInList:
+        updateProject(vcxproj, '')
+
 updateProjectUser("nodegl", "")
 updateProjectUser("ngl-python", "-b "+backend+R" $(ProjectDir)\..\..\builddir\tests\..\..\tests\compute.py compute_cubemap_load_store")
 updateProjectUser("ngl-desktop", "-b "+backend)
 updateProjectUser("ngl-serialize", R"$(ProjectDir)\..\..\builddir\tests\..\..\tests\compute.py compute_cubemap_load_store c:\tmp\compute_cubemap_load_store.ngl")
+
 
 print("setup dev sln -> done")
 
