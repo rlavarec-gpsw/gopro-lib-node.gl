@@ -9,6 +9,9 @@ Versioning](https://semver.org/spec/v2.0.0.html) for `libnodegl`.
 
 ## [Unreleased]
 
+### Added
+- Log draw times at debug level when hud is enabled
+
 ## [2023.2] [libnodegl 0.9.0] - 2023-06-28
 
 ### Fixed

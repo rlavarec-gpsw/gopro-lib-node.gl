@@ -344,6 +344,10 @@ int ngli_ctx_draw(struct ngl_ctx *s, double t)
         ngli_gpu_ctx_query_draw_time(s->gpu_ctx, &s->gpu_draw_time);
 
         ngli_hud_draw(s->hud);
+        LOG(DEBUG, "draw scene %s time (ms) cpu %f gpu %f",
+            scene->label,
+            (double)s->cpu_draw_time / 1000.0,
+            (double)s->gpu_draw_time / 1000000.0);
     }
 
     if (s->render_pass_started) {
