@@ -1086,6 +1086,19 @@ static int vk_begin_update(struct gpu_ctx *s, double t)
     s_priv->cur_frame_index = (s_priv->cur_frame_index + 1) % s_priv->nb_in_flight_frames;
 
     s_priv->cur_cmd = s_priv->update_cmds[s_priv->cur_frame_index];
+
+#if defined(TARGET_DARWIN) || defined(TARGET_IPHONE)
+    // Unlike other vulkan implementations, moltenvk (based on metal)
+    // does not guarantee finish rendering when fence is signaled from
+    // vkQueueSubmit.  We need to make sure it finishes presenting before
+    // we can update buffers and textures.
+    if (!s->config.offscreen) {
+        res = swapchain_acquire_image(s, &s_priv->cur_image_index);
+        if (res != VK_SUCCESS)
+            return ngli_vk_res2ret(res);
+    }
+#endif
+
     res = ngli_cmd_vk_begin(s_priv->cur_cmd);
     if (res != VK_SUCCESS)
         return res;
@@ -1157,10 +1170,11 @@ static int vk_begin_draw(struct gpu_ctx *s, double t)
         struct rendertarget **rts_load = ngli_darray_data(&s_priv->rts_load);
         s_priv->default_rt_load = rts_load[s_priv->cur_frame_index];
     } else {
+#if !defined(TARGET_DARWIN) && !defined(TARGET_IPHONE)
         VkResult res = swapchain_acquire_image(s, &s_priv->cur_image_index);
         if (res != VK_SUCCESS)
             return ngli_vk_res2ret(res);
-
+#endif
         struct rendertarget **rts = ngli_darray_data(&s_priv->rts);
         s_priv->default_rt = rts[s_priv->cur_image_index];
         s_priv->default_rt->width = s_priv->width;
