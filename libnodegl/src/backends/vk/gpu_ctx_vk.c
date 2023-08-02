@@ -42,7 +42,7 @@
 #include "vkcontext.h"
 #include "vkutils.h"
 
-#if defined(TARGET_DARWIN)
+#if defined(TARGET_DARWIN) || defined(TARGET_IPHONE)
 #include "utils_darwin_vk.h"
 #endif
 
@@ -292,6 +292,11 @@ static VkResult create_render_resources(struct gpu_ctx *s)
                     return res;
                 s_priv->capture_buffer_ptr = config->capture_buffer;
             }
+        }
+#else
+        else {
+            LOG(ERROR, "capture buffer does not suppor other type except CPU");
+            return VK_ERROR_FEATURE_NOT_PRESENT;
         }
 #endif
     }
@@ -874,11 +879,14 @@ static int vk_init(struct gpu_ctx *s)
     }
 #endif
 
+    int ret = 0;
+#if defined(TARGET_DARWIN) || defined(TARGET_IPHONE)
     /* Initialize vk backend with CAMetal Layer */
-    int ret = gpu_ctx_vk_init_layer(s);
+    ret = gpu_ctx_vk_init_layer(s);
     if (ret != 0) {
         return ret;
     }
+#endif
 
     ngli_darray_init(&s_priv->colors, sizeof(struct texture *), 0);
     ngli_darray_init(&s_priv->ms_colors, sizeof(struct texture *), 0);

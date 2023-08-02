@@ -244,7 +244,7 @@ hosts_cfg = {
     ),
   },
   'iphone': {
-    'frameworks': ['CoreVideo', 'Foundation'],
+    'frameworks': ['CoreVideo', 'Foundation', 'IOSurface', 'UIKit'],
   },
 }
 
@@ -441,7 +441,7 @@ gbackends_cfg = {
         'deps': ['vulkan', 'glslang'],
       },
       'iphone': {
-        'src': files('src/backends/vk/hwmap_videotoolbox_darwin_vk.m'),
+        'src': files('src/backends/vk/hwmap_videotoolbox_darwin_vk.m', 'src/backends/vk/utils_darwin_vk.m'),
         'deps': ['glslang'],
         'libs': ['MoltenVK'],
         'frameworks': ['QuartzCore', 'Metal'],

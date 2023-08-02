@@ -93,7 +93,7 @@ struct vkcontext {
     VK_DECLARE_FUNC(GetMemoryFdPropertiesKHR);
     VK_DECLARE_FUNC(GetRefreshCycleDurationGOOGLE);
     VK_DECLARE_FUNC(GetPastPresentationTimingGOOGLE);
-#if defined(TARGET_DARWIN)
+#if defined(TARGET_DARWIN) || defined(TARGET_IPHONE)
     void *set_mtl_texture_mvk_fn;
     void *get_mtl_device_mvk_fn;
 #endif

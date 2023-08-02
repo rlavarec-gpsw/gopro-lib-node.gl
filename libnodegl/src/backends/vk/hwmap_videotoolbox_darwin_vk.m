@@ -25,20 +25,6 @@
 #include <string.h>
 #include <sxplayer.h>
 
-#include <vulkan/vulkan.h>
-
-#include <CoreVideo/CoreVideo.h>
-#include <IOSurface/IOSurface.h>
-#include <Metal/Metal.h>
-
-/* MoltenVK deprecated functions prototype contains [[deprecated]] keyword,
-   that is not recognized by objc compiler. Do not use VK prototype
- */
-#ifndef VK_NO_PROTOTYPES
-#define VK_NO_PROTOTYPES
-#endif
-#include <MoltenVK/vk_mvk_moltenvk.h>
-
 #include "format.h"
 #include "format_vk.h"
 #include "gpu_ctx_vk.h"
@@ -51,6 +37,27 @@
 #include "texture_vk.h"
 #include "type.h"
 #include "vkutils.h"
+
+#include <vulkan/vulkan.h>
+
+#include <CoreVideo/CoreVideo.h>
+#if defined(TARGET_DARWIN)
+#include <IOSurface/IOSurface.h>
+#elif defined(TARGET_IPHONE)
+#include <IOSurface/IOSurfaceObjC.h>
+#endif
+#include <Metal/Metal.h>
+
+/* MoltenVK deprecated functions prototype contains [[deprecated]] keyword,
+   that is not recognized by objc compiler. Do not use VK prototype
+ */
+#if defined(TARGET_DARWIN)
+#ifndef VK_NO_PROTOTYPES
+#define VK_NO_PROTOTYPES
+#endif
+#endif
+
+#include <MoltenVK/vk_mvk_moltenvk.h>
 
 struct format_desc {
     int layout;
@@ -194,6 +201,7 @@ static int vt_darwin_map_frame(struct hwmap *hwmap, struct sxplayer_frame *frame
         }
 
         id<MTLTexture> mtl_texture = CVMetalTextureGetTexture(texture_ref);
+#if defined(TARGET_DARWIN)
         if (!vk->set_mtl_texture_mvk_fn) {
             VK_LOAD_FUNC(vk->instance, SetMTLTextureMVK);
             if (!SetMTLTextureMVK) {
@@ -205,6 +213,9 @@ static int vt_darwin_map_frame(struct hwmap *hwmap, struct sxplayer_frame *frame
         }
           
         res = ((PFN_vkSetMTLTextureMVK)vk->set_mtl_texture_mvk_fn)(plane_vk->image, mtl_texture);
+#else
+        res = vkSetMTLTextureMVK(plane_vk->image, mtl_texture);
+#endif
         if (res != VK_SUCCESS) {
             LOG(ERROR, "could not set Metal texture: %s", ngli_vk_res2str(res));
             CFRelease(texture_ref);
@@ -247,6 +258,7 @@ static int vt_darwin_init(struct hwmap *hwmap, struct sxplayer_frame * frame)
     if (ret < 0)
         return ret;
 
+#if defined(TARGET_DARWIN)
     if (!vk->get_mtl_device_mvk_fn) {
         VK_LOAD_FUNC(gpu_ctx_vk->vkcontext->instance, GetMTLDeviceMVK);
         if (!GetMTLDeviceMVK) {
@@ -257,6 +269,9 @@ static int vt_darwin_init(struct hwmap *hwmap, struct sxplayer_frame * frame)
     }
       
     ((PFN_vkGetMTLDeviceMVK)vk->get_mtl_device_mvk_fn)(vk->phy_device, &vt->device);
+#else
+    vkGetMTLDeviceMVK(vk->phy_device, &vt->device);
+#endif
     CVReturn status = CVMetalTextureCacheCreate(NULL, NULL, vt->device, NULL, &vt->texture_cache);
     if (status != kCVReturnSuccess) {
         LOG(ERROR, "could not create Metal texture cache: %d", status);

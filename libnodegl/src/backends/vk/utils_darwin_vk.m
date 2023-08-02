@@ -2,9 +2,12 @@
 
 #import <vulkan/vulkan.h>
 
+#if defined(TARGET_DARWIN)
 #ifndef VK_NO_PROTOTYPES
 #define VK_NO_PROTOTYPES
 #endif
+#endif
+
 #import <MoltenVK/vk_mvk_moltenvk.h>
 
 #import <Metal/Metal.h>
@@ -55,6 +58,7 @@ VkResult wrap_into_texture(struct gpu_ctx *s, const void *buffer, struct texture
 
     id<MTLDevice> device = (id<MTLDevice>)ctx->metal_device;
     if (!device) {
+#if defined(TARGET_DARWIN)
         if (!vk->get_mtl_device_mvk_fn) {
             VK_LOAD_FUNC(vk->instance, GetMTLDeviceMVK);
             if (!GetMTLDeviceMVK) {
@@ -64,6 +68,9 @@ VkResult wrap_into_texture(struct gpu_ctx *s, const void *buffer, struct texture
             vk->get_mtl_device_mvk_fn = GetMTLDeviceMVK;
         }
         ((PFN_vkGetMTLDeviceMVK)vk->get_mtl_device_mvk_fn)(vk->phy_device, &device);
+#else
+        vkGetMTLDeviceMVK(vk->phy_device, &device);
+#endif
         [device retain];
     }
     ctx->metal_device = device;
@@ -135,6 +142,7 @@ VkResult wrap_into_texture(struct gpu_ctx *s, const void *buffer, struct texture
     }
 
     id<MTLTexture> metal_texture = CVMetalTextureGetTexture(texture_ref);
+#if defined(TARGET_DARWIN)
     if (!vk->set_mtl_texture_mvk_fn) {
         VK_LOAD_FUNC(vk->instance, SetMTLTextureMVK);
         if (!SetMTLTextureMVK) {
@@ -146,6 +154,10 @@ VkResult wrap_into_texture(struct gpu_ctx *s, const void *buffer, struct texture
     }
 
     res = ((PFN_vkSetMTLTextureMVK)vk->set_mtl_texture_mvk_fn)(tex_vk->image, metal_texture);
+#else
+    res = vkSetMTLTextureMVK(tex_vk->image, metal_texture);
+#endif
+
     if (res != VK_SUCCESS) {
         LOG(ERROR, "could not set metal texure: %s", ngli_vk_res2str(res));
         CFRelease(texture_ref);
@@ -191,8 +203,8 @@ int gpu_ctx_vk_init_layer(struct gpu_ctx *s) {
         return NGL_ERROR_INVALID_ARG;
     }
 
-#ifdef TARGET_DARWIN
     NSObject *object = (NSObject *)s->config.window;
+#ifdef TARGET_DARWIN
     NSView *view = nil;
     if ([object isKindOfClass:[NSView class]]) {
         view = (NSView *)object;
@@ -219,6 +231,25 @@ int gpu_ctx_vk_init_layer(struct gpu_ctx *s) {
     view.layer = metal_layer;
 
     NSSize size = view.bounds.size;
+#else
+    if (![object isKindOfClass:[UIView class]]) {
+        LOG(ERROR, "view is not a UIView class");
+        return NGL_ERROR_INVALID_ARG;
+    }
+
+    UIView *view = (UIView *)object;
+    CALayer *layer = view.layer;
+    if (![layer isKindOfClass:[CAMetalLayer class]]) {
+        LOG(ERROR, "layer is not a CAMetalLayer class");
+        return NGL_ERROR_INVALID_ARG;
+    }
+
+    CAMetalLayer *metal_layer = (CAMetalLayer *)layer;
+    id<MTLDevice> device = MTLCreateSystemDefaultDevice();
+    metal_layer.device = device;
+
+    CGSize size = view.bounds.size;
+#endif
     CGSize layer_size = CGSizeMake(s->config.width, s->config.height);
     if (layer_size.width == 0) {
         if (size.width == 0) {
@@ -240,7 +271,6 @@ int gpu_ctx_vk_init_layer(struct gpu_ctx *s) {
 
     s->config.width = layer_size.width;
     s->config.height = layer_size.height;
-#endif
     return 0;
 }
 
