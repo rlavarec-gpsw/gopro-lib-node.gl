@@ -8,6 +8,8 @@ for the globale releases (`YYYY.MINOR`), and to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html) for `libnodegl`.
 
 ## [Unreleased]
+- Added Mac and iOS image capture support for MoltenVK
+- Release and leaks scripts transitioning from bash to python
 
 ## [2023.3] [libnodegl 0.9.1] - 2023-07-26
 
