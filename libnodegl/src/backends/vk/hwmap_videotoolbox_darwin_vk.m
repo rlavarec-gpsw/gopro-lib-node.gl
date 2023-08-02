@@ -186,7 +186,7 @@ static int vt_darwin_map_frame(struct hwmap *hwmap, struct sxplayer_frame *frame
             .image_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         };
 
-        res = ngli_texture_vk_wrap(vt->planes[i], &wrap_params);
+        res = ngli_texture_vk_wrap(vt->planes[i], &wrap_params, 0);
         if (res != VK_SUCCESS) {
             LOG(ERROR, "could not wrap texture: %s", ngli_vk_res2str(res));
             CFRelease(texture_ref);
@@ -292,6 +292,8 @@ static void vt_darwin_uninit(struct hwmap *hwmap)
 
     sxplayer_release_frame(vt->frame);
     vt->frame = NULL;
+
+    CFRelease(vt->texture_cache);
 }
 
 const struct hwmap_class ngli_hwmap_vt_darwin_vk_class = {

@@ -42,6 +42,10 @@
 #include "vkcontext.h"
 #include "vkutils.h"
 
+#if defined(TARGET_DARWIN)
+#include "utils_darwin_vk.h"
+#endif
+
 #if DEBUG_GPU_CAPTURE
 #include "gpu_capture.h"
 #endif
@@ -163,8 +167,9 @@ static VkResult create_render_resources(struct gpu_ctx *s)
     const struct ngl_config *config = &s->config;
 
     const int color_format = config->offscreen
-                           ? NGLI_FORMAT_R8G8B8A8_UNORM
-                           : ngli_format_vk_to_ngl(s_priv->surface_format.format);
+                             ? NGLI_FORMAT_R8G8B8A8_UNORM
+                             : ngli_format_vk_to_ngl(s_priv->surface_format.format);
+
     const int ds_format = vk->preferred_depth_stencil_format;
 
     const int nb_images = config->offscreen ? s_priv->nb_in_flight_frames : s_priv->nb_images;
@@ -193,7 +198,7 @@ static VkResult create_render_resources(struct gpu_ctx *s)
                 .image_layout = VK_IMAGE_LAYOUT_UNDEFINED,
             };
 
-            VkResult res = ngli_texture_vk_wrap(color, &wrap_params);
+            VkResult res = ngli_texture_vk_wrap(color, &wrap_params, 0);
             if (res != VK_SUCCESS) {
                 ngli_texture_vk_freep(&color);
                 return res;
@@ -252,21 +257,43 @@ static VkResult create_render_resources(struct gpu_ctx *s)
     }
 
     if (config->offscreen) {
-        s_priv->capture_buffer = ngli_buffer_vk_create(s);
-        if (!s_priv->capture_buffer)
-            return VK_ERROR_OUT_OF_HOST_MEMORY;
-
         s_priv->capture_buffer_size = s_priv->width * s_priv->height * ngli_format_get_bytes_per_pixel(color_format);
-        VkResult res = ngli_buffer_vk_init(s_priv->capture_buffer,
-                                           s_priv->capture_buffer_size,
-                                           NGLI_BUFFER_USAGE_MAP_READ |
-                                           NGLI_BUFFER_USAGE_TRANSFER_DST_BIT);
-        if (res != VK_SUCCESS)
-            return res;
+        if (config->capture_buffer_type == NGL_CAPTURE_BUFFER_TYPE_CPU) {
+            s_priv->capture_buffer = ngli_buffer_vk_create(s);
+            if (!s_priv->capture_buffer) {
+                return VK_ERROR_OUT_OF_HOST_MEMORY;
+            }
+            s_priv->capture_texture = NULL;
 
-        res = ngli_buffer_vk_map(s_priv->capture_buffer, s_priv->capture_buffer_size, 0, &s_priv->mapped_data);
-        if (res != VK_SUCCESS)
-            return res;
+            VkResult res = ngli_buffer_vk_init(s_priv->capture_buffer,
+                                               s_priv->capture_buffer_size,
+                                               NGLI_BUFFER_USAGE_MAP_READ |
+                                               NGLI_BUFFER_USAGE_TRANSFER_DST_BIT);
+            if (res != VK_SUCCESS)
+                return res;
+
+            res = ngli_buffer_vk_map(s_priv->capture_buffer, s_priv->capture_buffer_size, 0, &s_priv->mapped_data);
+            if (res != VK_SUCCESS)
+                return res;
+        }
+#if defined(TARGET_DARWIN) || defined(TARGET_IPHONE)
+        else if (config->capture_buffer_type == NGL_CAPTURE_BUFFER_TYPE_COREVIDEO) {
+            if (config->capture_buffer) {
+                s_priv->capture_texture = ngli_texture_vk_create(s);
+                if (!s_priv->capture_texture) {
+                    return VK_ERROR_OUT_OF_HOST_MEMORY;
+                }
+
+                s_priv->capture_buffer = NULL;
+                VkResult res = wrap_into_texture(s, config->capture_buffer, 
+                                                 s_priv->capture_texture);
+
+                if (res != VK_SUCCESS)
+                    return res;
+                s_priv->capture_buffer_ptr = config->capture_buffer;
+            }
+        }
+#endif
     }
 
     return VK_SUCCESS;
@@ -306,6 +333,10 @@ static void destroy_render_resources(struct gpu_ctx *s)
         s_priv->mapped_data = NULL;
     }
     ngli_buffer_vk_freep(&s_priv->capture_buffer);
+    s_priv->capture_buffer_ptr = NULL;
+#if defined(TARGET_DARWIN) || defined(TARGET_IPHONE)
+    gpu_ctx_vk_cleanup(s);
+#endif
 }
 
 static VkResult create_query_pool(struct gpu_ctx *s)
@@ -843,6 +874,12 @@ static int vk_init(struct gpu_ctx *s)
     }
 #endif
 
+    /* Initialize vk backend with CAMetal Layer */
+    int ret = gpu_ctx_vk_init_layer(s);
+    if (ret != 0) {
+        return ret;
+    }
+
     ngli_darray_init(&s_priv->colors, sizeof(struct texture *), 0);
     ngli_darray_init(&s_priv->ms_colors, sizeof(struct texture *), 0);
     ngli_darray_init(&s_priv->depth_stencils, sizeof(struct texture *), 0);
@@ -915,7 +952,7 @@ static int vk_init(struct gpu_ctx *s)
     s_priv->height = config->height;
     s_priv->nb_in_flight_frames = 1;
 
-    int ret = ngli_glslang_init();
+    ret = ngli_glslang_init();
     if (ret < 0)
         return ret;
 
@@ -936,10 +973,12 @@ static int vk_init(struct gpu_ctx *s)
         return ngli_vk_res2ret(res);
 
     if (config->offscreen) {
+#if !defined(TARGET_DARWIN) && !defined(TARGET_IPHONE)
         if (config->capture_buffer_type != NGL_CAPTURE_BUFFER_TYPE_CPU) {
             LOG(ERROR, "unsupported capture buffer type");
             return NGL_ERROR_UNSUPPORTED;
         }
+#endif
     } else {
         res = create_swapchain(s);
         if (res != VK_SUCCESS)
@@ -992,13 +1031,38 @@ static int vk_resize(struct gpu_ctx *s, int width, int height, const int *viewpo
 static int vk_set_capture_buffer(struct gpu_ctx *s, void *capture_buffer)
 {
     struct ngl_config *config = &s->config;
+    struct gpu_ctx_vk *s_priv = (struct gpu_ctx_vk *)s;
 
     if (!config->offscreen) {
         LOG(ERROR, "capture_buffer is not supported by onscreen context");
         return NGL_ERROR_UNSUPPORTED;
     }
 
-    config->capture_buffer = capture_buffer;
+    if (config->capture_buffer_type == NGL_CAPTURE_BUFFER_TYPE_CPU) {
+        config->capture_buffer = capture_buffer;
+    }
+#if defined(TARGET_DARWIN) || defined(TARGET_IPHONE)
+    else if (config->capture_buffer_type == NGL_CAPTURE_BUFFER_TYPE_COREVIDEO) {
+        if (s_priv->capture_buffer_ptr != capture_buffer) {
+            s_priv->capture_buffer_ptr = capture_buffer;
+            config->capture_buffer = capture_buffer;
+            ngli_texture_vk_freep(&s_priv->capture_texture);
+            if (config->capture_buffer) {
+                s_priv->capture_texture = ngli_texture_vk_create(s);
+                if (!s_priv->capture_texture) {
+                    return NGL_ERROR_MEMORY;
+                }
+
+                s_priv->capture_buffer = NULL;
+                VkResult res = wrap_into_texture(s, config->capture_buffer, 
+                                                 s_priv->capture_texture);
+
+                if (res != VK_SUCCESS)
+                    return NGL_ERROR_EXTERNAL;
+            }
+        }
+    }
+#endif
     return 0;
 }
 
@@ -1161,7 +1225,11 @@ static int vk_end_draw(struct gpu_ctx *s, double t)
         if (config->capture_buffer) {
             struct texture **colors = ngli_darray_data(&s_priv->colors);
             struct texture *color = colors[s_priv->cur_frame_index];
-            ngli_texture_vk_copy_to_buffer(color, s_priv->capture_buffer);
+            if (s_priv->capture_buffer) {
+                ngli_texture_vk_copy_to_buffer(color, s_priv->capture_buffer);
+            } else {
+                ngli_texture_vk_copy_to_texture(color, s_priv->capture_texture);
+            }
 
             VkResult res = ngli_cmd_vk_submit(s_priv->cur_cmd);
             if (res != VK_SUCCESS)
@@ -1171,7 +1239,9 @@ static int vk_end_draw(struct gpu_ctx *s, double t)
             if (res != VK_SUCCESS)
                 return ngli_vk_res2ret(res);
 
-            memcpy(config->capture_buffer, s_priv->mapped_data, s_priv->capture_buffer_size);
+            if (s_priv->capture_buffer) {
+                memcpy(config->capture_buffer, s_priv->mapped_data, s_priv->capture_buffer_size);
+            }
         } else {
             VkResult res = ngli_cmd_vk_submit(s_priv->cur_cmd);
             if (res != VK_SUCCESS)

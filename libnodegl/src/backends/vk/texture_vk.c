@@ -259,17 +259,23 @@ static int init_fields(struct texture *s, const struct texture_params *params)
     return 0;
 }
 
-static VkResult create_image_view(struct texture *s)
+static VkResult create_image_view(struct texture *s, int swizzle_rb)
 {
     struct gpu_ctx_vk *gpu_ctx_vk = (struct gpu_ctx_vk *)s->gpu_ctx;
     struct vkcontext *vk = gpu_ctx_vk->vkcontext;
     struct texture_vk *s_priv = (struct texture_vk *)s;
 
-    const VkImageViewCreateInfo view_info = {
+    VkImageViewCreateInfo view_info = {
         .sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image    = s_priv->image,
         .viewType = get_vk_image_view_type(s->params.type),
         .format   = s_priv->format,
+        .components = {
+            .r = VK_COMPONENT_SWIZZLE_R,
+            .g = VK_COMPONENT_SWIZZLE_G,
+            .b = VK_COMPONENT_SWIZZLE_B,
+            .a = VK_COMPONENT_SWIZZLE_A,
+        },
         .subresourceRange = {
             .aspectMask     = get_vk_image_aspect_flags(s_priv->format),
             .baseMipLevel   = 0,
@@ -278,6 +284,11 @@ static VkResult create_image_view(struct texture *s)
             .layerCount     = VK_REMAINING_ARRAY_LAYERS,
         }
     };
+
+    if (swizzle_rb) {
+        view_info.components.r = VK_COMPONENT_SWIZZLE_B;
+        view_info.components.b = VK_COMPONENT_SWIZZLE_R;
+    }
 
     return vkCreateImageView(vk->device, &view_info, NULL, &s_priv->image_view);
 }
@@ -432,14 +443,14 @@ VkResult ngli_texture_vk_init(struct texture *s, const struct texture_params *pa
 
     s_priv->image_layout = s_priv->default_image_layout;
 
-    res = create_image_view(s);
+    res = create_image_view(s, 0);
     if (res != VK_SUCCESS)
         return res;
 
     return create_sampler(s);
 }
 
-VkResult ngli_texture_vk_wrap(struct texture *s, const struct texture_vk_wrap_params *wrap_params)
+VkResult ngli_texture_vk_wrap(struct texture *s, const struct texture_vk_wrap_params *wrap_params, int swizzle_rb)
 {
     struct texture_vk *s_priv = (struct texture_vk *)s;
 
@@ -461,7 +472,7 @@ VkResult ngli_texture_vk_wrap(struct texture *s, const struct texture_vk_wrap_pa
     }
 
     if (!s_priv->image_view) {
-        res = create_image_view(s);
+        res = create_image_view(s, swizzle_rb);
         if (res != VK_SUCCESS)
             return res;
     }
@@ -652,6 +663,47 @@ VkResult ngli_texture_vk_upload(struct texture *s, const uint8_t *data, int line
         ngli_texture_generate_mipmap(s);
 
     return VK_SUCCESS;
+}
+
+void ngli_texture_vk_copy_to_texture(struct texture *from, struct texture *to)
+{
+    struct gpu_ctx_vk *gpu_ctx_vk = (struct gpu_ctx_vk *)from->gpu_ctx;
+    struct texture_vk *from_priv = (struct texture_vk *)from;
+    struct texture_vk *to_priv = (struct texture_vk *)to;
+
+    ngli_texture_vk_transition_layout(from, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    ngli_texture_vk_transition_layout(to, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    int width = from->params.width;
+    int height = from->params.height;
+
+    const VkImageBlit image_blit = {
+        .srcSubresource = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = 0,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+        .srcOffsets[0] = (VkOffset3D){0, 0, 0},
+        .srcOffsets[1] = (VkOffset3D){width, height, 1},
+        .dstSubresource = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = 0,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+        .dstOffsets[0] = (VkOffset3D){0, 0, 0},
+        .dstOffsets[1] = (VkOffset3D){width, height, 1},
+    };
+
+    VkCommandBuffer cmd_buf = gpu_ctx_vk->cur_cmd->cmd_buf;
+    vkCmdBlitImage(cmd_buf,
+                   from_priv->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                   to_priv->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                   1, &image_blit, VK_FILTER_NEAREST);
+
+    ngli_texture_vk_transition_to_default_layout(from);
+    ngli_texture_vk_transition_to_default_layout(to);
 }
 
 VkResult ngli_texture_vk_generate_mipmap(struct texture *s)

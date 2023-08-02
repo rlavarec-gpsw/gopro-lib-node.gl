@@ -404,7 +404,7 @@ static int vaapi_map_frame(struct hwmap *hwmap, struct sxplayer_frame *frame)
             .image_layout = VK_IMAGE_LAYOUT_UNDEFINED,
         };
 
-        res = ngli_texture_vk_wrap(vaapi->planes[i], &wrap_params);
+        res = ngli_texture_vk_wrap(vaapi->planes[i], &wrap_params, false);
         if (res != VK_SUCCESS)
             return NGL_ERROR_GRAPHICS_GENERIC;
 

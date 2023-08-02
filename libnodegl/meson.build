@@ -431,10 +431,10 @@ gbackends_cfg = {
         'deps': ['vulkan', 'glslang'],
       },
       'darwin': {
-        'src': files('src/backends/vk/hwmap_videotoolbox_darwin_vk.m'),
+        'src': files('src/backends/vk/hwmap_videotoolbox_darwin_vk.m', 'src/backends/vk/utils_darwin_vk.m'),
         'deps': ['glslang'],
         'libs': ['MoltenVK'],
-        'frameworks': ['Metal'],
+        'frameworks': ['QuartzCore', 'Metal'],
       },
       'android': {
         'src': files('src/backends/vk/hwmap_mediacodec_vk.c'),
@@ -444,7 +444,7 @@ gbackends_cfg = {
         'src': files('src/backends/vk/hwmap_videotoolbox_darwin_vk.m'),
         'deps': ['glslang'],
         'libs': ['MoltenVK'],
-        'frameworks': ['Metal'],
+        'frameworks': ['QuartzCore', 'Metal'],
       },
       'windows': {
         'deps': ['vulkan', 'glslang'],

@@ -67,8 +67,10 @@ struct gpu_ctx_vk {
     struct darray rts;
     struct darray rts_load;
     struct buffer *capture_buffer;
+    void *capture_buffer_ptr;
     int capture_buffer_size;
     void *mapped_data;
+    struct texture *capture_texture;
 
     struct rendertarget *default_rt;
     struct rendertarget *default_rt_load;
@@ -86,6 +88,10 @@ struct gpu_ctx_vk {
     int viewport[4];
     int scissor[4];
     float clear_color[4];
+
+    void *texture_cache;
+    void *cvbuffer;
+    uintptr_t metal_device;
 };
 
 #endif

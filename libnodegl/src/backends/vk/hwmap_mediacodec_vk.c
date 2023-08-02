@@ -362,7 +362,7 @@ static int mc_map_frame(struct hwmap *hwmap, struct sxplayer_frame *frame)
         .ycbcr_sampler = mc->ycbcr_sampler,
     };
 
-    res = ngli_texture_vk_wrap(mc->texture, &wrap_params);
+    res = ngli_texture_vk_wrap(mc->texture, &wrap_params, false);
     if (res != VK_SUCCESS)
         return NGL_ERROR_GRAPHICS_GENERIC;
 
