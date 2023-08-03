@@ -70,7 +70,7 @@
   ],
   "AnimKeyFrameQuat": [
     ["time", "f64", ""],
-    ["quat", "vec4", ""],
+    ["value", "vec4", ""],
     ["easing", "select", ""],
     ["easing_args", "f64_list", ""],
     ["easing_start_offset", "f64", ""],

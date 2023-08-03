@@ -92,7 +92,7 @@ ANIMKEYFRAME_PARAMS(float, value, NGLI_PARAM_TYPE_F64, scalar);
 ANIMKEYFRAME_PARAMS(vec2,  value, NGLI_PARAM_TYPE_VEC2, value);
 ANIMKEYFRAME_PARAMS(vec3,  value, NGLI_PARAM_TYPE_VEC3, value);
 ANIMKEYFRAME_PARAMS(vec4,  value, NGLI_PARAM_TYPE_VEC4, value);
-ANIMKEYFRAME_PARAMS(quat,  quat,  NGLI_PARAM_TYPE_VEC4, value);
+ANIMKEYFRAME_PARAMS(quat,  value, NGLI_PARAM_TYPE_VEC4, value);
 ANIMKEYFRAME_PARAMS(color, color, NGLI_PARAM_TYPE_VEC3, value);
 ANIMKEYFRAME_PARAMS(buffer, data, NGLI_PARAM_TYPE_DATA, data);
 
@@ -472,8 +472,6 @@ static char *animkeyframe_info_str(const struct ngl_node *node)
 
     if (node->cls->id == NGL_NODE_ANIMKEYFRAMEBUFFER) {
         ngli_bstr_printf(b, "with data size of %dB", o->data_size);
-    } else if (node->cls->id == NGL_NODE_ANIMKEYFRAMEQUAT) {
-        ngli_bstr_printf(b, "with quat=(%g,%g,%g,%g)", NGLI_ARG_VEC4(o->value));
     } else if (node->cls->id == NGL_NODE_ANIMKEYFRAMECOLOR) {
         ngli_bstr_printf(b, "with color=(%g,%g,%g)", NGLI_ARG_VEC3(o->value));
     } else {
