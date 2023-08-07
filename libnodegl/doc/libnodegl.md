@@ -180,7 +180,7 @@ Parameter | Flags | Type | Description | Default
 Parameter | Flags | Type | Description | Default
 --------- | ----- | ---- | ----------- | :-----:
 `time` |  | [`f64`](#parameter-types) | the time key point in seconds | `0`
-`color` |  | [`vec3`](#parameter-types) | the color at time `time` | (`0`,`0`,`0`)
+`value` |  | [`vec3`](#parameter-types) | the color value at time `time` | (`0`,`0`,`0`)
 `easing` |  | [`easing`](#easing-choices) | easing interpolation from previous key frame | `linear`
 `easing_args` |  | [`f64_list`](#parameter-types) | a list of arguments some easings may use | 
 `easing_start_offset` |  | [`f64`](#parameter-types) | starting offset of the truncation of the easing | `0`

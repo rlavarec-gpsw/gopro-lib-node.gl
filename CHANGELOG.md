@@ -8,7 +8,7 @@ for the globale releases (`YYYY.MINOR`), and to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html) for `libnodegl`.
 
 ## [Unreleased]
-- Rename AnimKeyFrameQuat quat field to value to better match other usage
+- Rename AnimKeyFrameQuat/Color data fields to value to better match other usage
 
 ## [2023.4] [libnodegl 0.10.0] - 2023-08-02
 - Added Mac and iOS image capture support for MoltenVK

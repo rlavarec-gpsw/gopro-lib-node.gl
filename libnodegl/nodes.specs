@@ -78,7 +78,7 @@
   ],
   "AnimKeyFrameColor": [
     ["time", "f64", ""],
-    ["color", "vec3", ""],
+    ["value", "vec3", ""],
     ["easing", "select", ""],
     ["easing_args", "f64_list", ""],
     ["easing_start_offset", "f64", ""],
