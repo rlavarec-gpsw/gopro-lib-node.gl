@@ -33,13 +33,13 @@ import shutil
 import stat
 import sysconfig
 import tarfile
-import urllib.request
 import venv
 import zipfile
 from multiprocessing import Pool
 from subprocess import run
 
 import certifi
+import requests
 
 _ROOTDIR = op.abspath(op.dirname(__file__))
 _SYSTEM = "MinGW" if sysconfig.get_platform().startswith("mingw") else platform.system()
@@ -148,7 +148,8 @@ def _download_extract(dep_item):
     # Download
     if not op.exists(dst_path) or not _file_chk(dst_path, chksum):
         logging.info("downloading %s to %s", url, dst_file)
-        urllib.request.urlretrieve(url, dst_path)
+        with open(dst_path, "wb") as bin_file:
+            bin_file.write(requests.get(url).content)
         assert _file_chk(dst_path, chksum)
 
     # Extract
